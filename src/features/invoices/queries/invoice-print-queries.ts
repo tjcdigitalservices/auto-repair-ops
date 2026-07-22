@@ -1,0 +1,159 @@
+import { cache } from "react";
+
+import { getAuthorizedSupabaseServerClient } from "@/lib/auth/session";
+import { buildPreparedByProfile } from "@/lib/auth/prepared-by";
+import { buildPrintBusinessProfile } from "@/lib/branding/print-business-profile";
+import { isMissingStaffDocumentTitleColumnError } from "@/features/staff/document-title-compat";
+import { getInvoiceById } from "@/features/invoices/queries/invoice-queries";
+import type { InvoicePrintDocument } from "@/features/invoices/types";
+
+export const getInvoicePrintDocument = cache(
+  async (invoiceId: string): Promise<InvoicePrintDocument | null> => {
+    const invoice = await getInvoiceById(invoiceId);
+
+    if (!invoice) {
+      return null;
+    }
+
+    const { supabase, context } = await getAuthorizedSupabaseServerClient("invoices:read");
+    const [{ data: invoiceSupport, error: invoiceSupportError }, sourceResult] = await Promise.all([
+      supabase
+        .from("invoices")
+        .select("created_by")
+        .eq("id", invoiceId)
+        .maybeSingle(),
+      invoice.jobOrderId
+        ? supabase
+            .from("job_orders")
+            .select("branch_id")
+            .eq("id", invoice.jobOrderId)
+            .maybeSingle()
+        : invoice.saleId
+          ? supabase
+              .from("sales")
+              .select("branch_id")
+              .eq("id", invoice.saleId)
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+    ]);
+
+    if (invoiceSupportError) {
+      throw new Error(invoiceSupportError.message);
+    }
+
+    if (sourceResult.error) {
+      throw new Error(sourceResult.error.message);
+    }
+
+    const branchId = sourceResult.data?.branch_id ?? null;
+
+    const preparedByResultPromise = invoiceSupport?.created_by
+      ? supabase
+          .from("staff")
+          .select("first_name, last_name, role, document_title")
+          .eq("linked_user_id", invoiceSupport.created_by)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null });
+
+    const [
+      { data: customer, error: customerError },
+      { data: vehicle, error: vehicleError },
+      { data: businessSettings, error: settingsError },
+      { data: tenantBranding, error: brandingError },
+      preparedByResult,
+    ] = await Promise.all([
+      invoice.customerId
+        ? supabase
+            .from("customers")
+            .select("contact_number, address")
+            .eq("id", invoice.customerId)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+      invoice.vehicleId
+        ? supabase
+            .from("vehicles")
+            .select("make, model, year, plate_number, vin")
+            .eq("id", invoice.vehicleId)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+      branchId
+        ? supabase
+            .from("business_settings")
+            .select("business_name, business_logo_path, business_vat_registration_no, business_contact, business_email, business_address, updated_at")
+            .eq("branch_id", branchId)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+      supabase
+        .from("tenant_branding")
+        .select("website_url, facebook_label")
+        .eq("tenant_id", context.tenantId)
+        .maybeSingle(),
+      preparedByResultPromise,
+    ]);
+
+    if (customerError) {
+      throw new Error(customerError.message);
+    }
+
+    if (vehicleError) {
+      throw new Error(vehicleError.message);
+    }
+
+    if (settingsError) {
+      throw new Error(settingsError.message);
+    }
+
+    if (brandingError) {
+      throw new Error(brandingError.message);
+    }
+
+    let preparedBy = preparedByResult.data;
+
+    if (preparedByResult.error) {
+      if (!isMissingStaffDocumentTitleColumnError(preparedByResult.error)) {
+        throw new Error(preparedByResult.error.message);
+      }
+
+      const { data: fallbackPreparedBy, error: fallbackPreparedByError } = await supabase
+        .from("staff")
+        .select("first_name, last_name, role")
+        .eq("linked_user_id", invoiceSupport?.created_by ?? "")
+        .maybeSingle();
+
+      if (fallbackPreparedByError) {
+        throw new Error(fallbackPreparedByError.message);
+      }
+
+      preparedBy = fallbackPreparedBy
+        ? {
+            ...fallbackPreparedBy,
+            document_title: null,
+          }
+        : null;
+    }
+    const preparedByProfile = preparedBy
+      ? buildPreparedByProfile({
+          displayName: `${preparedBy.first_name} ${preparedBy.last_name}`.trim(),
+          email: null,
+          role: preparedBy.role,
+          documentTitle: preparedBy.document_title,
+        })
+      : null;
+
+    return {
+      invoice: {
+        ...invoice,
+        customerContactNumber: customer?.contact_number ?? null,
+        customerAddress: customer?.address ?? null,
+        vehicleMake: vehicle?.make ?? null,
+        vehicleModel: vehicle?.model ?? null,
+        vehicleYear: vehicle?.year ?? null,
+        vehiclePlateNumber: vehicle?.plate_number ?? null,
+        vehicleVin: vehicle?.vin ?? null,
+        preparedByName: preparedByProfile?.name ?? null,
+        preparedByTitle: preparedByProfile?.title ?? null,
+      },
+      businessProfile: buildPrintBusinessProfile(businessSettings, tenantBranding),
+    };
+  },
+);

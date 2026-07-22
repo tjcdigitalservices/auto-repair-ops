@@ -1,0 +1,17 @@
+---
+description: Sticky bottom Save/Cancel bar for long create/edit forms
+globs: src/features/**/components/**/*form*.tsx,src/components/shared/form-sticky-actions.tsx,src/app/(dashboard)/**/new/**/*.tsx,src/app/(dashboard)/**/edit/**/*.tsx
+alwaysApply: false
+---
+
+# Long form actions
+
+For long create/edit forms (catalog/entity screens where Save would otherwise sit below the fold):
+
+- Use `FormStickyActions` from `@/components/shared/form-sticky-actions`.
+- Place it as the **last child of the `<form>`** (outside the card body), not buried in the last field section.
+- Order: **Cancel** (outline) then primary **Save/Create** (`SubmitButton`) on the right.
+- Do **not** duplicate the same Save row at the top and bottom.
+- Short dialogs / compact forms keep inline actions; sticky bar is for page-length forms.
+
+Reference: `src/features/products/components/product-form.tsx`

@@ -1,0 +1,95 @@
+'use client';
+
+import Link from 'next/link';
+import { useState } from 'react';
+import { Plus, Search } from 'lucide-react';
+
+import { EmptyState } from '@/components/shared/empty-state';
+import { PageHeader } from '@/components/shared/page-header';
+import { Button } from '@/components/ui/button';
+import { QuickAccessResultsWorkspace } from '@/features/quick-access/components/quick-access-results-workspace';
+import { QuickAccessSearchDialog } from '@/features/quick-access/components/quick-access-search-dialog';
+import type { QuickAccessSearchState } from '@/features/quick-access/types';
+
+export function QuickAccessPage({
+  searchState,
+}: {
+  searchState: QuickAccessSearchState;
+}) {
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const hasSearch = Boolean(
+    searchState.plateQuery || searchState.customerLastNameQuery,
+  );
+  const hasResults = searchState.records.length > 0;
+
+  return (
+    <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-7xl flex-col gap-6">
+      <PageHeader
+        title="Quick Access"
+        description="Use this intake workspace to pull up a returning customer or vehicle record quickly, then jump into the next action."
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild variant="bluePrimary">
+              <Link href="/quotations/new">
+                <Plus className="size-4" />
+                New Quotation
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/dashboard">Back to dashboard</Link>
+            </Button>
+          </div>
+        }
+      />
+
+      {!hasSearch ? (
+        <div className="flex min-h-[55vh] flex-1 items-center justify-center">
+          <div className="w-full max-w-2xl">
+            <EmptyState
+              icon={<Search className="size-5" />}
+              title="No active lookup yet"
+              description="Look up a vehicle by plate number or find a customer by last name to open their service record."
+              action={
+                <Button type="button" variant="bluePrimary" size="lg" onClick={() => setSearchDialogOpen(true)}>
+                  <Search className="size-4" />
+                  Find record
+                </Button>
+              }
+            />
+          </div>
+        </div>
+      ) : hasResults ? (
+        <QuickAccessResultsWorkspace
+          key={`${searchState.plateQuery}:${searchState.customerLastNameQuery}`}
+          records={searchState.records}
+          plateQuery={searchState.plateQuery}
+          customerLastNameQuery={searchState.customerLastNameQuery}
+          canCreateQuotations={searchState.permissions.canCreateQuotations}
+          canViewQuotations={searchState.permissions.canViewQuotations}
+          canViewServiceHistory={searchState.permissions.canViewServiceHistory}
+          canRecordPastService={searchState.permissions.canRecordPastService}
+        />
+      ) : (
+        <div className="flex min-h-[55vh] flex-1 items-center justify-center">
+          <div className="w-full max-w-2xl">
+            <EmptyState
+              title="No record matched that lookup"
+              description={
+                searchState.plateQuery
+                  ? `No vehicle record matched "${searchState.plateQuery}". Try another plate format or search by customer last name instead.`
+                  : `No customer matched "${searchState.customerLastNameQuery}". Try another spelling or switch to a vehicle lookup.`
+              }
+            />
+          </div>
+        </div>
+      )}
+
+      <QuickAccessSearchDialog
+        initialPlate={searchState.plateQuery}
+        initialCustomerLastName={searchState.customerLastNameQuery}
+        open={searchDialogOpen}
+        onOpenChange={setSearchDialogOpen}
+      />
+    </div>
+  );
+}

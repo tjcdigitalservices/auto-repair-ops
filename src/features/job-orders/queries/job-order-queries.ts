@@ -1,0 +1,623 @@
+import { cache } from "react";
+
+import {
+  applyBranchFilter,
+  getBranchScopedServerClient,
+} from "@/lib/branches";
+import {
+  applyCatalogVisibilityFilter,
+  getCatalogSharingSettings,
+} from "@/lib/catalog-visibility";
+import { mapProductRowToPickerOption } from "@/features/products/picker-mappers";
+import type { ProductPickerOption } from "@/features/products/types";
+import { buildStockMap, buildUnitLabelMap } from "@/features/pos/mappers";
+import { mapServiceRowToQuotationOption } from "@/features/quotations/mappers";
+import type { QuotationServiceOption } from "@/features/quotations/types";
+import type { TableRow } from "@/types/database";
+
+import {
+  buildInventoryTracking,
+  mapJobOrderDetail,
+  mapJobOrderPartUsageToEntry,
+  mapJobOrderItemRowToDetail,
+  mapJobOrderMechanicRowToAssignment,
+  mapJobOrderRowToListItem,
+  mapStaffRowToMechanicOption,
+} from "@/features/job-orders/mappers";
+import type {
+  JobOrderDetail,
+  JobOrderFormOptions,
+  JobOrderItemDetail,
+  JobOrderListItem,
+  JobOrderMechanicOption,
+} from "@/features/job-orders/types";
+import { expandJobOrderStatusFilter } from "@/features/job-orders/utils";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
+
+type JobOrderRow = TableRow<"job_orders">;
+type JobOrderItemRow = TableRow<"job_order_items">;
+type JobOrderMechanicRow = TableRow<"job_order_mechanics">;
+type JobOrderPartUsageRow = TableRow<"job_order_part_usages">;
+type CustomerRow = Pick<TableRow<"customers">, "id" | "display_name">;
+type VehicleRow = TableRow<"vehicles">;
+type QuotationRow = Pick<TableRow<"quotations">, "id" | "quotation_number">;
+type InvoiceSummaryRow = Pick<
+  TableRow<"invoices">,
+  "id" | "invoice_number" | "status" | "total_amount" | "paid_amount" | "balance"
+>;
+type BusinessSettingsRow = Pick<
+  TableRow<"business_settings">,
+  | "allow_release_with_balance"
+  | "require_full_payment_before_release"
+  | "require_invoice_before_job_completion"
+  | "require_invoice_before_vehicle_release"
+>;
+type StaffRow = Pick<TableRow<"staff">, "id" | "first_name" | "last_name">;
+type ProductRow = Pick<TableRow<"products">, "id" | "name" | "sku" | "selling_price">;
+type ProductInventoryRow = Pick<TableRow<"products">, "id" | "reorder_level" | "shelf_location">;
+type ServiceRow = Pick<TableRow<"services">, "id" | "name" | "category" | "labor_price">;
+type InventoryStockRow = Pick<
+  TableRow<"inventory_stocks">,
+  "product_id" | "quantity_on_hand" | "available_quantity" | "reorder_level" | "shelf_location"
+>;
+type StockMovementRow = Pick<TableRow<"stock_movements">, "id" | "previous_quantity" | "new_quantity">;
+
+export async function listJobOrders(filters?: {
+  search?: string;
+  status?: JobOrderRow["status"] | "active" | "";
+}): Promise<JobOrderListItem[]> {
+  const { branchScope, supabase } = await getBranchScopedServerClient("job_orders:read");
+  let query = applyBranchFilter(
+    supabase
+      .from("job_orders")
+      .select("*")
+      .order("created_at", { ascending: false }),
+    branchScope.selectedBranchId,
+  );
+
+  if (filters?.status) {
+    const matchingStatuses = expandJobOrderStatusFilter(filters.status);
+    query =
+      matchingStatuses.length === 1
+        ? query.eq("status", matchingStatuses[0])
+        : query.in("status", matchingStatuses);
+  }
+
+  if (filters?.search) {
+    const escapedSearch = escapeSearchTerm(filters.search);
+    query = query.ilike("job_order_number", `%${escapedSearch}%`);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const jobOrders = (data ?? []) as JobOrderRow[];
+  const jobOrderIds = jobOrders.map((row) => row.id);
+  const customerIds = [...new Set(jobOrders.map((row) => row.customer_id))];
+  const vehicleIds = [...new Set(jobOrders.map((row) => row.vehicle_id))];
+  const quotationIds = [...new Set(jobOrders.flatMap((row) => (row.quotation_id ? [row.quotation_id] : [])))];
+
+  const [itemsByJobOrderId, mechanicCountMap, customerMap, vehicleMap, quotationMap, invoicedJobOrderIds] =
+    await Promise.all([
+    getJobOrderItemsMap(jobOrderIds),
+    getMechanicCountMap(jobOrderIds),
+    getCustomerNameMap(customerIds),
+    getVehicleLabelMap(vehicleIds),
+    getQuotationNumberMap(quotationIds),
+    getInvoicedJobOrderIdSet(jobOrderIds),
+  ]);
+
+  return jobOrders.map((row) =>
+    mapJobOrderRowToListItem({
+      row,
+      customerName: customerMap.get(row.customer_id) ?? "Unknown customer",
+      vehicleLabel: vehicleMap.get(row.vehicle_id) ?? "Unknown vehicle",
+      quotationNumber: row.quotation_id ? quotationMap.get(row.quotation_id) ?? null : null,
+      assignedMechanicCount: mechanicCountMap.get(row.id) ?? 0,
+      items: itemsByJobOrderId.get(row.id) ?? [],
+      hasInvoice: invoicedJobOrderIds.has(row.id),
+    }),
+  );
+}
+
+export const getJobOrderById = cache(async (jobOrderId: string): Promise<JobOrderDetail | null> => {
+  const { branchScope, context, supabase } = await getBranchScopedServerClient("job_orders:read");
+  const [
+    { data: jobOrder, error: jobOrderError },
+    { data: items, error: itemsError },
+    { data: mechanics, error: mechanicsError },
+    { data: usages, error: usagesError },
+    { data: invoice, error: invoiceError },
+  ] = await Promise.all([
+    applyBranchFilter(
+      supabase.from("job_orders").select("*"),
+      branchScope.selectedBranchId,
+    )
+      .eq("id", jobOrderId)
+      .maybeSingle(),
+    supabase
+      .from("job_order_items")
+      .select("*")
+      .eq("job_order_id", jobOrderId)
+      .order("line_number", { ascending: true }),
+    supabase
+      .from("job_order_mechanics")
+      .select("*")
+      .eq("job_order_id", jobOrderId)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("job_order_part_usages")
+      .select("*")
+      .eq("job_order_id", jobOrderId)
+      .order("created_at", { ascending: true }),
+    applyBranchFilter(
+      supabase
+        .from("invoices")
+        .select("id, invoice_number, status, total_amount, paid_amount, balance")
+        .eq("job_order_id", jobOrderId),
+      branchScope.selectedBranchId,
+    ).maybeSingle(),
+  ]);
+
+  if (jobOrderError) {
+    throw new Error(jobOrderError.message);
+  }
+
+  if (itemsError) {
+    throw new Error(itemsError.message);
+  }
+
+  if (mechanicsError) {
+    throw new Error(mechanicsError.message);
+  }
+
+  if (usagesError) {
+    throw new Error(usagesError.message);
+  }
+
+  if (invoiceError) {
+    throw new Error(invoiceError.message);
+  }
+
+  if (!jobOrder) {
+    return null;
+  }
+
+  const jobOrderRow = jobOrder as JobOrderRow;
+  const { data: settings, error: settingsError } = await supabase
+    .from("business_settings")
+    .select(
+      "allow_release_with_balance, require_full_payment_before_release, require_invoice_before_job_completion, require_invoice_before_vehicle_release",
+    )
+    .eq("branch_id", jobOrderRow.branch_id)
+    .maybeSingle();
+
+  if (settingsError) {
+    throw new Error(settingsError.message);
+  }
+
+  const itemRows = (items ?? []) as JobOrderItemRow[];
+  const mechanicRows = (mechanics ?? []) as JobOrderMechanicRow[];
+  const usageRows = (usages ?? []) as JobOrderPartUsageRow[];
+  const staffIds = [...new Set(mechanicRows.map((row) => row.staff_id))];
+  const checklistStaffIds = [
+    ...new Set(
+      itemRows.flatMap((row) =>
+        row.checklist_checked_by_staff_id ? [row.checklist_checked_by_staff_id] : [],
+      ),
+    ),
+  ];
+  const productIds = [
+    ...new Set(itemRows.flatMap((row) => (row.product_id ? [row.product_id] : []))),
+  ];
+  const stockMovementIds = [
+    ...new Set(usageRows.flatMap((row) => (row.stock_movement_id ? [row.stock_movement_id] : []))),
+  ];
+
+  const [customerMap, vehicleMap, quotationMap, staffMap, inventoryStockMap, productInventoryMap, stockMovementMap] =
+    await Promise.all([
+    getCustomerNameMap([jobOrderRow.customer_id]),
+    getVehicleLabelMap([jobOrderRow.vehicle_id]),
+    getQuotationNumberMap(jobOrderRow.quotation_id ? [jobOrderRow.quotation_id] : []),
+    getStaffNameMap([...new Set([...staffIds, ...checklistStaffIds])]),
+    getInventoryStockMap(jobOrderRow.branch_id, productIds),
+    getProductInventoryMap(productIds),
+    getStockMovementMap(stockMovementIds),
+  ]);
+
+  const usageHistoryMap = new Map<string, ReturnType<typeof mapJobOrderPartUsageToEntry>[]>();
+
+  for (const row of usageRows) {
+    const currentEntries = usageHistoryMap.get(row.job_order_item_id) ?? [];
+    currentEntries.push(
+      mapJobOrderPartUsageToEntry({
+        usageRow: row,
+        movementRow: row.stock_movement_id
+          ? stockMovementMap.get(row.stock_movement_id) ?? null
+          : null,
+      }),
+    );
+    usageHistoryMap.set(row.job_order_item_id, currentEntries);
+  }
+
+  const itemDetails = itemRows.map((row) =>
+    mapJobOrderItemRowToDetail({
+      row,
+      checklistCheckedByName: row.checklist_checked_by_staff_id
+        ? staffMap.get(row.checklist_checked_by_staff_id) ?? null
+        : null,
+      inventoryTracking: buildInventoryTracking({
+        itemRow: row,
+        stockRow: row.product_id ? inventoryStockMap.get(row.product_id) ?? null : null,
+        productRow: row.product_id ? productInventoryMap.get(row.product_id) ?? null : null,
+        usageHistory: usageHistoryMap.get(row.id) ?? [],
+      }),
+    }),
+  );
+
+  return mapJobOrderDetail({
+    row: jobOrderRow,
+    customerName: customerMap.get(jobOrderRow.customer_id) ?? "Unknown customer",
+    vehicleLabel: vehicleMap.get(jobOrderRow.vehicle_id) ?? "Unknown vehicle",
+    quotationNumber: jobOrderRow.quotation_id
+      ? quotationMap.get(jobOrderRow.quotation_id) ?? null
+      : null,
+    invoice: (invoice as InvoiceSummaryRow | null) ?? null,
+    settings: (settings as BusinessSettingsRow | null) ?? null,
+    items: itemDetails,
+    mechanics: mechanicRows.map((row) =>
+      mapJobOrderMechanicRowToAssignment(
+        row,
+        staffMap.get(row.staff_id) ?? "Unknown mechanic",
+      ),
+    ),
+    canUpdateChecklistRole: context.capabilities.includes("job_orders:write"),
+    canUpdateStatusRole: context.capabilities.includes("job_orders:write"),
+    canManageBillingRole: context.capabilities.includes("invoices:write"),
+  });
+});
+
+export const getJobOrderMechanicOptions = cache(async (): Promise<JobOrderMechanicOption[]> => {
+  const { branchScope, supabase } = await getBranchScopedServerClient("job_orders:write");
+  const { data: mechanics, error } = await applyBranchFilter(
+    supabase
+      .from("staff")
+      .select("id, first_name, last_name")
+      .eq("status", "active")
+      .eq("role", "mechanic")
+      .order("last_name", { ascending: true }),
+    branchScope.selectedBranchId,
+  );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return ((mechanics ?? []) as StaffRow[]).map(mapStaffRowToMechanicOption);
+});
+
+export const getJobOrderItemCatalogOptions = cache(async (): Promise<{
+  products: ProductPickerOption[];
+  services: QuotationServiceOption[];
+  permissions: JobOrderFormOptions["permissions"];
+}> => {
+  const { branchScope, context, supabase } = await getBranchScopedServerClient("job_orders:write");
+  const sharingSettings = await getCatalogSharingSettings(supabase, branchScope.selectedBranchId);
+  const [
+    { data: products, error: productsError },
+    { data: services, error: servicesError },
+    { data: units, error: unitsError },
+    { data: stocks, error: stocksError },
+  ] = await Promise.all([
+    applyCatalogVisibilityFilter(
+      supabase
+        .from("products")
+        .select("*")
+        .eq("status", "active")
+        .order("name", { ascending: true }),
+      {
+        branchId: branchScope.selectedBranchId,
+        includeGlobal: sharingSettings.allowGlobalProductCatalog,
+      },
+    ),
+    applyCatalogVisibilityFilter(
+      supabase
+        .from("services")
+        .select("*")
+        .eq("status", "active")
+        .order("name", { ascending: true }),
+      {
+        branchId: branchScope.selectedBranchId,
+        includeGlobal: sharingSettings.allowGlobalServiceCatalog,
+      },
+    ),
+    supabase.from("units").select("id, name, abbreviation").order("name", { ascending: true }),
+    branchScope.selectedBranchId
+      ? supabase
+          .from("inventory_stocks")
+          .select("product_id, available_quantity, reorder_level, shelf_location")
+          .eq("branch_id", branchScope.selectedBranchId)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (productsError) {
+    throw new Error(productsError.message);
+  }
+
+  if (servicesError) {
+    throw new Error(servicesError.message);
+  }
+
+  if (unitsError) {
+    throw new Error(unitsError.message);
+  }
+
+  if (stocksError) {
+    throw new Error(stocksError.message);
+  }
+
+  type UnitRow = Pick<TableRow<"units">, "id" | "name" | "abbreviation">;
+  type StockRow = Pick<
+    TableRow<"inventory_stocks">,
+    "product_id" | "available_quantity" | "reorder_level" | "shelf_location"
+  >;
+  type ProductRow = TableRow<"products">;
+  type ServiceRow = TableRow<"services">;
+
+  const unitLabelMap = buildUnitLabelMap((units ?? []) as UnitRow[]);
+  const stockMap = buildStockMap((stocks ?? []) as StockRow[]);
+
+  return {
+    products: ((products ?? []) as ProductRow[]).map((row) =>
+      mapProductRowToPickerOption(row, {
+        unitLabel: unitLabelMap.get(row.unit_id) ?? null,
+        stock: stockMap.get(row.id) ?? null,
+      }),
+    ),
+    services: ((services ?? []) as ServiceRow[]).map(mapServiceRowToQuotationOption),
+    permissions: {
+      canCreateProducts: context.capabilities.includes("products:write"),
+      canCreateServices: context.capabilities.includes("services:write"),
+    },
+  };
+});
+
+export async function getJobOrderFormOptions(): Promise<JobOrderFormOptions> {
+  const [mechanics, catalog] = await Promise.all([
+    getJobOrderMechanicOptions(),
+    getJobOrderItemCatalogOptions(),
+  ]);
+
+  return {
+    mechanics,
+    products: catalog.products,
+    services: catalog.services,
+    permissions: catalog.permissions,
+  };
+}
+
+async function getJobOrderItemsMap(jobOrderIds: string[]) {
+  if (jobOrderIds.length === 0) {
+    return new Map<string, JobOrderItemDetail[]>();
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("job_order_items")
+    .select("*")
+    .in("job_order_id", jobOrderIds)
+    .order("line_number", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const map = new Map<string, JobOrderItemDetail[]>();
+
+  for (const row of (data ?? []) as JobOrderItemRow[]) {
+    const currentItems = map.get(row.job_order_id) ?? [];
+    currentItems.push(mapJobOrderItemRowToDetail({ row }));
+    map.set(row.job_order_id, currentItems);
+  }
+
+  return map;
+}
+
+async function getInvoicedJobOrderIdSet(jobOrderIds: string[]) {
+  if (jobOrderIds.length === 0) {
+    return new Set<string>();
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("job_order_id")
+    .in("job_order_id", jobOrderIds)
+    .neq("status", "cancelled");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return new Set(
+    ((data ?? []) as { job_order_id: string | null }[])
+      .map((row) => row.job_order_id)
+      .filter((jobOrderId): jobOrderId is string => Boolean(jobOrderId)),
+  );
+}
+
+async function getMechanicCountMap(jobOrderIds: string[]) {
+  if (jobOrderIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("job_order_mechanics")
+    .select("id, job_order_id")
+    .in("job_order_id", jobOrderIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const map = new Map<string, number>();
+
+  for (const row of (data ?? []) as Pick<JobOrderMechanicRow, "id" | "job_order_id">[]) {
+    map.set(row.job_order_id, (map.get(row.job_order_id) ?? 0) + 1);
+  }
+
+  return map;
+}
+
+async function getCustomerNameMap(customerIds: string[]) {
+  if (customerIds.length === 0) {
+    return new Map<string, string>();
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("customers")
+    .select("id, display_name")
+    .in("id", customerIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return new Map(((data ?? []) as CustomerRow[]).map((row) => [row.id, row.display_name]));
+}
+
+async function getVehicleLabelMap(vehicleIds: string[]) {
+  if (vehicleIds.length === 0) {
+    return new Map<string, string>();
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const { data, error } = await supabase.from("vehicles").select("*").in("id", vehicleIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return new Map(
+    ((data ?? []) as VehicleRow[]).map((vehicle) => {
+      return [vehicle.id, formatVehicleLabel(vehicle)];
+    }),
+  );
+}
+
+async function getQuotationNumberMap(quotationIds: string[]) {
+  if (quotationIds.length === 0) {
+    return new Map<string, string>();
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("quotations")
+    .select("id, quotation_number")
+    .in("id", quotationIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return new Map(((data ?? []) as QuotationRow[]).map((row) => [row.id, row.quotation_number]));
+}
+
+async function getStaffNameMap(staffIds: string[]) {
+  if (staffIds.length === 0) {
+    return new Map<string, string>();
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("staff")
+    .select("id, first_name, last_name")
+    .in("id", staffIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return new Map(
+    ((data ?? []) as StaffRow[]).map((row) => {
+      const option = mapStaffRowToMechanicOption(row);
+      return [option.id, option.label];
+    }),
+  );
+}
+
+async function getInventoryStockMap(branchId: string, productIds: string[]) {
+  if (productIds.length === 0) {
+    return new Map<string, InventoryStockRow>();
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("inventory_stocks")
+    .select("product_id, quantity_on_hand, available_quantity, reorder_level, shelf_location")
+    .eq("branch_id", branchId)
+    .in("product_id", productIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return new Map(
+    ((data ?? []) as InventoryStockRow[]).map((row) => [row.product_id, row]),
+  );
+}
+
+async function getProductInventoryMap(productIds: string[]) {
+  if (productIds.length === 0) {
+    return new Map<string, ProductInventoryRow>();
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("products")
+    .select("id, reorder_level, shelf_location")
+    .in("id", productIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return new Map(
+    ((data ?? []) as ProductInventoryRow[]).map((row) => [row.id, row]),
+  );
+}
+
+async function getStockMovementMap(stockMovementIds: string[]) {
+  if (stockMovementIds.length === 0) {
+    return new Map<string, StockMovementRow>();
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("stock_movements")
+    .select("id, previous_quantity, new_quantity")
+    .in("id", stockMovementIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return new Map(
+    ((data ?? []) as StockMovementRow[]).map((row) => [row.id, row]),
+  );
+}
+
+function escapeSearchTerm(value: string) {
+  return value.replaceAll(",", "\\,");
+}
+
+function formatVehicleLabel(vehicle: VehicleRow) {
+  const platePart = vehicle.plate_number ? ` · ${vehicle.plate_number}` : "";
+  const yearPart = vehicle.year ? ` (${vehicle.year})` : "";
+  return `${vehicle.make} ${vehicle.model}${yearPart}${platePart}`;
+}

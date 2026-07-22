@@ -1,0 +1,42 @@
+---
+description: Entity detail page design patterns (customer details is the reference)
+globs: src/features/**/components/**/*detail*.tsx,src/features/**/components/**/*-tab.tsx,src/components/shared/entity-detail/**/*,src/app/(dashboard)/**/[id]/**/*.tsx,src/app/(dashboard)/**/[customerId]/**/*.tsx,src/app/(dashboard)/**/[vehicleId]/**/*.tsx
+alwaysApply: false
+---
+
+# Entity detail patterns
+
+Full guide: `docs/entity-detail-design-patterns.md`. Reference UIs: customer, vehicle, quotation, job order, invoice, and payment details.
+
+## Layout
+
+- Use `EntityDetailLayout` (`header` + main tabs/tables + sticky `sidebar`).
+- Do **not** add a third column for back navigation.
+
+## Header
+
+- `backHref` → circular chevron left of the title (listing URL, not `router.back()`).
+- Identity facts (status, type, member-since) → `MetadataPill` in the header only.
+- Actions → `TableRowActionsMenu` (`...`) only; no standalone Edit/Add buttons.
+- Form-only screens without a detail page (e.g. product create/edit) use the same circular back on `PageHeader` via `backHref`.
+
+## Overview sidebar
+
+- `EntityDetailField`: label left, value right; empty → `-`.
+- Values: medium slate gray (`text-slate-600`), not bold black.
+- Only real/editable fields (or real system values). No placeholders (advisor, tags, secondary phone, etc.).
+- Never repeat header pills. Never duplicate counts that belong in a tab.
+- Hide whole sections when they have nothing useful.
+
+## Tables (every related-record tab)
+
+- Always `EntityDataTable` + `FilterBar` (`SearchInput` + `NativeSelect`s).
+- Lean columns (about 4–6). Fold secondary labels under the primary cell (e.g. type under document #).
+- If the only action is view → **clickable row**, no Actions column.
+- Nested detail → expandable row + `colSpan` panel (not a separate list).
+- Keep equal cell padding on first/last columns (don’t flush content to the edges).
+- Empty cells → `-`. Empty states for no data and for no filter matches.
+
+## Checklist
+
+Back · overflow actions · no sidebar dupes · table + filters · lean columns · clickable view rows · `-` empties · edge padding

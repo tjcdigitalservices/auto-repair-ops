@@ -1,0 +1,61 @@
+import type { TableRow } from "@/types/database";
+
+import type {
+  BusinessSettingsValues,
+  SettingsDocumentSequence,
+  SettingsDocumentSequenceKey,
+} from "@/features/settings/types";
+import { DEFAULT_BRAND_PACK, sanitizeBrandName } from "@/lib/branding/types";
+import { buildBusinessLogoUrl } from "@/lib/storage";
+
+type BusinessSettingsRow = TableRow<"business_settings">;
+type DocumentSequenceRow = TableRow<"document_sequences">;
+
+const DOCUMENT_SEQUENCE_LABELS: Record<SettingsDocumentSequenceKey, string> = {
+  quotation: "Quotation numbers",
+  job_order: "Job order numbers",
+  invoice: "Invoice numbers",
+  sale: "POS sale numbers",
+};
+
+export function mapBusinessSettingsRowToValues(
+  row: BusinessSettingsRow,
+): BusinessSettingsValues {
+  return {
+    businessName: sanitizeBrandName(row.business_name, DEFAULT_BRAND_PACK.companyName),
+    businessLogoUrl: buildBusinessLogoUrl(row.business_logo_path, row.updated_at),
+    businessMarkUrl: buildBusinessLogoUrl(row.business_mark_path, row.updated_at),
+    businessAddress: row.business_address ?? "",
+    businessContact: row.business_contact ?? "",
+    businessEmail: row.business_email ?? "",
+    businessVatRegistrationNo: row.business_vat_registration_no ?? "",
+    receiptFooter: /say auto care/i.test(row.receipt_footer ?? "")
+      ? DEFAULT_BRAND_PACK.receiptFooterDefault
+      : (row.receipt_footer ?? ""),
+    defaultTaxRate: String(row.default_tax_rate),
+    allowGlobalProductCatalog: row.allow_global_product_catalog ?? false,
+    allowGlobalServiceCatalog: row.allow_global_service_catalog ?? false,
+    allowPartialPayments: row.allow_partial_payments,
+    requireInvoiceBeforeJobCompletion: row.require_invoice_before_job_completion,
+    requireInvoiceBeforeVehicleRelease: row.require_invoice_before_vehicle_release,
+    allowReleaseWithBalance: row.allow_release_with_balance,
+    requireFullPaymentBeforeRelease: row.require_full_payment_before_release,
+    requireAdditionalItemPreApproval: row.require_additional_item_preapproval,
+    enableBarcodeSupport: row.enable_barcode_support,
+    enableShelfLocation: row.enable_shelf_location,
+    payrollStandardDailyHours: String(row.payroll_standard_daily_hours ?? 8),
+    payrollHolidayPremiumRate: String((row.payroll_holiday_premium_rate ?? 0.3) * 100),
+  };
+}
+
+export function mapDocumentSequenceRowToItem(
+  row: DocumentSequenceRow,
+): SettingsDocumentSequence {
+  return {
+    key: row.key as SettingsDocumentSequenceKey,
+    label: DOCUMENT_SEQUENCE_LABELS[row.key as SettingsDocumentSequenceKey] ?? row.key,
+    prefix: row.prefix,
+    padding: row.padding,
+    lastValue: Number(row.last_value),
+  };
+}

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Auto Repair Ops — Multi-Tenant Architecture</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --panel-2: #334155;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-2: #a78bfa;
+      --ok: #34d399;
+      --warn: #fbbf24;
+      --line: #475569;
+      --platform: #f472b6;
+      --tenant: #38bdf8;
+      --branch: #34d399;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(ellipse at top, #1e293b 0%, var(--bg) 55%);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 2rem 1.25rem 4rem;
+    }
+
+    .wrap { max-width: 920px; margin: 0 auto; }
+
+    h1 {
+      font-size: clamp(1.6rem, 4vw, 2.3rem);
+      letter-spacing: -0.03em;
+      margin: 0 0 0.5rem;
+    }
+    .lede { color: var(--muted); font-size: 1.05rem; margin-bottom: 2.5rem; }
+
+    h2 {
+      margin: 2.75rem 0 0.75rem;
+      font-size: 1.25rem;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+    }
+    p { color: #cbd5e1; }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--panel-2);
+      border-radius: 1rem;
+      padding: 1.25rem 1.35rem;
+      margin: 1rem 0;
+    }
+
+    /* Hierarchy diagram */
+    .tree {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      align-items: stretch;
+    }
+    .node {
+      border-radius: 0.85rem;
+      padding: 0.9rem 1.1rem;
+      border: 1px solid transparent;
+      position: relative;
+    }
+    .node strong { display: block; font-size: 1rem; }
+    .node span { color: var(--muted); font-size: 0.88rem; }
+    .node.platform { background: color-mix(in srgb, var(--platform) 18%, var(--panel)); border-color: color-mix(in srgb, var(--platform) 45%, transparent); }
+    .node.tenant { background: color-mix(in srgb, var(--tenant) 16%, var(--panel)); border-color: color-mix(in srgb, var(--tenant) 45%, transparent); margin-left: 1.5rem; }
+    .node.branch { background: color-mix(in srgb, var(--branch) 14%, var(--panel)); border-color: color-mix(in srgb, var(--branch) 40%, transparent); margin-left: 3rem; }
+    .node.staff { background: var(--panel-2); margin-left: 4.5rem; }
+
+    .arrow {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+      letter-spacing: 0.04em;
+      margin: 0.35rem 0;
+    }
+
+    /* Flow steps */
+    .flow {
+      display: grid;
+      gap: 0.75rem;
+    }
+    @media (min-width: 720px) {
+      .flow { grid-template-columns: repeat(4, 1fr); }
+      .flow-step::after {
+        content: "→";
+        position: absolute;
+        right: -0.55rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--muted);
+        font-size: 1.1rem;
+      }
+      .flow-step:last-child::after { content: none; }
+    }
+    .flow-step {
+      background: var(--panel);
+      border: 1px solid var(--panel-2);
+      border-radius: 0.85rem;
+      padding: 0.9rem;
+      position: relative;
+      min-height: 7rem;
+    }
+    .flow-step .n {
+      display: inline-flex;
+      width: 1.5rem;
+      height: 1.5rem;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #0f172a;
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-bottom: 0.45rem;
+    }
+    .flow-step strong { display: block; font-size: 0.92rem; margin-bottom: 0.25rem; }
+    .flow-step p { margin: 0; font-size: 0.82rem; color: var(--muted); }
+
+    /* Localhost vs prod comparison */
+    .compare {
+      display: grid;
+      gap: 1rem;
+    }
+    @media (min-width: 720px) {
+      .compare { grid-template-columns: 1fr 1fr; }
+    }
+    .compare .card h3 {
+      margin: 0 0 0.75rem;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.2rem 0.45rem;
+      border-radius: 999px;
+    }
+    .badge.local { background: color-mix(in srgb, var(--warn) 25%, transparent); color: var(--warn); }
+    .badge.prod { background: color-mix(in srgb, var(--ok) 25%, transparent); color: var(--ok); }
+
+    code, .url {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.84em;
+      background: #0b1220;
+      padding: 0.15rem 0.4rem;
+      border-radius: 0.35rem;
+      color: #e2e8f0;
+    }
+    .url-block {
+      display: block;
+      margin: 0.45rem 0;
+      padding: 0.65rem 0.75rem;
+      background: #0b1220;
+      border-radius: 0.5rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.8rem;
+      color: #7dd3fc;
+      word-break: break-all;
+    }
+    .url-block em { color: var(--warn); font-style: normal; }
+
+    ul.plain { padding-left: 1.1rem; color: #cbd5e1; }
+    ul.plain li { margin: 0.35rem 0; }
+
+    .callout {
+      border-left: 3px solid var(--accent-2);
+      padding: 0.75rem 1rem;
+      background: color-mix(in srgb, var(--accent-2) 10%, var(--panel));
+      border-radius: 0 0.75rem 0.75rem 0;
+      margin: 1rem 0;
+    }
+    .callout strong { color: #ddd6fe; }
+
+    footer {
+      margin-top: 3rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>How this SaaS is structured</h1>
+    <p class="lede">
+      One app codebase. Many auto-repair shops (tenants). Each shop can have multiple branches.
+      Middleware only answers one question: <em>“Which shop is this request for?”</em>
+    </p>
+
+    <h2>1. The ownership hierarchy</h2>
+    <div class="card tree">
+      <div class="node platform">
+        <strong>Platform (you / Cursor ops)</strong>
+        <span>Super admin at <code>/platform</code> — creates tenants, suspends subscriptions</span>
+      </div>
+      <div class="arrow">owns many ↓</div>
+      <div class="node tenant">
+        <strong>Tenant A — “Acme Auto”</strong>
+        <span>slug: <code>acme</code> · one subscription · its own branding &amp; catalog</span>
+      </div>
+      <div class="node tenant">
+        <strong>Tenant B — “Legacy Shop”</strong>
+        <span>slug: <code>legacy</code> · bootstrap tenant on a fresh DB</span>
+      </div>
+      <div class="arrow">each tenant owns ↓</div>
+      <div class="node branch">
+        <strong>Main Branch</strong>
+        <span>default location · public website uses this branch’s settings</span>
+      </div>
+      <div class="node branch">
+        <strong>North Branch</strong>
+        <span>another location · same shop, separate stock / customers / JOs</span>
+      </div>
+      <div class="arrow">each branch has ↓</div>
+      <div class="node staff">
+        <strong>Staff</strong>
+        <span>owner / admin / mechanic… — always tied to a <em>tenant</em> + usually a <em>branch</em></span>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>Key idea:</strong> “Owner” means tenant owner (all branches in <em>their</em> shop) —
+      not platform owner. Platform people are in <code>platform_admins</code>, separate from shop staff.
+    </div>
+
+    <h2>2. What middleware does (and doesn’t)</h2>
+    <div class="flow">
+      <div class="flow-step">
+        <div class="n">1</div>
+        <strong>Request arrives</strong>
+        <p>Browser hits a URL on your Next.js app.</p>
+      </div>
+      <div class="flow-step">
+        <div class="n">2</div>
+        <strong>Resolve tenant slug</strong>
+        <p>Path, subdomain, query, cookie, or default <code>legacy</code>.</p>
+      </div>
+      <div class="flow-step">
+        <div class="n">3</div>
+        <strong>Stamp the request</strong>
+        <p>Sets header <code>x-tenant-slug</code> (+ cookie). Does not query the DB.</p>
+      </div>
+      <div class="flow-step">
+        <div class="n">4</div>
+        <strong>Page loads data</strong>
+        <p>Server code uses that slug to load branding, branch, catalog for that shop.</p>
+      </div>
+    </div>
+    <p>Middleware is a labeler — not login, not business rules, not billing.</p>
+
+    <h2>3. Localhost vs production (same code)</h2>
+    <div class="compare">
+      <div class="card">
+        <h3><span class="badge local">Localhost</span> No real subdomain</h3>
+        <p>Most of the time you just open:</p>
+        <div class="url-block">http://localhost:3000</div>
+        <p>Middleware has no subdomain, so it uses:</p>
+        <ul class="plain">
+          <li>Cookie if set, else</li>
+          <li><code>NEXT_PUBLIC_DEFAULT_TENANT_SLUG</code>, else</li>
+          <li><strong><code>legacy</code></strong></li>
+        </ul>
+        <p>To open a specific shop without DNS:</p>
+        <div class="url-block">http://localhost:3000/t/<em>acme</em></div>
+        <div class="url-block">http://localhost:3000/?tenant=<em>acme</em></div>
+      </div>
+      <div class="card">
+        <h3><span class="badge prod">Production</span> Subdomains (optional)</h3>
+        <p>When you set <code>NEXT_PUBLIC_ROOT_DOMAIN=example.com</code>:</p>
+        <div class="url-block">https://<em>acme</em>.example.com</div>
+        <p>Middleware reads subdomain <code>acme</code> as the tenant slug.</p>
+        <p>Path style still works too:</p>
+        <div class="url-block">https://app.example.com/t/<em>acme</em></div>
+        <p>Wildcard DNS + TLS are ops setup (documented in white-label docs) — not needed for local dev.</p>
+      </div>
+    </div>
+
+    <h2>4. Two different “who am I?” questions</h2>
+    <div class="card">
+      <ul class="plain">
+        <li>
+          <strong>Public website</strong> — “Which shop’s marketing site is this?”
+          → answered by <em>middleware slug</em> (legacy /acme / subdomain)
+        </li>
+        <li>
+          <strong>Logged-in ops app</strong> — “Which staff user is this?”
+          → answered by Auth + <code>staff.tenant_id</code> / <code>platform_admins</code>
+        </li>
+      </ul>
+      <p>
+        So on localhost, visiting <code>/login</code> as a staff user from Acme still scopes
+        their dashboard to Acme’s data via the database — even if the public site cookie says <code>legacy</code>.
+      </p>
+    </div>
+
+    <h2>5. Tiny mental model</h2>
+    <div class="card">
+      <pre style="margin:0; white-space:pre-wrap; font-family:ui-monospace,monospace; font-size:0.85rem; color:#e2e8f0;">
+Platform admin
+   └── Tenants (subscriptions)
+         ├── Branding (colors, logos, names)
+         └── Branches (locations)
+               └── Customers, job orders, inventory, staff…
+      </pre>
+    </div>
+
+    <div class="callout">
+      <strong>Try this locally:</strong> open
+      <code>http://localhost:3000</code> (legacy public site) and
+      <code>http://localhost:3000/platform</code> after signing in as a platform admin.
+      Same app, two layers.
+    </div>
+
+    <footer>
+      Generated for the auto-repair-ops-platform white-label migration.
+      Open this file in any browser (File → Open).
+    </footer>
+  </div>
+</body>
+</html>

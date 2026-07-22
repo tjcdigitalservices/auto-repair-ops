@@ -1,0 +1,449 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { CalendarDays, Clock, Mail, MapPin, Menu, PhoneCall, X } from 'lucide-react';
+
+import { BrandLogo } from '@/components/shared/brand-logo';
+import { Button } from '@/components/ui/button';
+import type { WebsiteShellData } from '@/features/website/types';
+import type { StoreHoursDay } from '@/lib/branding/types';
+import { cn } from '@/lib/utils';
+
+const publicNavLinks = [
+  {
+    href: '/',
+    label: 'Home',
+    exact: true,
+  },
+  {
+    href: '/#services',
+    label: 'Services',
+  },
+  {
+    href: '/catalog',
+    label: 'Catalog',
+  },
+  {
+    href: '/#brands',
+    label: 'Brands',
+  },
+  {
+    href: '/#about-us',
+    label: 'About Us',
+  },
+  {
+    href: '/#why-choose-us',
+    label: 'Why Choose Us',
+  },
+  {
+    href: '/#reviews',
+    label: 'Reviews',
+  },
+  {
+    href: '/contact',
+    label: 'Contact',
+  },
+] as const;
+
+function isActivePath(pathname: string, href: string, exact?: boolean) {
+  if (href.startsWith('/#')) {
+    return false;
+  }
+
+  if (exact) {
+    return pathname === href;
+  }
+
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function PublicNavLink({
+  href,
+  label,
+  exact,
+  onSelect,
+}: {
+  href: string;
+  label: string;
+  exact?: boolean;
+  onSelect?: () => void;
+}) {
+  const pathname = usePathname();
+  const isActive = isActivePath(pathname, href, exact);
+
+  return (
+    <Link
+      href={href}
+      onClick={onSelect}
+      aria-current={isActive ? 'page' : undefined}
+      className={cn(
+        'group inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-sm font-semibold uppercase tracking-[0.14em] transition',
+        isActive ? 'text-white' : 'text-white/78 hover:text-white',
+      )}
+    >
+      <span>{label}</span>
+      <span
+        className={cn(
+          'h-px w-0 bg-brand-red transition-all duration-200',
+          isActive ? 'w-10' : 'group-hover:w-6',
+        )}
+      />
+    </Link>
+  );
+}
+
+function FooterSectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mb-2.5 md:mb-4">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white sm:text-sm sm:tracking-[0.24em]">
+        {children}
+      </p>
+      <span className="mt-1.5 block h-px w-8 bg-brand-red md:mt-2 md:w-10" aria-hidden="true" />
+    </div>
+  );
+}
+
+function FooterSection({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={cn('pb-5 last:pb-0 md:pb-0', className)}>
+      {children}
+    </section>
+  );
+}
+
+function FooterIconBadge({
+  icon: Icon,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+}) {
+  return (
+    <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-brand-red/40 bg-brand-red/10 text-brand-red">
+      <Icon className="size-4 shrink-0" />
+    </span>
+  );
+}
+
+function FooterLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="text-[13px] leading-5 text-[#a8b0c2] transition hover:text-white md:text-sm md:leading-6 md:text-white/70"
+    >
+      {label}
+    </Link>
+  );
+}
+
+function FacebookIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M13.5 8.5V6.75c0-.69.56-1.25 1.25-1.25H16V3h-2.03c-2.07 0-3.72 1.68-3.72 3.75V8.5H9v2.75h1.25V21h3.25v-9.75H16l.5-2.75H13.5Z" />
+    </svg>
+  );
+}
+
+function FooterContactRow({
+  icon: Icon,
+  href,
+  external,
+  ariaLabel,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  href?: string;
+  external?: boolean;
+  ariaLabel?: string;
+  children: React.ReactNode;
+}) {
+  const content = (
+    <>
+      <FooterIconBadge icon={Icon} />
+      <span className="min-w-0 self-center text-sm leading-snug text-[#a8b0c2] transition group-hover:text-white md:text-white/70">
+        {children}
+      </span>
+    </>
+  );
+  const rowClassName = 'group flex items-start gap-3';
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        aria-label={ariaLabel}
+        className={rowClassName}
+        {...(external
+          ? { target: '_blank', rel: 'noopener noreferrer' }
+          : undefined)}
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return <div className={rowClassName}>{content}</div>;
+}
+
+function formatPhoneHref(value: string) {
+  const digits = value.replace(/\D/g, '');
+
+  if (!digits) {
+    return undefined;
+  }
+
+  if (digits.startsWith('0')) {
+    return `tel:+63${digits.slice(1)}`;
+  }
+
+  return `tel:+${digits}`;
+}
+
+function FooterHoursRow({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-start gap-2.5 py-2 first:pt-0 last:pb-0 md:gap-3 md:py-3">
+      <FooterIconBadge icon={Icon} />
+      <div className="min-w-0 space-y-0.5">
+        <p className="text-[13px] font-medium leading-snug text-white md:text-sm">{label}</p>
+        <p className="text-[13px] leading-snug text-[#a8b0c2] md:text-sm md:text-white/70">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function summarizeStoreHours(storeHours: StoreHoursDay[]) {
+  if (storeHours.length === 0) {
+    return [{ label: 'Hours', value: '—', icon: Clock as React.ComponentType<{ className?: string }> }];
+  }
+
+  const groups: Array<{ days: string[]; hours: string }> = [];
+  for (const entry of storeHours) {
+    const last = groups[groups.length - 1];
+    if (last && last.hours === entry.hours) {
+      last.days.push(entry.day);
+    } else {
+      groups.push({ days: [entry.day], hours: entry.hours });
+    }
+  }
+
+  return groups.map((group, index) => ({
+    label:
+      group.days.length === 1
+        ? group.days[0]
+        : `${group.days[0]} – ${group.days[group.days.length - 1]}`,
+    value: group.hours,
+    icon: index === 0 ? Clock : CalendarDays,
+  }));
+}
+
+function FooterStoreHoursCard({ storeHours }: { storeHours: StoreHoursDay[] }) {
+  const rows = summarizeStoreHours(storeHours);
+
+  return (
+    <div className="space-y-0">
+      {rows.map((row) => (
+        <FooterHoursRow
+          key={`${row.label}-${row.value}`}
+          icon={row.icon}
+          label={row.label}
+          value={row.value}
+        />
+      ))}
+    </div>
+  );
+}
+
+export function PublicSiteShell({
+  shellData,
+  children,
+}: {
+  shellData: WebsiteShellData;
+  children: React.ReactNode;
+}) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const websiteLogoSrc = shellData.businessLogoUrl || shellData.logoSrc;
+  const displayName = shellData.businessName || shellData.companyName;
+
+  return (
+    <div className="min-h-screen overflow-x-hidden bg-[#030B18] text-white">
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#030B18]/84 backdrop-blur-xl">
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-4 px-4 py-4 sm:px-6 lg:px-8">
+          <Link href="/" className="flex min-w-0 shrink-0 items-center">
+            <BrandLogo
+              src={websiteLogoSrc}
+              alt={displayName}
+              width={320}
+              height={120}
+              className="h-[3.08rem] w-auto max-w-[206px] shrink-0 object-contain sm:h-[3.36rem] sm:max-w-[240px] lg:h-[3.78rem] lg:max-w-[278px]"
+              priority
+              sizes="(max-width: 639px) 206px, (max-width: 1023px) 240px, 278px"
+              surface="dark"
+            />
+          </Link>
+
+          <nav className="hidden min-w-0 flex-1 items-center justify-center gap-4 xl:gap-5 lg:flex">
+            {publicNavLinks.map((link) => (
+              <PublicNavLink
+                key={link.href}
+                href={link.href}
+                label={link.label}
+                exact={'exact' in link ? link.exact : undefined}
+              />
+            ))}
+          </nav>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="ml-auto rounded-2xl border border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white lg:hidden"
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileMenuOpen}
+            onClick={() => setMobileMenuOpen((current) => !current)}
+          >
+            {mobileMenuOpen ? (
+              <X className="size-5" />
+            ) : (
+              <Menu className="size-5" />
+            )}
+          </Button>
+        </div>
+
+        {mobileMenuOpen ? (
+          <div className="border-t border-white/10 bg-[#061326]/96 px-4 py-4 shadow-[0_24px_48px_rgba(0,0,0,0.28)] lg:hidden">
+            <nav className="mx-auto flex w-full max-w-7xl flex-col gap-3">
+              {publicNavLinks.map((link) => (
+                <PublicNavLink
+                  key={link.href}
+                  href={link.href}
+                  label={link.label}
+                  exact={'exact' in link ? link.exact : undefined}
+                  onSelect={() => setMobileMenuOpen(false)}
+                />
+              ))}
+            </nav>
+          </div>
+        ) : null}
+      </header>
+
+      <main className="flex-1 bg-[#030B18]">{children}</main>
+
+      <footer className="overflow-x-hidden bg-[#020817] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_42%),linear-gradient(180deg,#031024_0%,#020817_100%)]">
+        <div className="mx-auto max-w-7xl px-5 py-8 md:px-6 md:py-14 lg:px-8">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-5 md:grid-cols-2 md:gap-x-8 md:gap-y-10 lg:grid-cols-[minmax(0,1.2fr)_0.8fr_1fr_0.9fr]">
+            <FooterSection className="col-span-2 space-y-3 md:col-span-2 md:space-y-5 lg:col-span-1">
+              <BrandLogo
+                src={websiteLogoSrc}
+                alt={displayName}
+                width={320}
+                height={120}
+                className="h-10 w-auto max-w-[9rem] object-contain sm:max-w-[10rem] md:h-12 md:max-w-[210px]"
+                surface="dark"
+              />
+              <p className="max-w-sm text-sm leading-relaxed text-[#a8b0c2] md:max-w-md md:leading-7 md:text-white/68">
+                {shellData.tagline ||
+                  'Professional auto care and repair services you can trust. Quality work. Honest service.'}
+              </p>
+            </FooterSection>
+
+            <FooterSection className="col-span-1 md:col-span-1 md:row-start-2 md:col-start-1 lg:col-start-auto lg:row-start-auto">
+              <FooterSectionHeading>Quick Links</FooterSectionHeading>
+              <div className="flex flex-col gap-1.5 md:gap-3">
+                {publicNavLinks.map((link) => (
+                  <FooterLink
+                    key={link.href}
+                    href={link.href}
+                    label={link.label}
+                  />
+                ))}
+              </div>
+            </FooterSection>
+
+            <FooterSection className="col-span-1 md:col-span-2 md:row-start-3 lg:col-span-1 lg:row-start-auto lg:col-start-auto">
+              <FooterSectionHeading>Store Hours</FooterSectionHeading>
+              <FooterStoreHoursCard storeHours={shellData.storeHours} />
+            </FooterSection>
+
+            <FooterSection className="col-span-2 md:col-span-1 md:row-start-2 md:col-start-2 lg:col-start-auto lg:row-start-auto">
+              <FooterSectionHeading>Contact Us</FooterSectionHeading>
+              <div className="space-y-2 md:space-y-3">
+                {shellData.contactNumber ? (
+                  <FooterContactRow
+                    icon={PhoneCall}
+                    href={formatPhoneHref(shellData.contactNumber)}
+                  >
+                    {shellData.contactNumber}
+                  </FooterContactRow>
+                ) : null}
+                {shellData.email ? (
+                  <FooterContactRow
+                    icon={Mail}
+                    href={`mailto:${shellData.email}`}
+                  >
+                    {shellData.email}
+                  </FooterContactRow>
+                ) : null}
+                {shellData.address ? (
+                  <FooterContactRow
+                    icon={MapPin}
+                    href={shellData.mapsUrl ?? undefined}
+                    external={Boolean(shellData.mapsUrl)}
+                    ariaLabel={
+                      shellData.mapsUrl
+                        ? `Open ${shellData.address} in Google Maps`
+                        : undefined
+                    }
+                  >
+                    {shellData.address}
+                  </FooterContactRow>
+                ) : null}
+                {shellData.facebookUrl ? (
+                  <FooterContactRow
+                    icon={FacebookIcon}
+                    href={shellData.facebookUrl}
+                    external
+                    ariaLabel={`Visit ${displayName} on Facebook`}
+                  >
+                    {shellData.facebookLabel ?? displayName}
+                  </FooterContactRow>
+                ) : null}
+              </div>
+            </FooterSection>
+          </div>
+
+          <div className="mt-8 pt-6 md:mt-10 md:pt-8">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <p className="text-xs leading-6 text-[#a8b0c2] md:text-sm md:text-white/46">
+                © {new Date().getFullYear()} {shellData.companyName || displayName}. All rights reserved.
+              </p>
+              <div className="flex max-w-full flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-[#8f98ab] md:gap-x-6 md:text-sm">
+                <span className="transition hover:text-white">Privacy Policy</span>
+                <span className="transition hover:text-white">Terms of Service</span>
+                <span className="transition hover:text-white">Contact Support</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

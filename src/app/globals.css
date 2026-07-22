@@ -1,0 +1,343 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --brand-navy: 225 75% 17%;
+    --brand-navy-strong: 225 74% 12%;
+    --brand-navy-hover: 220 77% 19%;
+    --brand-red: 0 69% 50%;
+    --brand-red-dark: 0 72% 42%;
+    --brand-soft: 214 60% 95%;
+    --brand-border: 220 18% 91%;
+    --background: 220 23% 97%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 225 75% 17%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 214 68% 95%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 214 68% 95%;
+    --muted-foreground: 215 14% 44%;
+    --accent: 214 68% 95%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 72% 42%;
+    --destructive-foreground: 0 0% 98%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 200 92% 42%;
+    --info-foreground: 0 0% 100%;
+    --border: 213 31% 88%;
+    --input: 213 31% 88%;
+    --ring: 225 75% 17%;
+    --radius: 0.875rem;
+    --font-sans: var(--font-space-grotesk), "Segoe UI", sans-serif;
+    --font-display: var(--font-barlow-condensed), "Segoe UI", sans-serif;
+    --print-page-width: 210mm;
+    --print-page-height: 297mm;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply scroll-smooth bg-slate-50;
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-slate-50 font-sans text-foreground antialiased;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.16);
+  }
+}
+
+@layer utilities {
+  .surface-subtle {
+    background-color: hsl(var(--muted) / 0.55);
+  }
+
+  .surface-card {
+    background-color: hsl(var(--card));
+    border-color: hsl(var(--border) / 0.9);
+    box-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.04),
+      0 10px 24px rgba(15, 23, 42, 0.03);
+  }
+
+  .table-grid {
+    background-image: linear-gradient(
+      to bottom,
+      transparent calc(100% - 1px),
+      hsl(var(--border) / 0.55) 0
+    );
+    background-size: 100% 52px;
+  }
+}
+
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+.report-preview-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top, rgba(214, 40, 40, 0.12), transparent 28%),
+    linear-gradient(180deg, #eef2f8 0%, #e7edf5 100%);
+}
+
+.blank-document-preview-panel {
+  background: linear-gradient(180deg, #eef2f8 0%, #e7edf5 100%);
+}
+
+.blank-document-preview-scale {
+  transform-origin: top left;
+}
+
+.blank-document-preview-pages {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.blank-document-editor-content p {
+  margin: 0 0 0.65em;
+}
+
+.blank-document-editor-content ul,
+.blank-document-editor-content ol {
+  margin: 0 0 0.65em;
+  padding-left: 1.25rem;
+}
+
+.blank-document-editor-content ul {
+  list-style: disc;
+}
+
+.blank-document-editor-content ol {
+  list-style: decimal;
+}
+
+.blank-document-editor-content p.is-editor-empty:first-child::before {
+  color: hsl(var(--muted-foreground));
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.blank-document-body-content {
+  font-size: 12px;
+  line-height: 1.68;
+  color: rgb(30 41 59);
+}
+
+.blank-document-body-content p {
+  margin: 0 0 0.65em;
+}
+
+.blank-document-body-content ul,
+.blank-document-body-content ol {
+  margin: 0 0 0.65em;
+  padding-left: 1.25rem;
+}
+
+.blank-document-body-content ul {
+  list-style: disc;
+}
+
+.blank-document-body-content ol {
+  list-style: decimal;
+}
+
+.blank-document-body-content li p {
+  margin: 0;
+}
+
+.print-page-stack,
+.report-print-stack {
+  width: var(--print-page-width);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.print-page,
+.report-print-page {
+  width: var(--print-page-width);
+  height: var(--print-page-height);
+  min-height: var(--print-page-height);
+  margin: 0 auto;
+  background: #fff;
+  box-sizing: border-box;
+  box-shadow:
+    0 18px 50px rgba(15, 23, 42, 0.12),
+    0 4px 18px rgba(15, 23, 42, 0.08);
+}
+
+/* Printed documents keep fixed document colors; tenant theme tokens apply to the app UI only. */
+.print-document-frame {
+  --brand-navy: 225 75% 17%;
+  --brand-navy-strong: 225 74% 12%;
+  --brand-navy-hover: 220 77% 19%;
+  --brand-red: 0 69% 50%;
+  --brand-red-dark: 0 72% 42%;
+  --brand-soft: 214 60% 95%;
+  --brand-border: 220 18% 91%;
+  --primary: 225 75% 17%;
+  --ring: 225 75% 17%;
+  --destructive: 0 72% 42%;
+}
+
+.report-section-keep,
+.report-row-avoid {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.job-order-print-closing,
+.job-order-print-summary,
+.job-order-print-prepared-by {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.job-order-print-page .print-document-footer {
+  margin-top: 5mm;
+}
+
+.quotation-print-page .print-document-footer {
+  margin-top: 3mm;
+}
+
+.print-page-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.print-header,
+.print-document-header {
+  flex: 0 0 auto;
+  width: 100%;
+}
+
+.print-body,
+.print-document-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.print-footer,
+.print-document-footer {
+  flex: 0 0 auto;
+  margin-top: 8mm;
+  width: 100%;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .report-preview-shell {
+    min-height: 0;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  .blank-document-workspace {
+    height: auto !important;
+  }
+
+  .blank-document-workspace > header {
+    display: none !important;
+  }
+
+  .blank-document-workspace > .rounded-xl {
+    border: none !important;
+    border-radius: 0 !important;
+  }
+
+  .blank-document-preview-panel {
+    background: #fff !important;
+  }
+
+  .blank-document-preview-panel > div:first-child {
+    display: none !important;
+  }
+
+  .blank-document-preview-viewport {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .blank-document-preview-scale {
+    transform: none !important;
+    width: var(--print-page-width) !important;
+    height: var(--print-page-height) !important;
+  }
+
+  .print-page-stack,
+  .report-print-stack {
+    width: var(--print-page-width);
+    margin: 0;
+    gap: 0;
+  }
+
+  .print-page,
+  .report-print-page {
+    width: var(--print-page-width);
+    height: var(--print-page-height);
+    min-height: var(--print-page-height);
+    margin: 0;
+    box-shadow: none;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .print-page:last-child,
+  .report-print-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .job-order-print-page .print-document-footer {
+    margin-top: 4mm;
+  }
+
+  .quotation-print-page .print-document-footer {
+    margin-top: 3mm;
+  }
+
+  tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

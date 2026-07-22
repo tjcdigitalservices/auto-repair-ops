@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { PrintDocumentPage } from "@/components/reports/print-document-page";
+import type { PrintPageLayoutMode } from "@/components/reports/print-document-layout";
 import { cn } from "@/lib/utils";
 
 export function BlankPrintDocument({
@@ -19,6 +20,7 @@ export function BlankPrintDocument({
   bottomPaddingClassName,
   bodyClassName,
   compactHeader = false,
+  layoutMode,
 }: {
   businessName: string;
   businessLogoUrl?: string | null;
@@ -35,6 +37,7 @@ export function BlankPrintDocument({
   bottomPaddingClassName?: string;
   bodyClassName?: string;
   compactHeader?: boolean;
+  layoutMode?: PrintPageLayoutMode;
 }) {
   return (
     <PrintDocumentPage
@@ -44,6 +47,7 @@ export function BlankPrintDocument({
       topPaddingClassName={topPaddingClassName}
       bottomPaddingClassName={bottomPaddingClassName}
       compactHeader={compactHeader}
+      layoutMode={layoutMode}
       businessProfile={{
         businessName,
         businessLogoUrl: businessLogoUrl ?? null,

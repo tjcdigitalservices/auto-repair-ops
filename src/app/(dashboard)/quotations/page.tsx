@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/currency";
 import { formatDate } from "@/lib/dates";
+import { QuotationPageActionsMenu } from "@/features/quotations/components/quotation-page-actions-menu";
 import { QuotationRowActions } from "@/features/quotations/components/quotation-row-actions";
 import { QuotationStatusBadge } from "@/features/quotations/components/quotation-status-badge";
 import { listQuotations } from "@/features/quotations/queries/quotation-queries";
@@ -44,6 +45,7 @@ export default async function QuotationsPage({ searchParams }: QuotationsPagePro
         actions={
           <PageHeaderActions
             primary={<PagePrimaryAction href="/quotations/new">New Quotation</PagePrimaryAction>}
+            overflow={<QuotationPageActionsMenu />}
           />
         }
       />

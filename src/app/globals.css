@@ -96,11 +96,13 @@
     linear-gradient(180deg, #eef2f8 0%, #e7edf5 100%);
 }
 
-.blank-document-preview-panel {
+.blank-document-preview-panel,
+.document-viewport-panel {
   background: linear-gradient(180deg, #eef2f8 0%, #e7edf5 100%);
 }
 
-.blank-document-preview-scale {
+.blank-document-preview-scale,
+.document-viewport-page {
   transform-origin: top left;
 }
 
@@ -110,24 +112,106 @@
   gap: 18px;
 }
 
+.document-viewport {
+  background: linear-gradient(180deg, #eef2f8 0%, #e7edf5 100%);
+}
+
+/* Fixed A4 document pages with pinned header/footer template regions */
+.print-page--document {
+  height: var(--print-page-height);
+  min-height: var(--print-page-height);
+  max-height: var(--print-page-height);
+  overflow: hidden;
+}
+
+.print-page-inner--document {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100%;
+}
+
+.print-page--document .document-template-region {
+  user-select: none;
+  pointer-events: none;
+}
+
+.print-page--document .document-editable-region {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.print-page--document .document-template-footer,
+.print-page--document .print-document-footer {
+  margin-top: 0;
+}
+
+.document-page-stack .print-page--document + .print-page--document {
+  margin-top: 18px;
+}
+
+.document-page-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-top: 1.5rem;
+}
+
+.document-page-body-host {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.document-page-static--hidden-while-editing {
+  visibility: hidden;
+}
+
+.document-editor-overlay {
+  z-index: 2;
+}
+
+.document-composer-print-root {
+  position: relative;
+}
+
+.document-composer-workspace {
+  min-height: 0;
+}
+
+.document-editor-surface {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.document-editor-content p,
 .blank-document-editor-content p {
   margin: 0 0 0.65em;
 }
 
+.document-editor-content ul,
+.document-editor-content ol,
 .blank-document-editor-content ul,
 .blank-document-editor-content ol {
   margin: 0 0 0.65em;
   padding-left: 1.25rem;
 }
 
+.document-editor-content ul,
 .blank-document-editor-content ul {
   list-style: disc;
 }
 
+.document-editor-content ol,
 .blank-document-editor-content ol {
   list-style: decimal;
 }
 
+.document-editor-content li p,
+.blank-document-body-content li p {
+  margin: 0;
+}
+
+.document-editor-content p.is-editor-empty:first-child::before,
 .blank-document-editor-content p.is-editor-empty:first-child::before {
   color: hsl(var(--muted-foreground));
   content: attr(data-placeholder);
@@ -136,7 +220,8 @@
   pointer-events: none;
 }
 
-.blank-document-body-content {
+.blank-document-body-content,
+.document-page-body {
   font-size: 12px;
   line-height: 1.68;
   color: rgb(30 41 59);
@@ -158,10 +243,6 @@
 
 .blank-document-body-content ol {
   list-style: decimal;
-}
-
-.blank-document-body-content li p {
-  margin: 0;
 }
 
 .print-page-stack,
@@ -272,36 +353,75 @@
     background: #fff !important;
   }
 
-  .blank-document-workspace {
+  .blank-document-workspace,
+  .document-composer {
     height: auto !important;
   }
 
-  .blank-document-workspace > header {
+  .blank-document-workspace > header,
+  .document-composer > header {
     display: none !important;
   }
 
-  .blank-document-workspace > .rounded-xl {
+  .blank-document-workspace > .rounded-xl,
+  .document-composer > .rounded-xl {
     border: none !important;
     border-radius: 0 !important;
   }
 
-  .blank-document-preview-panel {
-    background: #fff !important;
-  }
-
-  .blank-document-preview-panel > div:first-child {
+  .document-composer-chrome {
     display: none !important;
   }
 
-  .blank-document-preview-viewport {
-    padding: 0 !important;
-    overflow: visible !important;
+  .document-editor-overlay {
+    display: none !important;
   }
 
-  .blank-document-preview-scale {
+  .document-page-static--hidden-while-editing {
+    visibility: visible !important;
+  }
+
+  .document-page-body-activator {
+    display: none !important;
+  }
+
+  .blank-document-preview-panel,
+  .document-viewport-panel {
+    background: #fff !important;
+  }
+
+  .blank-document-preview-panel > div:first-child,
+  .document-viewport-panel > div:first-child {
+    display: block !important;
+  }
+
+  .blank-document-preview-viewport,
+  .document-viewport {
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  .blank-document-preview-scale,
+  .document-viewport-page {
     transform: none !important;
     width: var(--print-page-width) !important;
+  }
+
+  .document-viewport-scale {
+    width: var(--print-page-width) !important;
+  }
+
+  .document-editable-page.print-page {
     height: var(--print-page-height) !important;
+    min-height: var(--print-page-height) !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+  }
+
+  .print-page--document .document-editable-region {
+    overflow: visible !important;
   }
 
   .print-page-stack,

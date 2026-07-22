@@ -2,7 +2,10 @@ import type { ReactNode } from "react";
 
 import { DocumentFooter } from "@/components/reports/document-footer";
 import { DocumentHeader } from "@/components/reports/document-header";
-import { PrintPage } from "@/components/reports/print-document-layout";
+import {
+  PrintPage,
+  type PrintPageLayoutMode,
+} from "@/components/reports/print-document-layout";
 import type { PrintBusinessProfile } from "@/lib/branding/print-business-profile";
 
 export type PrintDocumentBusinessProfile = PrintBusinessProfile;
@@ -19,6 +22,7 @@ export function PrintDocumentPage({
   horizontalPaddingClassName,
   topPaddingClassName,
   bottomPaddingClassName,
+  layoutMode,
 }: {
   businessProfile: PrintDocumentBusinessProfile;
   documentTitle: string;
@@ -31,6 +35,7 @@ export function PrintDocumentPage({
   horizontalPaddingClassName?: string;
   topPaddingClassName?: string;
   bottomPaddingClassName?: string;
+  layoutMode?: PrintPageLayoutMode;
 }) {
   return (
     <PrintPage
@@ -40,6 +45,7 @@ export function PrintDocumentPage({
       horizontalPaddingClassName={horizontalPaddingClassName}
       topPaddingClassName={topPaddingClassName}
       bottomPaddingClassName={bottomPaddingClassName}
+      layoutMode={layoutMode}
       header={
         <DocumentHeader
           businessName={businessProfile.businessName}

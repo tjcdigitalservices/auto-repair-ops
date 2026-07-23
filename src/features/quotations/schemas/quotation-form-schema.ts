@@ -11,7 +11,7 @@ const quotationItemSchema = z
     productId: z.string().trim(),
     serviceId: z.string().trim(),
     laborTemplateId: z.string().trim().optional().default(""),
-    description: z.string().trim().min(1, "Description is required."),
+    description: z.string().trim(),
     quantity: z
       .string()
       .trim()
@@ -35,6 +35,14 @@ const quotationItemSchema = z
         code: z.ZodIssueCode.custom,
         path: ["serviceId"],
         message: "Select a service for service line items.",
+      });
+    }
+
+    if (value.itemType === "labor" && !value.description.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["description"],
+        message: "Description is required for manual labor.",
       });
     }
   });

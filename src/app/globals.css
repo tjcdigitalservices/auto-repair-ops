@@ -157,9 +157,19 @@
   padding-top: 1.5rem;
 }
 
+.document-viewport-pages {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
 .document-page-body-host {
-  flex: 1 1 auto;
-  min-height: 0;
+  position: relative;
+}
+
+.document-editor-overlay--idle {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .document-page-static--hidden-while-editing {
@@ -186,6 +196,24 @@
 .document-editor-content p,
 .blank-document-editor-content p {
   margin: 0 0 0.65em;
+}
+
+.document-editor-content h2,
+.blank-document-editor-content h2 {
+  margin: 0 0 0.5em;
+  font-size: 14pt;
+  font-weight: 600;
+  line-height: 1.35;
+  color: hsl(var(--foreground));
+}
+
+.document-editor-content h3,
+.blank-document-editor-content h3 {
+  margin: 0 0 0.45em;
+  font-size: 12pt;
+  font-weight: 600;
+  line-height: 1.35;
+  color: hsl(var(--foreground));
 }
 
 .document-editor-content ul,
@@ -218,6 +246,18 @@
   float: left;
   height: 0;
   pointer-events: none;
+}
+
+.document-block-wrapper {
+  margin: 0.5rem 0;
+}
+
+.document-block-wrapper.ProseMirror-selectednode .document-block {
+  outline: none;
+}
+
+.document-merge-variable {
+  white-space: nowrap;
 }
 
 .blank-document-body-content,
@@ -392,7 +432,7 @@
 
   .blank-document-preview-panel > div:first-child,
   .document-viewport-panel > div:first-child {
-    display: block !important;
+    display: none !important;
   }
 
   .blank-document-preview-viewport,

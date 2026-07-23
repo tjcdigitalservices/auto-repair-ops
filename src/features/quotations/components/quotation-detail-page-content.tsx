@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Download, FilePenLine, Printer, Trash2, X } from "lucide-react";
+import { Download, Printer, Trash2, X } from "lucide-react";
 
 import {
   EntityDetailHeader,
@@ -31,38 +31,50 @@ import {
   QuotationRelatedDocumentsTab,
   type QuotationRelatedDocument,
 } from "@/features/quotations/components/quotation-related-documents-tab";
+import { QuotationRevisionHistoryTab } from "@/features/quotations/components/quotation-revision-history-tab";
 import { formatQuotationStatus } from "@/features/quotations/components/quotation-status-badge";
+import type { QuotationRevisionHistoryItem } from "@/features/quotations/queries/quotation-revision-history-queries";
 import type { QuotationDetail } from "@/features/quotations/types";
+import { formatLastRevisedLabel } from "@/features/quotations/utils";
 import { formatCurrency } from "@/lib/currency";
 import { formatDate } from "@/lib/dates";
 
-const QUOTATION_DETAIL_TABS = [
+const BASE_QUOTATION_DETAIL_TABS = [
   { id: "line-items", label: "Line items" },
   { id: "documents", label: "Related documents" },
 ] as const;
 
-type QuotationDetailTabId = (typeof QUOTATION_DETAIL_TABS)[number]["id"];
+const REVISION_HISTORY_TAB = { id: "revision-history", label: "Revision History" } as const;
+
+type QuotationDetailTabId =
+  | (typeof BASE_QUOTATION_DETAIL_TABS)[number]["id"]
+  | typeof REVISION_HISTORY_TAB.id;
 
 export function QuotationDetailPageContent({
   quotation,
   relatedDocuments,
+  revisionHistory,
   canEdit,
   canApprove,
-  canRevise,
   canDelete,
 }: {
   quotation: QuotationDetail;
   relatedDocuments: QuotationRelatedDocument[];
+  revisionHistory: QuotationRevisionHistoryItem[];
   canEdit: boolean;
   canApprove: boolean;
-  canRevise: boolean;
   canDelete: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialTab = resolveQuotationDetailTab(searchParams.get("tab"));
+  const showRevisionHistory = quotation.status === "approved";
+  const tabs = showRevisionHistory
+    ? [...BASE_QUOTATION_DETAIL_TABS, REVISION_HISTORY_TAB]
+    : [...BASE_QUOTATION_DETAIL_TABS];
+  const initialTab = resolveQuotationDetailTab(searchParams.get("tab"), showRevisionHistory);
   const [activeTab, setActiveTab] = useState<QuotationDetailTabId>(initialTab);
+  const lastRevision = revisionHistory[0] ?? null;
 
   const updateTab = useCallback(
     (nextTab: QuotationDetailTabId) => {
@@ -101,6 +113,9 @@ export function QuotationDetailPageContent({
                   ? `Approved ${formatDate(quotation.approvedAt)}`
                   : `Created ${formatDate(quotation.createdAt)}`}
               </MetadataPill>
+              {lastRevision ? (
+                <MetadataPill tone="info">{formatLastRevisedLabel(lastRevision.revisedAt)}</MetadataPill>
+              ) : null}
             </>
           }
           actions={
@@ -109,12 +124,19 @@ export function QuotationDetailPageContent({
                 <QuotationDetailPrimaryAction
                   quotationId={quotation.id}
                   quotationNumber={quotation.quotationNumber}
-                  canEdit={canEdit}
                   canApprove={canApprove}
+                  isApproved={quotation.status === "approved"}
                 />
               }
               overflow={
                 <TableRowActionsMenu label="Quotation actions" variant="page">
+                  {canEdit ? (
+                    <TableRowActionsMenuLink
+                      href={`/quotations/${quotation.id}/edit`}
+                      label="Edit Quotation"
+                      iconName="pencil"
+                    />
+                  ) : null}
                   <TableRowActionsMenuButton
                     label="Print quotation"
                     icon={Printer}
@@ -127,14 +149,7 @@ export function QuotationDetailPageContent({
                     label="Download PDF"
                     icon={Download}
                   />
-                  {canRevise || canApprove || canDelete ? <TableRowActionsMenuSeparator /> : null}
-                  {canRevise ? (
-                    <TableRowActionsMenuLink
-                      href={`/quotations/${quotation.id}/revise`}
-                      label="Revise quotation"
-                      icon={FilePenLine}
-                    />
-                  ) : null}
+                  {canApprove || canDelete ? <TableRowActionsMenuSeparator /> : null}
                   {canApprove ? (
                     <TableRowActionsMenuConfirm
                       label="Reject quotation"
@@ -172,7 +187,7 @@ export function QuotationDetailPageContent({
       }
     >
       <EntityDetailTabs
-        tabs={[...QUOTATION_DETAIL_TABS]}
+        tabs={tabs}
         activeTab={activeTab}
         onTabChange={(tabId) => updateTab(tabId as QuotationDetailTabId)}
       />
@@ -190,12 +205,25 @@ export function QuotationDetailPageContent({
       <EntityDetailTabPanel activeTab={activeTab} tabId="documents" className="pt-6">
         <QuotationRelatedDocumentsTab documents={relatedDocuments} />
       </EntityDetailTabPanel>
+
+      {showRevisionHistory ? (
+        <EntityDetailTabPanel activeTab={activeTab} tabId="revision-history" className="pt-6">
+          <QuotationRevisionHistoryTab revisions={revisionHistory} />
+        </EntityDetailTabPanel>
+      ) : null}
     </EntityDetailLayout>
   );
 }
 
-function resolveQuotationDetailTab(tab: string | null): QuotationDetailTabId {
+function resolveQuotationDetailTab(
+  tab: string | null,
+  showRevisionHistory: boolean,
+): QuotationDetailTabId {
   if (tab === "documents") {
+    return tab;
+  }
+
+  if (tab === "revision-history" && showRevisionHistory) {
     return tab;
   }
 

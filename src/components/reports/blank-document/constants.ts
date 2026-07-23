@@ -1,4 +1,4 @@
-/** @deprecated Import from @/components/reports/document-composer instead */
+/** @deprecated Import from @/components/document-engine instead */
 export {
   DEFAULT_DOCUMENT_BODY,
   DEFAULT_DOCUMENT_BODY_HTML,
@@ -11,5 +11,6 @@ export {
   PRINT_HORIZONTAL_PADDING_PX,
   PRINT_PAGE_HEIGHT_PX,
   PRINT_PAGE_WIDTH_PX,
-} from "@/components/reports/document-composer";
-export type { PreviewZoomMode } from "@/components/reports/document-composer";
+} from "@/components/document-engine";
+export type { PreviewZoomMode } from "@/components/document-engine";
+

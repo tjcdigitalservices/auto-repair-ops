@@ -1,8 +1,7 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { DEFAULT_DOCUMENT_BODY } from "@/components/reports/document-composer/constants";
+import { DEFAULT_DOCUMENT_BODY } from "@/components/document-engine/constants";
 import { BlankDocumentPreviewComposer } from "@/components/reports/blank-document-preview-composer";
 
 vi.mock("next/image", () => ({
@@ -14,9 +13,7 @@ vi.mock("next/image", () => ({
 }));
 
 describe("BlankDocumentPreviewComposer", () => {
-  it("places print in the page header and secondary actions in the overflow menu", async () => {
-    const user = userEvent.setup();
-
+  it("keeps print as the sole primary header action without an overflow menu", () => {
     render(
       <BlankDocumentPreviewComposer
         businessName="SAY Auto Care Center"
@@ -38,21 +35,8 @@ describe("BlankDocumentPreviewComposer", () => {
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Document Body")).toHaveTextContent(DEFAULT_DOCUMENT_BODY);
     expect(screen.getByRole("button", { name: "Print" })).toBeInTheDocument();
-    expect(screen.queryByRole("toolbar", { name: "Document actions" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Document actions" })).not.toBeInTheDocument();
     expect(screen.getByRole("toolbar", { name: "Formatting" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Document Body")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Zoom" })).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Document actions" }));
-
-    const menu = screen.getByRole("menu");
-    expect(within(menu).getByRole("menuitem", { name: "Export PDF" })).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
-    expect(within(menu).getByRole("menuitem", { name: "Download PDF" })).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
   });
 });

@@ -5,7 +5,7 @@ import { useState } from "react";
 import {
   DEFAULT_DOCUMENT_TITLE,
   DocumentComposer,
-} from "@/components/reports/document-composer";
+} from "@/components/document-engine";
 
 export function BlankDocumentPreviewComposer({
   businessName,
@@ -28,12 +28,12 @@ export function BlankDocumentPreviewComposer({
 
   return (
     <DocumentComposer
+      template="blank"
       moduleTitle="Blank Document"
       moduleDescription="Compose and print A4 documents for this branch."
       documentTitle={documentTitle}
       onDocumentTitleChange={setDocumentTitle}
       defaultDocumentTitle={DEFAULT_DOCUMENT_TITLE}
-      documentMeta={`Internal blank document • ${branchName}`}
       businessProfile={{
         businessName,
         businessLogoUrl,

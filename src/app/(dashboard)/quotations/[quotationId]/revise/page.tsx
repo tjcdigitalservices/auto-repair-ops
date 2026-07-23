@@ -46,8 +46,20 @@ export default async function ReviseQuotationPage({ params }: ReviseQuotationPag
   return (
     <div className="space-y-6">
       <PageHeader
+        backHref={`/quotations/${quotationId}`}
+        backLabel="Back to quotation"
         title={`Revise ${reviseContext.quotation.quotationNumber}`}
-        description="Load the latest linked job order lines, update prices or items, then save to sync the customer quotation and shop work order."
+        description={
+          <div className="space-y-1.5">
+            <p>
+              {reviseContext.quotation.customerName} · {reviseContext.quotation.vehicleLabel}
+            </p>
+            <p className="pt-1">
+              The linked job order is the operational source of truth. Saving synchronizes line
+              items, prices, and totals with the customer-facing quotation.
+            </p>
+          </div>
+        }
       />
       <QuotationForm mode="revise" options={options} initialValues={reviseContext.initialValues} />
     </div>

@@ -23,7 +23,7 @@ export function QuotationRowActions({
   status: QuotationStatus;
 }) {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const canEdit = status !== "approved";
+  const canEdit = status === "draft" || status === "pending_approval";
   const canRevise = status === "approved";
   const canDelete = canDeleteQuotation(status);
 
@@ -38,14 +38,14 @@ export function QuotationRowActions({
         {canEdit ? (
           <TableRowActionsMenuLink
             href={`/quotations/${quotationId}/edit`}
-            label="Edit quotation"
+            label="Edit Quotation"
             iconName="pencil"
           />
         ) : null}
         {canRevise ? (
           <TableRowActionsMenuLink
             href={`/quotations/${quotationId}/revise`}
-            label="Revise quotation"
+            label="Revise Quote"
             iconName="pencil"
           />
         ) : null}

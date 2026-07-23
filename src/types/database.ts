@@ -518,6 +518,66 @@ export type Database = {
           },
         ];
       };
+      documents: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          branch_id: string;
+          title: string;
+          template: string;
+          content_json: Json;
+          status: Database["public"]["Enums"]["document_status"];
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+          root_document_id: string | null;
+          parent_document_id: string | null;
+          revision_number: number;
+          is_current_revision: boolean;
+          published_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          branch_id: string;
+          title: string;
+          template: string;
+          content_json?: Json;
+          status?: Database["public"]["Enums"]["document_status"];
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          root_document_id?: string | null;
+          parent_document_id?: string | null;
+          revision_number?: number;
+          is_current_revision?: boolean;
+          published_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["documents"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "documents_tenant_id_fkey";
+            columns: ["tenant_id"];
+            isOneToOne: false;
+            referencedRelation: "tenants";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "documents_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "documents_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       dtr_amendment_requests: {
         Row: {
           id: string;
@@ -2320,6 +2380,12 @@ export type Database = {
         };
         Returns: string;
       };
+      create_document_revision: {
+        Args: {
+          p_document_id: string;
+        };
+        Returns: string;
+      };
       cancel_invoice: {
         Args: {
           p_invoice_id: string;
@@ -2546,6 +2612,7 @@ export type Database = {
       approval_status: "not_required" | "pending" | "approved" | "rejected";
       attendance_status: "present" | "absent" | "late" | "half_day" | "unpaid_day_off";
       customer_type: "individual" | "company" | "fleet";
+      document_status: "draft" | "published" | "archived";
       invoice_status: "unpaid" | "partially_paid" | "paid" | "cancelled";
       job_order_status:
         | "pending"

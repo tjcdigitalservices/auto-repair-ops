@@ -129,7 +129,7 @@ export async function getSettingsPageData(): Promise<SettingsPageData> {
   };
 }
 
-async function getBusinessSettingsValues(): Promise<BusinessSettingsValues> {
+export async function getBusinessSettingsValues(): Promise<BusinessSettingsValues> {
   const { branchScope, supabase } = await getBranchScopedServerClient("settings:write");
   const { data: settings, error } = await supabase
     .from("business_settings")
@@ -148,7 +148,7 @@ async function getBusinessSettingsValues(): Promise<BusinessSettingsValues> {
   return mapBusinessSettingsRowToValues(settings as BusinessSettingsRow);
 }
 
-async function getPublicPresenceSettingsValues(): Promise<PublicPresenceSettingsValues> {
+export async function getPublicPresenceSettingsValues(): Promise<PublicPresenceSettingsValues> {
   const { context, supabase } = await getBranchScopedServerClient("settings:write");
   const { data: tenantBranding, error } = await supabase
     .from("tenant_branding")

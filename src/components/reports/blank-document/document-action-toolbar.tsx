@@ -1,2 +1,2 @@
-/** @deprecated Import from @/components/reports/document-composer instead */
-export { DocumentActionToolbar, DocumentActions } from "@/components/reports/document-composer";
+/** @deprecated Import from @/components/document-engine instead */
+export { DocumentHeaderActions as DocumentActionToolbar, DocumentActions } from "@/components/document-engine";

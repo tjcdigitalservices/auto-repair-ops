@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { getJobOrderById } from "@/features/job-orders/queries/job-order-queries";
 import { QuotationDetailPageContent } from "@/features/quotations/components/quotation-detail-page-content";
 import type { QuotationRelatedDocument } from "@/features/quotations/components/quotation-related-documents-tab";
+import { getQuotationRevisionHistory } from "@/features/quotations/queries/quotation-revision-history-queries";
 import { getQuotationById } from "@/features/quotations/queries/quotation-queries";
-import { canDeleteQuotation, canReviseQuotation } from "@/features/quotations/utils";
+import { canDeleteQuotation } from "@/features/quotations/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -23,17 +24,11 @@ export default async function QuotationDetailPage({ params }: QuotationDetailPag
   }
 
   const canApprove = quotation.status === "draft" || quotation.status === "pending_approval";
-  const canEdit = quotation.status !== "approved";
-  const jobOrder =
-    quotation.jobOrderId ? await getJobOrderById(quotation.jobOrderId) : null;
-  const canRevise = canReviseQuotation({
-    status: quotation.status,
-    jobOrderId: quotation.jobOrderId,
-    jobOrderStatus: jobOrder?.status ?? null,
-    hasActiveInvoice:
-      Boolean(jobOrder?.invoiceId) && jobOrder?.invoiceStatus !== "cancelled",
-  });
+  const canEdit = quotation.status === "draft" || quotation.status === "pending_approval";
+  const jobOrder = quotation.jobOrderId ? await getJobOrderById(quotation.jobOrderId) : null;
   const canDelete = canDeleteQuotation(quotation.status) && !quotation.jobOrderId;
+  const revisionHistory =
+    quotation.status === "approved" ? await getQuotationRevisionHistory(quotationId) : [];
 
   const relatedDocuments = buildRelatedDocuments(quotation, jobOrder);
 
@@ -41,9 +36,9 @@ export default async function QuotationDetailPage({ params }: QuotationDetailPag
     <QuotationDetailPageContent
       quotation={quotation}
       relatedDocuments={relatedDocuments}
+      revisionHistory={revisionHistory}
       canEdit={canEdit}
       canApprove={canApprove}
-      canRevise={canRevise}
       canDelete={canDelete}
     />
   );

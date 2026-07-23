@@ -1,5 +1,6 @@
 import {
   LineItemCatalogFields,
+  type CatalogLineItemType,
   type CatalogLineItemValue,
 } from "@/components/shared/line-item-catalog-fields";
 import type { ProductPickerOption } from "@/features/products/types";
@@ -25,6 +26,12 @@ type QuotationLineItemFieldsProps = {
   onAfterCatalogSelect?: () => void;
   quantityInputRef?: (element: HTMLInputElement | null) => void;
   inputClassName?: string;
+  layout?: "default" | "card";
+  lineNumber?: number;
+  canRemove?: boolean;
+  onRemove?: () => void;
+  onItemTypeChange?: (itemType: CatalogLineItemType) => void;
+  itemTypeSelectClassName?: string;
   getFieldProps?: (
     field: "quantity" | "unitPrice" | "description" | "items",
   ) => FieldControlProps;

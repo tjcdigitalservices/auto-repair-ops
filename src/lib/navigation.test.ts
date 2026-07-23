@@ -24,13 +24,13 @@ describe("resolveActiveNavigationItem", () => {
     expect(activeItem?.href).toBe("/dashboard");
   });
 
-  it("matches the blank document preview route in the sidebar", () => {
+  it("matches the documents route in the sidebar", () => {
     const activeItem = resolveActiveNavigationItem(
       DASHBOARD_NAV_ITEMS,
-      "/documents/blank-preview",
+      "/documents/new",
     );
 
-    expect(activeItem?.href).toBe("/documents/blank-preview");
-    expect(activeItem?.label).toBe("Blank Document");
+    expect(activeItem?.href).toBe("/documents");
+    expect(activeItem?.label).toBe("Documents");
   });
 });

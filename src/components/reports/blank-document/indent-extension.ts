@@ -1,2 +1,3 @@
 /** @deprecated Import from @/components/reports/document-composer instead */
-export { Indent } from "@/components/reports/document-composer/extensions/indent-extension";
+/** @deprecated Import from @/components/document-engine instead */
+export { Indent } from "@/components/document-engine/extensions/indent-extension";

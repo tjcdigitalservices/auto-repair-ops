@@ -1,6 +1,7 @@
 import type { CustomerOption } from "@/features/customers/types";
 import type { QuotationFormItem, QuotationStatus, QuotationVehicleOption } from "@/features/quotations/types";
 import { formatMoneyInputValue, roundCurrency } from "@/lib/currency";
+import { formatDateTime } from "@/lib/dates";
 
 type OptionWithId = {
   id: string;
@@ -138,4 +139,8 @@ export function canReviseQuotation(params: {
   }
 
   return !REVISE_LOCKED_JOB_ORDER_STATUSES.has(params.jobOrderStatus);
+}
+
+export function formatLastRevisedLabel(revisedAt: string) {
+  return `Last revised ${formatDateTime(revisedAt)}`;
 }

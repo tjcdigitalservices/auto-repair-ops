@@ -1,2 +1,3 @@
 /** @deprecated Import from @/components/reports/document-composer instead */
-export { FontSize } from "@/components/reports/document-composer/extensions/font-size-extension";
+/** @deprecated Import from @/components/document-engine instead */
+export { FontSize } from "@/components/document-engine/extensions/font-size-extension";

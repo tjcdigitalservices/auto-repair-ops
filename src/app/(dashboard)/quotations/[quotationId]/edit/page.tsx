@@ -27,8 +27,18 @@ export default async function EditQuotationPage({ params }: EditQuotationPagePro
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`Edit ${quotation.quotationNumber}`}
-        description="Keep editing limited to non-approved quotations so the later job order stays authoritative."
+        backHref={`/quotations/${quotationId}`}
+        backLabel="Back to quotation"
+        title="Edit Quotation"
+        description={
+          <div className="space-y-1.5">
+            <p className="font-medium text-foreground">{quotation.quotationNumber}</p>
+            <p>
+              {quotation.customerName} · {quotation.vehicleLabel}
+            </p>
+            <p className="pt-1">Update this draft quotation before approval.</p>
+          </div>
+        }
       />
       <QuotationForm
         mode="edit"

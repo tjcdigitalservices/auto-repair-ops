@@ -85,7 +85,7 @@ export function ConfirmActionDialog({
       {isOpen
         ? createPortal(
             <div
-              className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-[2px]"
+              className="fixed inset-0 z-[140] flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-[2px]"
               onMouseDown={() => setDialogOpen(false)}
             >
               <div

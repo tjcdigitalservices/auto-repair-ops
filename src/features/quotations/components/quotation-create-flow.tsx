@@ -693,7 +693,7 @@ export function QuotationCreateFlow({
                     </div>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     <div>
                       <p className="text-sm font-semibold text-foreground">Line items</p>
                       <p className="text-xs text-muted-foreground">
@@ -703,77 +703,46 @@ export function QuotationCreateFlow({
 
                     {values.items.map((item, index) => {
                       return (
-                        <div
+                        <QuotationLineItemFields
                           key={item.key}
-                          className="space-y-4 border-b border-border/60 pb-6 last:border-b-0 last:pb-0"
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <p className="text-sm font-semibold text-foreground">
-                              Line {index + 1}
-                            </p>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              disabled={values.items.length === 1}
-                              onClick={() =>
-                                setValues((current) => ({
-                                  ...current,
-                                  items:
-                                    current.items.length > 1
-                                      ? current.items.filter(
-                                          (entry) => entry.key !== item.key,
-                                        )
-                                      : current.items,
-                                }))
-                              }
-                            >
-                              Remove
-                            </Button>
-                          </div>
-
-                          <div className="max-w-xs space-y-2">
-                            <Label required>Item type</Label>
-                            <NativeSelect
-                              value={item.itemType}
-                              onChange={(event) =>
-                                updateQuotationItem(setValues, item.key, {
-                                  itemType: event.target
-                                    .value as QuotationFormItem['itemType'],
-                                  ...getQuotationItemTypeResetPatch(),
-                                })
-                              }
-                            >
-                              <option value="product">Product</option>
-                              <option value="service">Service</option>
-                              <option value="labor">Manual labor</option>
-                            </NativeSelect>
-                          </div>
-
-                          <QuotationLineItemFields
-                            item={item}
-                            productOptions={productOptions}
-                            serviceOptions={serviceOptions}
-                            permissions={options.permissions}
-                            onUpdate={(patch) =>
-                              updateQuotationItem(setValues, item.key, patch)
-                            }
-                            onCreateProduct={(searchQuery) => {
-                              setCreateProductSearchQuery(searchQuery);
-                              setCreatingProductForKey(item.key);
-                            }}
-                            onCreateService={(searchQuery) => {
-                              setCreateServiceSearchQuery(searchQuery);
-                              setCreatingServiceForKey(item.key);
-                            }}
-                            onAfterCatalogSelect={() => {
-                              quantityInputRefs.current[item.key]?.focus();
-                            }}
-                            quantityInputRef={(element) => {
-                              quantityInputRefs.current[item.key] = element;
-                            }}
-                          />
-                        </div>
+                          layout="card"
+                          lineNumber={index + 1}
+                          canRemove={values.items.length > 1}
+                          onRemove={() =>
+                            setValues((current) => ({
+                              ...current,
+                              items:
+                                current.items.length > 1
+                                  ? current.items.filter((entry) => entry.key !== item.key)
+                                  : current.items,
+                            }))
+                          }
+                          onItemTypeChange={(itemType) =>
+                            updateQuotationItem(setValues, item.key, {
+                              itemType,
+                              ...getQuotationItemTypeResetPatch(),
+                            })
+                          }
+                          item={item}
+                          productOptions={productOptions}
+                          serviceOptions={serviceOptions}
+                          permissions={options.permissions}
+                          onUpdate={(patch) => updateQuotationItem(setValues, item.key, patch)}
+                          onCreateProduct={(searchQuery) => {
+                            setCreateProductSearchQuery(searchQuery);
+                            setCreatingProductForKey(item.key);
+                          }}
+                          onCreateService={(searchQuery) => {
+                            setCreateServiceSearchQuery(searchQuery);
+                            setCreatingServiceForKey(item.key);
+                          }}
+                          onAfterCatalogSelect={() => {
+                            quantityInputRefs.current[item.key]?.focus();
+                          }}
+                          quantityInputRef={(element) => {
+                            quantityInputRefs.current[item.key] = element;
+                          }}
+                        />
                       );
                     })}
 
@@ -786,7 +755,7 @@ export function QuotationCreateFlow({
                         }))
                       }
                     >
-                      Add another line item
+                      Add Line Item
                     </AddEntryButton>
 
                     <FieldError

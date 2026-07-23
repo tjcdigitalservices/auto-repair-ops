@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useMemo, useRef, useState } from "react";
 
 import {
   FieldError,
@@ -63,16 +63,19 @@ export function QuotationForm({
         ? reviseQuotationAction
         : updateQuotationAction;
   const [state, formActionState] = useActionState(formAction, INITIAL_FORM_ACTION_STATE);
-  const isRevise = mode === "revise";
+  const isJobOrderRevise = mode === "revise";
+  const lockCustomerVehicle = isJobOrderRevise;
   const [customerId, setCustomerId] = useState(initialValues.customerId);
   const [vehicleId, setVehicleId] = useState(initialValues.vehicleId);
+  const resolvedCustomerId = customerId || initialValues.customerId;
+  const resolvedVehicleId = vehicleId || initialValues.vehicleId;
   const [status, setStatus] = useState(initialValues.status);
   const [natureOfRepair, setNatureOfRepair] = useState(initialValues.natureOfRepair);
   const [inspectionNotes, setInspectionNotes] = useState(initialValues.inspectionNotes);
   const [discount, setDiscount] = useState(initialValues.discount);
   const [tax, setTax] = useState(initialValues.tax);
-  const customerOptions = dedupeOptionsById(options.customers);
-  const vehicleOptions = dedupeOptionsById(options.vehicles);
+  const customerOptions = useMemo(() => dedupeOptionsById(options.customers), [options.customers]);
+  const vehicleOptions = useMemo(() => dedupeOptionsById(options.vehicles), [options.vehicles]);
   const [items, setItems] = useState<QuotationFormItem[]>(
     initialValues.items.length > 0 ? initialValues.items : [createQuotationItem()],
   );
@@ -88,7 +91,7 @@ export function QuotationForm({
   const [createServiceSearchQuery, setCreateServiceSearchQuery] = useState("");
   const quantityInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const availableVehicles = vehicleOptions.filter((vehicle) => vehicle.customerId === customerId);
+  const availableVehicles = vehicleOptions.filter((vehicle) => vehicle.customerId === resolvedCustomerId);
   const subtotal = calculateQuotationSubtotal(items);
   const grandTotal = calculateQuotationGrandTotal({ items, discount, tax });
 
@@ -99,10 +102,11 @@ export function QuotationForm({
         <input type="hidden" name="quotationId" value={initialValues.quotationId} />
       ) : null}
 
-      {isRevise ? (
+      {lockCustomerVehicle ? (
         <>
-          <input type="hidden" name="customerId" value={customerId} />
-          <input type="hidden" name="vehicleId" value={vehicleId} />
+          <input type="hidden" name="customerId" value={resolvedCustomerId} />
+          <input type="hidden" name="vehicleId" value={resolvedVehicleId} />
+          <input type="hidden" name="status" value={status} />
         </>
       ) : null}
 
@@ -115,14 +119,16 @@ export function QuotationForm({
               <CardTitle>
                 {mode === "create"
                   ? "Quotation details"
-                  : mode === "revise"
+                  : isJobOrderRevise
                     ? "Revise quotation"
-                    : "Edit quotation"}
+                    : "Quotation details"}
               </CardTitle>
               <CardDescription>
-                {mode === "revise"
-                  ? "Updates save to both the customer quotation and the linked job order. Discount and tax apply to the quotation document; final invoice amounts may differ."
-                  : "Quotations are estimates only. They should not touch inventory until approval and later job-order usage."}
+                {isJobOrderRevise
+                  ? "Customer, vehicle, and status stay linked to the approved quotation. Line items load from the linked job order and save to both documents."
+                  : mode === "create"
+                    ? "Quotations are estimates only. They should not touch inventory until approval and later job-order usage."
+                    : "Update customer, vehicle, notes, and line items for this draft quotation."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -136,9 +142,9 @@ export function QuotationForm({
                   </Label>
                   <select
                     id="customerId"
-                    name={isRevise ? undefined : "customerId"}
-                    value={customerId}
-                    disabled={isRevise}
+                    name={lockCustomerVehicle ? undefined : "customerId"}
+                    value={resolvedCustomerId}
+                    disabled={lockCustomerVehicle}
                     onChange={(event) => {
                       const nextCustomerId = event.target.value;
                       const nextAvailableVehicles = vehicleOptions.filter(
@@ -175,9 +181,9 @@ export function QuotationForm({
                   </Label>
                   <select
                     id="vehicleId"
-                    name={isRevise ? undefined : "vehicleId"}
-                    value={vehicleId}
-                    disabled={isRevise}
+                    name={lockCustomerVehicle ? undefined : "vehicleId"}
+                    value={resolvedVehicleId}
+                    disabled={lockCustomerVehicle}
                     onChange={(event) => setVehicleId(event.target.value)}
                     className={formSelectClassName(state.fieldErrors, "vehicleId")}
                     {...fieldAriaProps({
@@ -198,7 +204,7 @@ export function QuotationForm({
                 </div>
               </div>
 
-              {!isRevise ? (
+              {!lockCustomerVehicle ? (
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="status" required>
@@ -275,87 +281,57 @@ export function QuotationForm({
                 Search the catalog for products and services. Manual labor uses free-text entry.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-5">
               {items.map((item, index) => {
                 return (
-                  <div
+                  <QuotationLineItemFields
                     key={item.key}
-                    className="space-y-4 border-b border-border/60 pb-6 last:border-b-0 last:pb-0"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold">Line {index + 1}</p>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          setItems((current) =>
-                            current.length > 1
-                              ? current.filter((entry) => entry.key !== item.key)
-                              : current,
-                          )
-                        }
-                        disabled={items.length === 1}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-
-                    <div className="max-w-xs space-y-2">
-                      <Label required>Item type</Label>
-                      <select
-                        value={item.itemType}
-                        onChange={(event) =>
-                          updateItem(setItems, item.key, {
-                            itemType: event.target.value as QuotationFormItem["itemType"],
-                            ...getQuotationItemTypeResetPatch(),
-                          })
-                        }
-                        className={formSelectClassName(state.fieldErrors, "items")}
-                        {...fieldAriaProps({
-                          errors: state.fieldErrors,
-                          name: "items",
-                          required: true,
-                          errorId: fieldErrorId("items"),
-                        })}
-                      >
-                        <option value="product">Product</option>
-                        <option value="service">Service</option>
-                        <option value="labor">Manual labor</option>
-                      </select>
-                    </div>
-
-                    <QuotationLineItemFields
-                      item={item}
-                      productOptions={productOptions}
-                      serviceOptions={serviceOptions}
-                      permissions={options.permissions}
-                      onUpdate={(patch) => updateItem(setItems, item.key, patch)}
-                      onCreateProduct={(searchQuery) => {
-                        setCreateProductSearchQuery(searchQuery);
-                        setCreatingProductForKey(item.key);
-                      }}
-                      onCreateService={(searchQuery) => {
-                        setCreateServiceSearchQuery(searchQuery);
-                        setCreatingServiceForKey(item.key);
-                      }}
-                      onAfterCatalogSelect={() => {
-                        quantityInputRefs.current[item.key]?.focus();
-                      }}
-                      quantityInputRef={(element) => {
-                        quantityInputRefs.current[item.key] = element;
-                      }}
-                      getFieldProps={(field) => ({
-                        className: fieldControlClassName(state.fieldErrors, "items"),
-                        ...fieldAriaProps({
-                          errors: state.fieldErrors,
-                          name: "items",
-                          required: true,
-                          errorId: fieldErrorId("items"),
-                        }),
-                      })}
-                    />
-                  </div>
+                    layout="card"
+                    lineNumber={index + 1}
+                    canRemove={items.length > 1}
+                    onRemove={() =>
+                      setItems((current) =>
+                        current.length > 1
+                          ? current.filter((entry) => entry.key !== item.key)
+                          : current,
+                      )
+                    }
+                    onItemTypeChange={(itemType) =>
+                      updateItem(setItems, item.key, {
+                        itemType,
+                        ...getQuotationItemTypeResetPatch(),
+                      })
+                    }
+                    itemTypeSelectClassName={fieldControlClassName(state.fieldErrors, "items")}
+                    item={item}
+                    productOptions={productOptions}
+                    serviceOptions={serviceOptions}
+                    permissions={options.permissions}
+                    onUpdate={(patch) => updateItem(setItems, item.key, patch)}
+                    onCreateProduct={(searchQuery) => {
+                      setCreateProductSearchQuery(searchQuery);
+                      setCreatingProductForKey(item.key);
+                    }}
+                    onCreateService={(searchQuery) => {
+                      setCreateServiceSearchQuery(searchQuery);
+                      setCreatingServiceForKey(item.key);
+                    }}
+                    onAfterCatalogSelect={() => {
+                      quantityInputRefs.current[item.key]?.focus();
+                    }}
+                    quantityInputRef={(element) => {
+                      quantityInputRefs.current[item.key] = element;
+                    }}
+                    getFieldProps={(field) => ({
+                      className: fieldControlClassName(state.fieldErrors, "items"),
+                      ...fieldAriaProps({
+                        errors: state.fieldErrors,
+                        name: "items",
+                        required: field !== "description",
+                        errorId: fieldErrorId("items"),
+                      }),
+                    })}
+                  />
                 );
               })}
 
@@ -363,7 +339,7 @@ export function QuotationForm({
                 className="w-full sm:w-auto"
                 onClick={() => setItems((current) => [...current, createQuotationItem()])}
               >
-                Add another line item
+                Add Line Item
               </AddEntryButton>
 
               <FieldError errors={state.fieldErrors} name="items" id={fieldErrorId("items")} />
@@ -445,12 +421,16 @@ export function QuotationForm({
               <div className="flex flex-wrap gap-3">
                 <SubmitButton
                   pendingLabel={
-                    mode === "create" ? "Saving..." : mode === "revise" ? "Revising..." : "Updating..."
+                    mode === "create"
+                      ? "Saving..."
+                      : isJobOrderRevise
+                        ? "Revising..."
+                        : "Updating..."
                   }
                 >
                   {mode === "create"
                     ? "Save quotation"
-                    : mode === "revise"
+                    : isJobOrderRevise
                       ? "Save revised quotation"
                       : "Save changes"}
                 </SubmitButton>

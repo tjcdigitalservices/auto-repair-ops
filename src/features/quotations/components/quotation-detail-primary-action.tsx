@@ -8,18 +8,18 @@ import { approveQuotationAction } from "@/features/quotations/actions/quotation-
 export function QuotationDetailPrimaryAction({
   quotationId,
   quotationNumber,
-  canEdit,
   canApprove,
+  isApproved,
 }: {
   quotationId: string;
   quotationNumber: string;
-  canEdit: boolean;
   canApprove: boolean;
+  isApproved: boolean;
 }) {
-  if (canEdit) {
+  if (isApproved) {
     return (
-      <PagePrimaryAction href={`/quotations/${quotationId}/edit`}>
-        Edit Quotation
+      <PagePrimaryAction href={`/quotations/${quotationId}/revise`}>
+        Revise Quote
       </PagePrimaryAction>
     );
   }
@@ -29,14 +29,14 @@ export function QuotationDetailPrimaryAction({
       <ConfirmActionDialog
         trigger={({ openDialog }) => (
           <Button type="button" onClick={openDialog}>
-            Convert to Job Order
+            Approve Quote
           </Button>
         )}
         title={`Approve ${quotationNumber}?`}
         description="This will approve the quotation and create a linked job order."
         action={approveQuotationAction}
         fields={[{ name: "quotationId", value: quotationId }]}
-        confirmLabel="Approve quotation"
+        confirmLabel="Approve Quote"
         cancelLabel="Cancel"
         confirmVariant="default"
       />

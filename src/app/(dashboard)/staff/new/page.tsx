@@ -11,7 +11,7 @@ export default async function NewStaffPage() {
     <div className="space-y-6">
       <PageHeader
         title="New Staff Record"
-        description="Create the personnel record first, then connect attendance and mechanic workflows later."
+        description="Create personnel records and auto-provision mechanic portal logins for attendance."
       />
       <StaffForm
         mode="create"
@@ -30,6 +30,7 @@ export default async function NewStaffPage() {
           emergencyContactName: "",
           emergencyContactNumber: "",
           status: "active",
+          linkPortalUsername: "",
         }}
       />
     </div>

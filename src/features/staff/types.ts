@@ -34,6 +34,26 @@ export type StaffFormValues = {
   emergencyContactName: string;
   emergencyContactNumber: string;
   status: StaffStatus;
+  portalUsername?: string | null;
+  linkPortalUsername: string;
+};
+
+export type StaffPortalLoginSuccessPayload = {
+  staffId: string;
+  staffName: string;
+  username: string;
+  temporaryPassword: string;
+};
+
+export type StaffActionState = {
+  status: "idle" | "error" | "success";
+  message?: string;
+  fieldErrors?: Record<string, string[] | undefined>;
+  portalLogin?: StaffPortalLoginSuccessPayload;
+};
+
+export const INITIAL_STAFF_ACTION_STATE: StaffActionState = {
+  status: "idle",
 };
 
 export function getDefaultPayrollEligibilityForRole(role: StaffRole) {

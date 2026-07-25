@@ -4,9 +4,18 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { applyBranchFilter, getBranchScopedServerClient } from "@/lib/branches";
-import { INITIAL_FORM_ACTION_STATE, toFormActionState, type FormActionState } from "@/lib/forms";
+import { toFormActionState } from "@/lib/forms";
 import { isMissingStaffDocumentTitleColumnError } from "@/features/staff/document-title-compat";
 import { parseStaffFormData, staffFormSchema } from "@/features/staff/schemas/staff-form-schema";
+import {
+  deleteMechanicPortalLogin,
+  linkExistingMechanicPortalLogin,
+  provisionMechanicPortalLogin,
+} from "@/features/staff/services/mechanic-portal-login";
+import {
+  INITIAL_STAFF_ACTION_STATE,
+  type StaffActionState,
+} from "@/features/staff/types";
 import type { TableInsert } from "@/types/database";
 
 type StaffSavePayload = Pick<
@@ -26,25 +35,27 @@ type StaffSavePayload = Pick<
   | "emergency_contact_name"
   | "emergency_contact_number"
   | "status"
->;
+> & {
+  linked_user_id?: string | null;
+};
 
 type LegacyStaffSavePayload = Omit<StaffSavePayload, "document_title">;
 
 export async function createStaffAction(
-  _prevState: FormActionState = INITIAL_FORM_ACTION_STATE,
+  _prevState: StaffActionState = INITIAL_STAFF_ACTION_STATE,
   formData: FormData,
-): Promise<FormActionState> {
+): Promise<StaffActionState> {
   return saveStaff(formData);
 }
 
 export async function updateStaffAction(
-  _prevState: FormActionState = INITIAL_FORM_ACTION_STATE,
+  _prevState: StaffActionState = INITIAL_STAFF_ACTION_STATE,
   formData: FormData,
-): Promise<FormActionState> {
+): Promise<StaffActionState> {
   return saveStaff(formData);
 }
 
-async function saveStaff(formData: FormData): Promise<FormActionState> {
+async function saveStaff(formData: FormData): Promise<StaffActionState> {
   const parsed = staffFormSchema.safeParse(parseStaffFormData(formData));
 
   if (!parsed.success) {
@@ -57,7 +68,45 @@ async function saveStaff(formData: FormData): Promise<FormActionState> {
     ? await getExistingStaffBranchId(supabase, branchScope.selectedBranchId, values.staffId)
     : branchScope.writeBranchId;
 
-  const payload = {
+  let linkedUserId: string | null = null;
+
+  if (values.staffId && values.role === "mechanic" && values.linkPortalUsername.trim()) {
+    const existingLinkedUserId = await getExistingLinkedUserId(
+      supabase,
+      branchScope.selectedBranchId,
+      values.staffId,
+    );
+
+    if (existingLinkedUserId) {
+      return {
+        status: "error",
+        message: "This mechanic already has a linked portal account.",
+        fieldErrors: {
+          linkPortalUsername: ["Portal account is already linked."],
+        },
+      };
+    }
+
+    try {
+      const linkedLogin = await linkExistingMechanicPortalLogin({
+        portalUsername: values.linkPortalUsername,
+        staffId: values.staffId,
+      });
+      linkedUserId = linkedLogin.userId;
+    } catch (error) {
+      return {
+        status: "error",
+        message: error instanceof Error ? error.message : "Portal account could not be linked.",
+        fieldErrors: {
+          linkPortalUsername: [
+            error instanceof Error ? error.message : "Portal account could not be linked.",
+          ],
+        },
+      };
+    }
+  }
+
+  const basePayload = {
     tenant_id: branchScope.tenantId,
     branch_id: branchId,
     first_name: values.firstName,
@@ -75,24 +124,84 @@ async function saveStaff(formData: FormData): Promise<FormActionState> {
     status: values.status,
   };
 
-  let { error } = await executeStaffSaveOperation({
+  const payload: StaffSavePayload = linkedUserId
+    ? { ...basePayload, linked_user_id: linkedUserId }
+    : basePayload;
+
+  let saveResult = await executeStaffSaveOperation({
     supabase,
     staffId: values.staffId,
     payload,
   });
 
-  if (error && isMissingStaffDocumentTitleColumnError(error)) {
-    const { document_title: _documentTitle, ...fallbackPayload } = payload;
-    const retryResult = await executeStaffSaveOperation({
+  if (saveResult.error && isMissingStaffDocumentTitleColumnError(saveResult.error)) {
+    const { document_title: _documentTitle, ...legacyPayload } = payload;
+    saveResult = await executeStaffSaveOperation({
       supabase,
       staffId: values.staffId,
-      payload: fallbackPayload,
+      payload: legacyPayload,
     });
-    error = retryResult.error;
   }
 
-  if (error) {
-    return { status: "error", message: error.message };
+  if (saveResult.error || !saveResult.data?.id) {
+    return {
+      status: "error",
+      message: saveResult.error?.message ?? "Staff record could not be saved.",
+    };
+  }
+
+  const staffId = saveResult.data.id;
+  const isCreate = !values.staffId;
+
+  if (isCreate && values.role === "mechanic") {
+    let createdLogin: Awaited<ReturnType<typeof provisionMechanicPortalLogin>> | null = null;
+
+    try {
+      createdLogin = await provisionMechanicPortalLogin({
+        firstName: values.firstName,
+        lastName: values.lastName,
+      });
+
+      const { error: linkError } = await supabase
+        .from("staff")
+        .update({ linked_user_id: createdLogin.userId })
+        .eq("id", staffId);
+
+      if (linkError) {
+        throw new Error(linkError.message);
+      }
+    } catch (error) {
+      if (createdLogin?.userId) {
+        try {
+          await deleteMechanicPortalLogin(createdLogin.userId);
+        } catch {
+          // Best-effort cleanup only.
+        }
+      }
+
+      await supabase.from("staff").delete().eq("id", staffId);
+
+      return {
+        status: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Mechanic portal login could not be created. The staff record was rolled back.",
+      };
+    }
+
+    revalidatePath("/staff");
+
+    return {
+      status: "success",
+      message: "Mechanic staff record created.",
+      portalLogin: {
+        staffId,
+        staffName: `${values.firstName} ${values.lastName}`.trim(),
+        username: createdLogin.username,
+        temporaryPassword: createdLogin.temporaryPassword,
+      },
+    };
   }
 
   revalidatePath("/staff");
@@ -125,6 +234,25 @@ async function getExistingStaffBranchId(
   }
 
   return data.branch_id;
+}
+
+async function getExistingLinkedUserId(
+  supabase: Awaited<ReturnType<typeof getBranchScopedServerClient>>["supabase"],
+  selectedBranchId: string | null,
+  staffId: string,
+) {
+  const { data, error } = await applyBranchFilter(
+    supabase.from("staff").select("linked_user_id"),
+    selectedBranchId,
+  )
+    .eq("id", staffId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data?.linked_user_id ?? null;
 }
 
 async function executeStaffSaveOperation({

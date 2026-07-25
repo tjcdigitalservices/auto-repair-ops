@@ -19,9 +19,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
+import { INITIAL_STAFF_ACTION_STATE } from "@/features/staff/types";
 import { useFormValues } from "@/lib/use-form-values";
 import { createStaffAction, updateStaffAction } from "@/features/staff/actions/staff-actions";
+import { StaffPortalLoginSuccess } from "@/features/staff/components/staff-portal-login-success";
+import { MECHANIC_PORTAL_EMAIL_DOMAIN } from "@/features/staff/mechanic-login";
 import { getDefaultPayrollEligibilityForRole, type StaffFormValues } from "@/features/staff/types";
 
 export function StaffForm({
@@ -33,10 +35,12 @@ export function StaffForm({
 }) {
   const [state, formAction] = useActionState(
     mode === "create" ? createStaffAction : updateStaffAction,
-    INITIAL_FORM_ACTION_STATE,
+    INITIAL_STAFF_ACTION_STATE,
   );
   const { values, updateFormValue } = useFormValues(initialValues);
   const [payrollEligibilityTouched, setPayrollEligibilityTouched] = useState(false);
+  const isMechanic = values.role === "mechanic";
+  const hasLinkedPortalAccount = Boolean(values.portalUsername);
 
   function handleRoleChange(nextRole: StaffFormValues["role"]) {
     updateFormValue("role", nextRole);
@@ -44,6 +48,16 @@ export function StaffForm({
     if (!payrollEligibilityTouched) {
       updateFormValue("isPayrollEligible", getDefaultPayrollEligibilityForRole(nextRole));
     }
+  }
+
+  if (state.portalLogin) {
+    return (
+      <StaffPortalLoginSuccess
+        staffName={state.portalLogin.staffName}
+        username={state.portalLogin.username}
+        temporaryPassword={state.portalLogin.temporaryPassword}
+      />
+    );
   }
 
   return (
@@ -323,6 +337,74 @@ export function StaffForm({
           </div>
         </CardContent>
       </Card>
+
+      {isMechanic ? (
+        <Card className="border-border/70 shadow-sm">
+          <CardHeader>
+            <CardTitle>Mechanic portal login</CardTitle>
+            <CardDescription>
+              {mode === "create"
+                ? "A Supabase portal account is created automatically when you save a new mechanic."
+                : hasLinkedPortalAccount
+                  ? "This mechanic already has a linked attendance portal account."
+                  : "Optionally link an existing portal account that was created manually in Supabase."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {mode === "edit" && hasLinkedPortalAccount ? (
+              <div className="space-y-2">
+                <Label htmlFor="portalUsername">Portal username</Label>
+                <Input
+                  id="portalUsername"
+                  name="portalUsername"
+                  value={values.portalUsername ?? ""}
+                  readOnly
+                  className="bg-muted/40 text-muted-foreground"
+                />
+              </div>
+            ) : null}
+
+            {mode === "edit" && !hasLinkedPortalAccount ? (
+              <div className="space-y-2">
+                <Label htmlFor="linkPortalUsername" optional>
+                  Link existing portal username
+                </Label>
+                <Input
+                  id="linkPortalUsername"
+                  name="linkPortalUsername"
+                  value={values.linkPortalUsername}
+                  placeholder={`delacruz@${MECHANIC_PORTAL_EMAIL_DOMAIN}`}
+                  className={fieldControlClassName(state.fieldErrors, "linkPortalUsername")}
+                  {...fieldAriaProps({
+                    errors: state.fieldErrors,
+                    name: "linkPortalUsername",
+                    required: false,
+                    errorId: fieldErrorId("linkPortalUsername"),
+                  })}
+                  onChange={(event) => updateFormValue("linkPortalUsername", event.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave blank to keep this mechanic unlinked. Only use this when the Supabase auth
+                  account already exists.
+                </p>
+                <FieldError
+                  errors={state.fieldErrors}
+                  name="linkPortalUsername"
+                  id={fieldErrorId("linkPortalUsername")}
+                />
+              </div>
+            ) : null}
+
+            {mode === "create" ? (
+              <p className="text-sm text-muted-foreground">
+                Username defaults to <span className="font-medium">lastname@{MECHANIC_PORTAL_EMAIL_DOMAIN}</span>{" "}
+                with duplicates resolved automatically. The temporary password uses{" "}
+                <span className="font-medium">lastname@2026</span> and is shown once after creation.
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <FormStickyActions>
         <Button asChild variant="outline" type="button">

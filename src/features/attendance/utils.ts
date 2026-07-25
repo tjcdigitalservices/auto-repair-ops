@@ -26,6 +26,7 @@ import type {
   DtrAmendmentType,
   MechanicPortalIpStatus,
   MechanicPortalLocationStatus,
+  MechanicPortalDeviceStatus,
   StaffLeaveEntrySummary,
   StaffLeaveFormValues,
   StaffLeaveType,
@@ -434,6 +435,112 @@ export function isMechanicPremiseVerificationPassed({
     locationStatus.isAllowed;
 
   return ipOk && locationOk;
+}
+
+export type MechanicAttendanceVerificationResult = {
+  isAllowed: boolean;
+  passedCount: number;
+  requiredCount: number;
+  activeCheckCount: number;
+  blockReason: string | null;
+  registeredToOtherStaff: boolean;
+};
+
+export function evaluateMechanicAttendanceVerification(params: {
+  settings: AttendanceAccessSettings;
+  ipStatus: MechanicPortalIpStatus;
+  locationStatus: MechanicPortalLocationStatus;
+  deviceStatus: Pick<MechanicPortalDeviceStatus, "isApproved" | "status">;
+}): MechanicAttendanceVerificationResult {
+  if (params.deviceStatus.status === "registered_to_other_staff") {
+    return {
+      isAllowed: false,
+      passedCount: 0,
+      requiredCount: 1,
+      activeCheckCount: 1,
+      blockReason:
+        "This device is already bound to another mechanic account and cannot be used for your attendance.",
+      registeredToOtherStaff: true,
+    };
+  }
+
+  const activeChecks: boolean[] = [];
+
+  if (params.settings.requireShopIpForMechanicAttendance) {
+    activeChecks.push(params.ipStatus.isAllowed);
+  }
+
+  if (params.settings.requireShopLocationForMechanicAttendance) {
+    activeChecks.push(params.locationStatus.isAllowed);
+  }
+
+  activeChecks.push(params.deviceStatus.isApproved);
+
+  const activeCheckCount = activeChecks.length;
+  const passedCount = activeChecks.filter(Boolean).length;
+  const requiredCount = activeCheckCount >= 3 ? 2 : activeCheckCount;
+  const isAllowed = passedCount >= requiredCount;
+
+  return {
+    isAllowed,
+    passedCount,
+    requiredCount,
+    activeCheckCount,
+    blockReason: isAllowed ? null : buildMechanicAttendanceVerificationBlockReason(params),
+    registeredToOtherStaff: false,
+  };
+}
+
+export function formatMechanicAttendanceVerificationRequirement(params: {
+  activeCheckCount: number;
+  requiredCount: number;
+}) {
+  if (params.activeCheckCount >= 3) {
+    return "At least 2 of shop network, location, and approved device must verify.";
+  }
+
+  if (params.activeCheckCount === 2) {
+    return "Both enabled on-site checks must verify.";
+  }
+
+  return "Your approved device must verify before you can punch.";
+}
+
+function buildMechanicAttendanceVerificationBlockReason(params: {
+  settings: AttendanceAccessSettings;
+  ipStatus: MechanicPortalIpStatus;
+  locationStatus: MechanicPortalLocationStatus;
+  deviceStatus: Pick<MechanicPortalDeviceStatus, "isApproved" | "status">;
+}) {
+  if (
+    params.settings.requireShopIpForMechanicAttendance &&
+    !params.ipStatus.isAllowed &&
+    !params.settings.requireShopLocationForMechanicAttendance &&
+    !params.deviceStatus.isApproved
+  ) {
+    return "You are not connected to the approved shop network. File a DTR amendment if this attendance needs admin review.";
+  }
+
+  if (
+    params.settings.requireShopLocationForMechanicAttendance &&
+    !params.locationStatus.isAllowed &&
+    params.locationStatus.errorMessage
+  ) {
+    return params.locationStatus.errorMessage;
+  }
+
+  if (!params.deviceStatus.isApproved) {
+    return "This device is not approved for time-in/time-out yet. Ask the owner or admin to approve it, or file a DTR amendment.";
+  }
+
+  if (
+    params.settings.requireShopIpForMechanicAttendance &&
+    !params.ipStatus.isAllowed
+  ) {
+    return "You are not connected to the approved shop network. File a DTR amendment if this attendance needs admin review.";
+  }
+
+  return "On-site verification failed. File a DTR amendment if this attendance needs admin review.";
 }
 
 export function buildAttendanceAccessSettingsFormValues(

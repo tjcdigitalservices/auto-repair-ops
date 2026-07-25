@@ -39,7 +39,8 @@ import {
   getMechanicPortalPrimaryActionLabel,
   getMechanicPortalPrimaryLogType,
   INITIAL_ATTENDANCE_ENTRY_ACTION_STATE,
-  isMechanicPremiseVerificationPassed,
+  evaluateMechanicAttendanceVerification,
+  formatMechanicAttendanceVerificationRequirement,
 } from "@/features/attendance/utils";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -68,13 +69,13 @@ export function MechanicPortalAttendancePage({
     distanceMeters: locationState.distanceMeters,
     errorMessage: locationState.errorMessage,
   };
-  const premiseAllowed = isMechanicPremiseVerificationPassed({
+  const verification = evaluateMechanicAttendanceVerification({
     settings: data.settings,
     ipStatus: data.ipStatus,
     locationStatus,
+    deviceStatus: data.deviceStatus,
   });
-  const canPunch =
-    Boolean(nextLogType) && data.deviceStatus.isApproved && premiseAllowed;
+  const canPunch = Boolean(nextLogType) && verification.isAllowed;
   const statusCopy = getAttendanceStatusCopy(data.attendance, data.todayAmendments);
   const networkSubtitle = getMechanicNetworkSummary(data);
   const locationSubtitle = formatMechanicLocationStatusMessage(
@@ -194,9 +195,13 @@ export function MechanicPortalAttendancePage({
               {actionLabel}
             </MechanicPortalSlideAction>
 
-            {!premiseAllowed || !data.deviceStatus.isApproved ? (
+            {!verification.isAllowed ? (
               <p className="px-1 text-sm leading-6 text-slate-500">
-                Time-in and time-out stay blocked until all required on-site checks and your approved device are verified.
+                {verification.blockReason ??
+                  formatMechanicAttendanceVerificationRequirement({
+                    activeCheckCount: verification.activeCheckCount,
+                    requiredCount: verification.requiredCount,
+                  })}
               </p>
             ) : null}
 
@@ -208,6 +213,15 @@ export function MechanicPortalAttendancePage({
       <section className="rounded-[1.9rem] border border-slate-200/80 bg-white px-5 py-5 shadow-[0_18px_45px_hsl(var(--brand-navy-strong)/0.05)]">
         <div className="space-y-1">
           <h2 className="text-base font-semibold text-slate-950">Verification Status</h2>
+          {verification.activeCheckCount > 1 ? (
+            <p className="text-sm text-slate-500">
+              {verification.passedCount} of {verification.activeCheckCount} checks verified ·{" "}
+              {formatMechanicAttendanceVerificationRequirement({
+                activeCheckCount: verification.activeCheckCount,
+                requiredCount: verification.requiredCount,
+              })}
+            </p>
+          ) : null}
         </div>
         <div className="mt-4 space-y-3">
           {data.settings.requireShopIpForMechanicAttendance ? (

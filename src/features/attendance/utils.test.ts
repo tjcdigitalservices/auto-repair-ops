@@ -5,6 +5,7 @@ import {
   buildBranchHolidayFormValues,
   buildStaffScheduleFormValues,
   computeExpectedWorkdaySummary,
+  evaluateMechanicAttendanceVerification,
   matchesAttendanceStatusFilter,
 } from "@/features/attendance/utils";
 
@@ -241,5 +242,159 @@ describe("attendance holiday handling", () => {
     expect(
       matchesAttendanceStatusFilter(scheduledUnrecorded, "absent_unrecorded", { branchHoliday }),
     ).toBe(false);
+  });
+});
+
+describe("evaluateMechanicAttendanceVerification", () => {
+  const baseSettings = {
+    requireShopIpForMechanicAttendance: true,
+    requireShopLocationForMechanicAttendance: true,
+    allowDtrAmendments: true,
+    allowAttendanceAdminOverride: false,
+    geofence: {
+      latitude: 14.6,
+      longitude: 121.0,
+      radiusMeters: 100,
+    },
+  };
+
+  it("requires any 2 of 3 checks when all guards are enabled", () => {
+    expect(
+      evaluateMechanicAttendanceVerification({
+        settings: baseSettings,
+        ipStatus: {
+          requestIp: "1.1.1.1",
+          isShopIpRequired: true,
+          isAllowed: true,
+          matchedAllowedIp: null,
+        },
+        locationStatus: {
+          isLocationRequired: true,
+          isAllowed: true,
+          latitude: 14.6,
+          longitude: 121.0,
+          accuracyMeters: 10,
+          distanceMeters: 5,
+          errorMessage: null,
+        },
+        deviceStatus: {
+          status: "pending",
+          isApproved: false,
+        },
+      }).isAllowed,
+    ).toBe(true);
+
+    expect(
+      evaluateMechanicAttendanceVerification({
+        settings: baseSettings,
+        ipStatus: {
+          requestIp: "1.1.1.1",
+          isShopIpRequired: true,
+          isAllowed: false,
+          matchedAllowedIp: null,
+        },
+        locationStatus: {
+          isLocationRequired: true,
+          isAllowed: false,
+          latitude: null,
+          longitude: null,
+          accuracyMeters: null,
+          distanceMeters: null,
+          errorMessage: "Outside shop area",
+        },
+        deviceStatus: {
+          status: "approved",
+          isApproved: true,
+        },
+      }).isAllowed,
+    ).toBe(false);
+  });
+
+  it("requires both checks when only two guards are active", () => {
+    expect(
+      evaluateMechanicAttendanceVerification({
+        settings: {
+          ...baseSettings,
+          requireShopLocationForMechanicAttendance: false,
+        },
+        ipStatus: {
+          requestIp: "1.1.1.1",
+          isShopIpRequired: true,
+          isAllowed: true,
+          matchedAllowedIp: null,
+        },
+        locationStatus: {
+          isLocationRequired: false,
+          isAllowed: false,
+          latitude: null,
+          longitude: null,
+          accuracyMeters: null,
+          distanceMeters: null,
+          errorMessage: null,
+        },
+        deviceStatus: {
+          status: "approved",
+          isApproved: true,
+        },
+      }).isAllowed,
+    ).toBe(true);
+
+    expect(
+      evaluateMechanicAttendanceVerification({
+        settings: {
+          ...baseSettings,
+          requireShopLocationForMechanicAttendance: false,
+        },
+        ipStatus: {
+          requestIp: "1.1.1.1",
+          isShopIpRequired: true,
+          isAllowed: false,
+          matchedAllowedIp: null,
+        },
+        locationStatus: {
+          isLocationRequired: false,
+          isAllowed: false,
+          latitude: null,
+          longitude: null,
+          accuracyMeters: null,
+          distanceMeters: null,
+          errorMessage: null,
+        },
+        deviceStatus: {
+          status: "pending",
+          isApproved: false,
+        },
+      }).isAllowed,
+    ).toBe(false);
+  });
+
+  it("always blocks devices registered to another mechanic", () => {
+    expect(
+      evaluateMechanicAttendanceVerification({
+        settings: baseSettings,
+        ipStatus: {
+          requestIp: "1.1.1.1",
+          isShopIpRequired: true,
+          isAllowed: true,
+          matchedAllowedIp: null,
+        },
+        locationStatus: {
+          isLocationRequired: true,
+          isAllowed: true,
+          latitude: 14.6,
+          longitude: 121.0,
+          accuracyMeters: 10,
+          distanceMeters: 5,
+          errorMessage: null,
+        },
+        deviceStatus: {
+          status: "registered_to_other_staff",
+          isApproved: false,
+        },
+      }),
+    ).toMatchObject({
+      isAllowed: false,
+      registeredToOtherStaff: true,
+    });
   });
 });

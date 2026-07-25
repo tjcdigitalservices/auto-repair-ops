@@ -23,15 +23,18 @@ import { INITIAL_STAFF_ACTION_STATE } from "@/features/staff/types";
 import { useFormValues } from "@/lib/use-form-values";
 import { createStaffAction, updateStaffAction } from "@/features/staff/actions/staff-actions";
 import { StaffPortalLoginSuccess } from "@/features/staff/components/staff-portal-login-success";
-import { MECHANIC_PORTAL_EMAIL_DOMAIN } from "@/features/staff/mechanic-login";
+import { StaffPortalLoginDomainFix } from "@/features/staff/components/staff-portal-login-domain-fix";
+import { isMechanicPortalUsername } from "@/features/staff/mechanic-login";
 import { getDefaultPayrollEligibilityForRole, type StaffFormValues } from "@/features/staff/types";
 
 export function StaffForm({
   mode,
   initialValues,
+  portalEmailDomain,
 }: {
   mode: "create" | "edit";
   initialValues: StaffFormValues;
+  portalEmailDomain: string;
 }) {
   const [state, formAction] = useActionState(
     mode === "create" ? createStaffAction : updateStaffAction,
@@ -41,6 +44,11 @@ export function StaffForm({
   const [payrollEligibilityTouched, setPayrollEligibilityTouched] = useState(false);
   const isMechanic = values.role === "mechanic";
   const hasLinkedPortalAccount = Boolean(values.portalUsername);
+  const hasLegacyPortalDomain =
+    mode === "edit" &&
+    hasLinkedPortalAccount &&
+    values.portalUsername &&
+    !isMechanicPortalUsername(values.portalUsername, portalEmailDomain);
 
   function handleRoleChange(nextRole: StaffFormValues["role"]) {
     updateFormValue("role", nextRole);
@@ -61,6 +69,7 @@ export function StaffForm({
   }
 
   return (
+    <>
     <form action={formAction} className="space-y-6">
       {initialValues.staffId ? <input type="hidden" name="staffId" value={initialValues.staffId} /> : null}
 
@@ -352,15 +361,21 @@ export function StaffForm({
           </CardHeader>
           <CardContent className="space-y-4">
             {mode === "edit" && hasLinkedPortalAccount ? (
-              <div className="space-y-2">
-                <Label htmlFor="portalUsername">Portal username</Label>
-                <Input
-                  id="portalUsername"
-                  name="portalUsername"
-                  value={values.portalUsername ?? ""}
-                  readOnly
-                  className="bg-muted/40 text-muted-foreground"
-                />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="portalUsername">Portal username</Label>
+                  <Input
+                    id="portalUsername"
+                    value={values.portalUsername ?? ""}
+                    readOnly
+                    className="bg-muted/40 text-muted-foreground"
+                  />
+                </div>
+                {hasLegacyPortalDomain ? (
+                  <p className="text-sm text-muted-foreground">
+                    Use the update action below this form to move this login to @{portalEmailDomain}.
+                  </p>
+                ) : null}
               </div>
             ) : null}
 
@@ -373,7 +388,7 @@ export function StaffForm({
                   id="linkPortalUsername"
                   name="linkPortalUsername"
                   value={values.linkPortalUsername}
-                  placeholder={`delacruz@${MECHANIC_PORTAL_EMAIL_DOMAIN}`}
+                  placeholder={`delacruz@${portalEmailDomain}`}
                   className={fieldControlClassName(state.fieldErrors, "linkPortalUsername")}
                   {...fieldAriaProps({
                     errors: state.fieldErrors,
@@ -397,9 +412,10 @@ export function StaffForm({
 
             {mode === "create" ? (
               <p className="text-sm text-muted-foreground">
-                Username defaults to <span className="font-medium">lastname@{MECHANIC_PORTAL_EMAIL_DOMAIN}</span>{" "}
-                with duplicates resolved automatically. The temporary password uses{" "}
-                <span className="font-medium">lastname@2026</span> and is shown once after creation.
+                Username defaults to <span className="font-medium">lastname@{portalEmailDomain}</span>{" "}
+                using this tenant&apos;s business name. Duplicates are resolved automatically. The
+                temporary password uses <span className="font-medium">lastname@2026</span> and is
+                shown once after creation.
               </p>
             ) : null}
           </CardContent>
@@ -415,5 +431,15 @@ export function StaffForm({
         </SubmitButton>
       </FormStickyActions>
     </form>
+
+    {hasLegacyPortalDomain && values.staffId ? (
+      <StaffPortalLoginDomainFix
+        staffId={values.staffId}
+        staffName={`${values.firstName} ${values.lastName}`.trim()}
+        currentUsername={values.portalUsername ?? ""}
+        portalEmailDomain={portalEmailDomain}
+      />
+    ) : null}
+    </>
   );
 }

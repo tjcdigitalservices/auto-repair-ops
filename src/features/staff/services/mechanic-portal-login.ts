@@ -1,13 +1,16 @@
 import "server-only";
 
+import { cache } from "react";
+
 import {
+  buildMechanicPortalEmailDomainFromTenant,
   buildMechanicPortalUsername,
   buildMechanicTemporaryPassword,
   isMechanicPortalUsername,
-  MECHANIC_PORTAL_EMAIL_DOMAIN,
   normalizeMechanicPortalUsernameInput,
 } from "@/features/staff/mechanic-login";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import type { DatabaseClient } from "@/features/attendance/server-utils";
 
 export type MechanicPortalLoginCredentials = {
   userId: string;
@@ -15,12 +18,35 @@ export type MechanicPortalLoginCredentials = {
   temporaryPassword: string;
 };
 
-export async function listMechanicPortalUsernames() {
+export const resolveMechanicPortalEmailDomain = cache(
+  async (supabase: DatabaseClient, tenantId: string) => {
+    const { data, error } = await supabase
+      .from("tenants")
+      .select("name, slug")
+      .eq("id", tenantId)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (!data?.slug && !data?.name) {
+      throw new Error("Tenant could not be resolved for portal login.");
+    }
+
+    return buildMechanicPortalEmailDomainFromTenant({
+      tenantName: data.name ?? "",
+      tenantSlug: data.slug ?? "",
+    });
+  },
+);
+
+export async function listMechanicPortalUsernames(emailDomain: string) {
   const admin = getSupabaseAdminClient();
   const takenUsernames = new Set<string>();
   let page = 1;
   const perPage = 200;
-  const domainSuffix = `@${MECHANIC_PORTAL_EMAIL_DOMAIN}`;
+  const domainSuffix = `@${emailDomain.trim().toLowerCase()}`;
 
   while (page <= 20) {
     const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
@@ -50,12 +76,14 @@ export async function listMechanicPortalUsernames() {
 export async function provisionMechanicPortalLogin(params: {
   firstName: string;
   lastName: string;
+  emailDomain: string;
 }): Promise<MechanicPortalLoginCredentials> {
   const admin = getSupabaseAdminClient();
-  const takenUsernames = await listMechanicPortalUsernames();
+  const takenUsernames = await listMechanicPortalUsernames(params.emailDomain);
   const username = buildMechanicPortalUsername({
     firstName: params.firstName,
     lastName: params.lastName,
+    emailDomain: params.emailDomain,
     takenUsernames,
   });
   const temporaryPassword = buildMechanicTemporaryPassword(params.lastName);
@@ -124,15 +152,19 @@ export async function findAuthUserIdByEmail(email: string) {
 export async function linkExistingMechanicPortalLogin(params: {
   portalUsername: string;
   staffId: string;
+  emailDomain: string;
 }) {
-  const username = normalizeMechanicPortalUsernameInput(params.portalUsername);
+  const username = normalizeMechanicPortalUsernameInput(
+    params.portalUsername,
+    params.emailDomain,
+  );
 
   if (!username) {
     throw new Error("Enter a portal username to link.");
   }
 
-  if (!isMechanicPortalUsername(username)) {
-    throw new Error(`Portal usernames must use @${MECHANIC_PORTAL_EMAIL_DOMAIN}.`);
+  if (!isMechanicPortalUsername(username, params.emailDomain)) {
+    throw new Error(`Portal usernames must use @${params.emailDomain}.`);
   }
 
   const userId = await findAuthUserIdByEmail(username);
@@ -175,4 +207,48 @@ export async function getPortalUsernameForLinkedUser(userId: string | null) {
   }
 
   return data.user.email ?? null;
+}
+
+export async function migrateMechanicPortalLoginToTenantDomain(params: {
+  linkedUserId: string;
+  firstName: string;
+  lastName: string;
+  emailDomain: string;
+}) {
+  const admin = getSupabaseAdminClient();
+  const currentEmail = await getPortalUsernameForLinkedUser(params.linkedUserId);
+
+  if (!currentEmail) {
+    throw new Error("Linked portal account could not be loaded.");
+  }
+
+  if (isMechanicPortalUsername(currentEmail, params.emailDomain)) {
+    throw new Error("Portal username already uses this tenant's domain.");
+  }
+
+  const takenUsernames = await listMechanicPortalUsernames(params.emailDomain);
+  const username = buildMechanicPortalUsername({
+    firstName: params.firstName,
+    lastName: params.lastName,
+    emailDomain: params.emailDomain,
+    takenUsernames,
+  });
+  const temporaryPassword = buildMechanicTemporaryPassword(params.lastName);
+
+  const { error } = await admin.auth.admin.updateUserById(params.linkedUserId, {
+    email: username,
+    password: temporaryPassword,
+    email_confirm: true,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return {
+    userId: params.linkedUserId,
+    username,
+    temporaryPassword,
+    previousUsername: currentEmail,
+  };
 }

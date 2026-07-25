@@ -10,7 +10,9 @@ import { parseStaffFormData, staffFormSchema } from "@/features/staff/schemas/st
 import {
   deleteMechanicPortalLogin,
   linkExistingMechanicPortalLogin,
+  migrateMechanicPortalLoginToTenantDomain,
   provisionMechanicPortalLogin,
+  resolveMechanicPortalEmailDomain,
 } from "@/features/staff/services/mechanic-portal-login";
 import {
   INITIAL_STAFF_ACTION_STATE,
@@ -55,6 +57,78 @@ export async function updateStaffAction(
   return saveStaff(formData);
 }
 
+export async function migrateMechanicPortalLoginAction(
+  _prevState: StaffActionState = INITIAL_STAFF_ACTION_STATE,
+  formData: FormData,
+): Promise<StaffActionState> {
+  const staffId = readStaffId(formData);
+
+  if (!staffId) {
+    return { status: "error", message: "Staff record is required." };
+  }
+
+  const { branchScope, supabase } = await getBranchScopedServerClient("staff:write");
+  const portalEmailDomain = await resolveMechanicPortalEmailDomain(
+    supabase,
+    branchScope.tenantId,
+  );
+
+  const { data: staff, error: staffError } = await applyBranchFilter(
+    supabase
+      .from("staff")
+      .select("id, first_name, last_name, role, linked_user_id")
+      .eq("id", staffId),
+    branchScope.selectedBranchId,
+  ).maybeSingle();
+
+  if (staffError) {
+    return { status: "error", message: staffError.message };
+  }
+
+  if (!staff) {
+    return { status: "error", message: "Staff record does not exist." };
+  }
+
+  if (staff.role !== "mechanic") {
+    return { status: "error", message: "Only mechanics can have portal logins." };
+  }
+
+  if (!staff.linked_user_id) {
+    return { status: "error", message: "This mechanic does not have a linked portal account." };
+  }
+
+  try {
+    const migrated = await migrateMechanicPortalLoginToTenantDomain({
+      linkedUserId: staff.linked_user_id,
+      firstName: staff.first_name,
+      lastName: staff.last_name,
+      emailDomain: portalEmailDomain,
+    });
+
+    revalidatePath("/staff");
+    revalidatePath(`/staff/${staffId}/edit`);
+
+    return {
+      status: "success",
+      message: "Portal username updated for this tenant.",
+      portalLogin: {
+        staffId: staff.id,
+        staffName: `${staff.first_name} ${staff.last_name}`.trim(),
+        username: migrated.username,
+        temporaryPassword: migrated.temporaryPassword,
+      },
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Portal username could not be updated for this tenant.",
+    };
+  }
+}
+
 async function saveStaff(formData: FormData): Promise<StaffActionState> {
   const parsed = staffFormSchema.safeParse(parseStaffFormData(formData));
 
@@ -64,6 +138,10 @@ async function saveStaff(formData: FormData): Promise<StaffActionState> {
 
   const values = parsed.data;
   const { branchScope, supabase } = await getBranchScopedServerClient("staff:write");
+  const portalEmailDomain = await resolveMechanicPortalEmailDomain(
+    supabase,
+    branchScope.tenantId,
+  );
   const branchId = values.staffId
     ? await getExistingStaffBranchId(supabase, branchScope.selectedBranchId, values.staffId)
     : branchScope.writeBranchId;
@@ -91,6 +169,7 @@ async function saveStaff(formData: FormData): Promise<StaffActionState> {
       const linkedLogin = await linkExistingMechanicPortalLogin({
         portalUsername: values.linkPortalUsername,
         staffId: values.staffId,
+        emailDomain: portalEmailDomain,
       });
       linkedUserId = linkedLogin.userId;
     } catch (error) {
@@ -160,6 +239,7 @@ async function saveStaff(formData: FormData): Promise<StaffActionState> {
       createdLogin = await provisionMechanicPortalLogin({
         firstName: values.firstName,
         lastName: values.lastName,
+        emailDomain: portalEmailDomain,
       });
 
       const { error: linkError } = await supabase
@@ -267,4 +347,9 @@ async function executeStaffSaveOperation({
   return staffId
     ? supabase.from("staff").update(payload).eq("id", staffId).select("id").single()
     : supabase.from("staff").insert(payload).select("id").single();
+}
+
+function readStaffId(formData: FormData) {
+  const value = formData.get("staffId");
+  return typeof value === "string" && value ? value : null;
 }

@@ -1,11 +1,18 @@
 import { PageHeader } from "@/components/shared/page-header";
 import { StaffForm } from "@/features/staff/components/staff-form";
+import { resolveMechanicPortalEmailDomain } from "@/features/staff/services/mechanic-portal-login";
+import { getBranchScopedServerClient } from "@/lib/branches";
 import { requireStaffCapability } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewStaffPage() {
   await requireStaffCapability("staff:write");
+  const { branchScope, supabase } = await getBranchScopedServerClient("staff:write");
+  const portalEmailDomain = await resolveMechanicPortalEmailDomain(
+    supabase,
+    branchScope.tenantId,
+  );
 
   return (
     <div className="space-y-6">
@@ -15,6 +22,7 @@ export default async function NewStaffPage() {
       />
       <StaffForm
         mode="create"
+        portalEmailDomain={portalEmailDomain}
         initialValues={{
           staffCode: "",
           firstName: "",

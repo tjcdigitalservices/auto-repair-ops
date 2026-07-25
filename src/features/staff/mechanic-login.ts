@@ -1,4 +1,38 @@
-export const MECHANIC_PORTAL_EMAIL_DOMAIN = "sayautocare.com";
+function normalizeTenantPortalDomainLabel(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+export function buildMechanicPortalEmailDomainFromTenant(params: {
+  tenantName: string;
+  tenantSlug: string;
+}) {
+  const fromName = normalizeTenantPortalDomainLabel(params.tenantName);
+
+  if (fromName) {
+    return `${fromName}.com`;
+  }
+
+  const fromSlug = params.tenantSlug.trim().toLowerCase().replace(/-/g, "");
+
+  if (fromSlug) {
+    return `${fromSlug}.com`;
+  }
+
+  throw new Error("Tenant name is required to build a portal email domain.");
+}
+
+/** @deprecated Use buildMechanicPortalEmailDomainFromTenant */
+export function buildMechanicPortalEmailDomain(tenantSlug: string) {
+  return buildMechanicPortalEmailDomainFromTenant({
+    tenantName: "",
+    tenantSlug,
+  });
+}
 
 export function normalizeMechanicLoginPart(value: string) {
   return value
@@ -12,6 +46,7 @@ export function normalizeMechanicLoginPart(value: string) {
 export function buildMechanicPortalUsername(params: {
   firstName: string;
   lastName: string;
+  emailDomain: string;
   takenUsernames: Iterable<string>;
 }) {
   const firstName = normalizeMechanicLoginPart(params.firstName);
@@ -21,7 +56,7 @@ export function buildMechanicPortalUsername(params: {
     throw new Error("Last name is required to generate a portal username.");
   }
 
-  const domain = MECHANIC_PORTAL_EMAIL_DOMAIN;
+  const domain = params.emailDomain.trim().toLowerCase();
   const taken = new Set(
     [...params.takenUsernames].map((username) => username.trim().toLowerCase()),
   );
@@ -51,8 +86,9 @@ export function buildMechanicTemporaryPassword(lastName: string) {
   return `${normalizedLastName}@${new Date().getFullYear()}`;
 }
 
-export function normalizeMechanicPortalUsernameInput(value: string) {
+export function normalizeMechanicPortalUsernameInput(value: string, emailDomain: string) {
   const trimmed = value.trim().toLowerCase();
+  const domain = emailDomain.trim().toLowerCase();
 
   if (!trimmed) {
     return "";
@@ -62,9 +98,9 @@ export function normalizeMechanicPortalUsernameInput(value: string) {
     return trimmed;
   }
 
-  return `${trimmed}@${MECHANIC_PORTAL_EMAIL_DOMAIN}`;
+  return `${trimmed}@${domain}`;
 }
 
-export function isMechanicPortalUsername(value: string) {
-  return value.trim().toLowerCase().endsWith(`@${MECHANIC_PORTAL_EMAIL_DOMAIN}`);
+export function isMechanicPortalUsername(value: string, emailDomain: string) {
+  return value.trim().toLowerCase().endsWith(`@${emailDomain.trim().toLowerCase()}`);
 }

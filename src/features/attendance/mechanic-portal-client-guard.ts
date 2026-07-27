@@ -14,6 +14,38 @@ export function isKnownExternalJsonRpcError(value: unknown) {
   );
 }
 
+export function installMechanicPortalClientGuard() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const globalWindow = window as Window & {
+    __mechanicPortalClientGuardInstalled?: boolean;
+  };
+
+  if (globalWindow.__mechanicPortalClientGuardInstalled) {
+    return;
+  }
+
+  globalWindow.__mechanicPortalClientGuardInstalled = true;
+
+  window.addEventListener(
+    "unhandledrejection",
+    function handleMechanicPortalUnhandledRejection(event) {
+      if (!isKnownExternalJsonRpcError(event.reason)) {
+        return;
+      }
+
+      if (typeof event.stopImmediatePropagation === "function") {
+        event.stopImmediatePropagation();
+      }
+
+      event.preventDefault();
+    },
+    true,
+  );
+}
+
 export function getMechanicPortalClientGuardScript() {
   return `
     (() => {

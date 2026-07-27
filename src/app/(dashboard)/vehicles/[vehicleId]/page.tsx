@@ -31,6 +31,7 @@ export default async function VehicleDetailPage({ params, searchParams }: Vehicl
   }
 
   const canManageVehicles = session.capabilities.includes("vehicles:write");
+  const canCreateQuotations = session.capabilities.includes("quotations:write");
   const canRecordPastService = session.capabilities.includes("job_orders:write");
   const canViewServiceHistory = session.capabilities.includes("job_orders:read");
   const [serviceHistory, documents] = await Promise.all([
@@ -45,6 +46,7 @@ export default async function VehicleDetailPage({ params, searchParams }: Vehicl
       documents={documents}
       canViewServiceHistory={canViewServiceHistory}
       canManageVehicles={canManageVehicles}
+      canCreateQuotations={canCreateQuotations}
       canRecordPastService={canRecordPastService}
       historicalSaved={historicalSaved === "1"}
     />

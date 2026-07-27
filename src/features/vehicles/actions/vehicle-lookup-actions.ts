@@ -260,6 +260,98 @@ export async function updateVehicleLookupOptionStatusAction(formData: FormData) 
   });
 }
 
+export async function deleteVehicleMakeAction(formData: FormData) {
+  const makeId = readString(formData, "makeId");
+
+  if (!makeId) {
+    redirect(`${LOOKUPS_PATH}?error=${encodeURIComponent("Invalid make request.")}`);
+  }
+
+  const { context, supabase } = await getAuthorizedSupabaseServerClient("settings:write");
+  const { data: make, error: makeError } = await supabase
+    .from("vehicle_makes")
+    .select("*")
+    .eq("id", makeId)
+    .eq("tenant_id", context.tenantId)
+    .maybeSingle();
+
+  if (makeError) {
+    redirect(`${LOOKUPS_PATH}?error=${encodeURIComponent(makeError.message)}`);
+  }
+
+  if (!make) {
+    redirect(`${LOOKUPS_PATH}?error=${encodeURIComponent("Vehicle make not found.")}`);
+  }
+
+  const { error: modelsError } = await supabase.from("vehicle_models").delete().eq("make_id", makeId);
+
+  if (modelsError) {
+    redirect(`${LOOKUPS_PATH}?error=${encodeURIComponent(modelsError.message)}`);
+  }
+
+  const { error: deleteError } = await supabase
+    .from("vehicle_makes")
+    .delete()
+    .eq("id", makeId)
+    .eq("tenant_id", context.tenantId);
+
+  if (deleteError) {
+    redirect(`${LOOKUPS_PATH}?error=${encodeURIComponent(deleteError.message)}`);
+  }
+
+  await writeAuditLog(supabase, {
+    action: `Deleted vehicle make: ${make.name}`,
+    entityType: "vehicle_make",
+    entityId: makeId,
+    userId: context.userId,
+    beforeData: make,
+  });
+
+  revalidateVehicleLookupPaths();
+  redirect(LOOKUPS_PATH);
+}
+
+export async function deleteVehicleModelAction(formData: FormData) {
+  const modelId = readString(formData, "modelId");
+
+  if (!modelId) {
+    redirect(`${LOOKUPS_PATH}?error=${encodeURIComponent("Invalid model request.")}`);
+  }
+
+  const { context, supabase } = await getAuthorizedSupabaseServerClient("settings:write");
+  const { data: model, error: modelError } = await supabase
+    .from("vehicle_models")
+    .select("*, vehicle_makes!inner(tenant_id, name)")
+    .eq("id", modelId)
+    .eq("vehicle_makes.tenant_id", context.tenantId)
+    .maybeSingle();
+
+  if (modelError) {
+    redirect(`${LOOKUPS_PATH}?error=${encodeURIComponent(modelError.message)}`);
+  }
+
+  if (!model) {
+    redirect(`${LOOKUPS_PATH}?error=${encodeURIComponent("Vehicle model not found.")}`);
+  }
+
+  const { error: deleteError } = await supabase.from("vehicle_models").delete().eq("id", modelId);
+
+  if (deleteError) {
+    redirect(`${LOOKUPS_PATH}?error=${encodeURIComponent(deleteError.message)}`);
+  }
+
+  await writeAuditLog(supabase, {
+    action: `Deleted vehicle model: ${model.name}`,
+    entityType: "vehicle_model",
+    entityId: modelId,
+    userId: context.userId,
+    beforeData: model,
+  });
+
+  revalidateVehicleLookupPaths();
+  redirect(LOOKUPS_PATH);
+}
+
 async function updateRecordStatus({
   formData,
   table,

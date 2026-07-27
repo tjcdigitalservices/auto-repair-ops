@@ -1,6 +1,7 @@
 "use client";
 
 import { useDeferredValue, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Plus, Search } from "lucide-react";
 
 import {
@@ -13,6 +14,18 @@ import {
 } from "@/components/shared/catalog-combobox/catalog-combobox-config";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+
+const DROPDOWN_GAP_PX = 8;
+const VIEWPORT_PADDING_PX = 16;
+const DROPDOWN_PREFERRED_MAX_HEIGHT_PX = 320;
+const DROPDOWN_MIN_HEIGHT_PX = 160;
+
+type DropdownPanelLayout = {
+  top: number;
+  left: number;
+  width: number;
+  maxHeight: number;
+};
 
 export function CatalogCombobox(props: CatalogComboboxProps) {
   const {
@@ -33,11 +46,14 @@ export function CatalogCombobox(props: CatalogComboboxProps) {
   const config = getCatalogKindConfig(kind);
   const listboxId = useId();
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [panelLayout, setPanelLayout] = useState<DropdownPanelLayout | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   const selectedOption =
     options.find((option) => option.id === value) ?? null;
@@ -57,15 +73,66 @@ export function CatalogCombobox(props: CatalogComboboxProps) {
       : null;
 
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) {
-        setIsOpen(false);
+      const target = event.target as Node;
+
+      if (containerRef.current?.contains(target)) {
+        return;
       }
+
+      if (panelRef.current?.contains(target)) {
+        return;
+      }
+
+      setIsOpen(false);
     }
 
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setPanelLayout(null);
+      return;
+    }
+
+    function updatePanelLayout() {
+      const anchor = containerRef.current;
+
+      if (!anchor) {
+        return;
+      }
+
+      const rect = anchor.getBoundingClientRect();
+      const spaceBelow =
+        window.innerHeight - rect.bottom - VIEWPORT_PADDING_PX - DROPDOWN_GAP_PX;
+      const maxHeight = Math.min(
+        DROPDOWN_PREFERRED_MAX_HEIGHT_PX,
+        Math.max(DROPDOWN_MIN_HEIGHT_PX, spaceBelow),
+      );
+
+      setPanelLayout({
+        top: rect.bottom + DROPDOWN_GAP_PX,
+        left: rect.left,
+        width: rect.width,
+        maxHeight,
+      });
+    }
+
+    updatePanelLayout();
+    window.addEventListener("resize", updatePanelLayout);
+    window.addEventListener("scroll", updatePanelLayout, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePanelLayout);
+      window.removeEventListener("scroll", updatePanelLayout, true);
+    };
+  }, [isOpen]);
 
   function openDropdown() {
     if (disabled) {
@@ -99,6 +166,79 @@ export function CatalogCombobox(props: CatalogComboboxProps) {
     ? getCatalogOptionLabel(kind, selectedOption)
     : fallbackLabel ?? "";
   const inputValue = isOpen ? query : displayLabel;
+
+  const dropdownPanel =
+    isOpen && panelLayout ? (
+      <div
+        ref={panelRef}
+        id={listboxId}
+        role="listbox"
+        style={{
+          position: "fixed",
+          top: panelLayout.top,
+          left: panelLayout.left,
+          width: panelLayout.width,
+          maxHeight: panelLayout.maxHeight,
+          zIndex: 200,
+        }}
+        className="flex flex-col overflow-hidden rounded-xl border border-border/70 bg-background shadow-lg shadow-slate-950/10"
+      >
+        {filteredOptions.length === 0 ? (
+          <div className="shrink-0 px-3 py-3 text-sm text-muted-foreground">
+            {config.emptyMessage}
+          </div>
+        ) : (
+          <div className="min-h-0 flex-1 overflow-y-auto py-1">
+            {filteredOptions.map((option, index) => {
+              const isActive = index === activeIndex;
+
+              return (
+                <button
+                  key={option.id}
+                  id={`${listboxId}-option-${index}`}
+                  type="button"
+                  role="option"
+                  aria-selected={option.id === value}
+                  className={cn(
+                    "flex w-full flex-col gap-0.5 px-3 py-2.5 text-left transition-colors",
+                    isActive ? "bg-muted/70" : "hover:bg-muted/40",
+                  )}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onClick={() => handleSelect(option)}
+                >
+                  {renderCatalogOptionDetails(kind, option)}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {showCreateFooter ? (
+          <div className="shrink-0 border-t border-border/70 bg-muted/10 px-3 py-3">
+            {filteredOptions.length > 0 ? (
+              <p className="text-xs text-muted-foreground">{config.emptyCreatePrompt}</p>
+            ) : null}
+            <button
+              id={`${listboxId}-create`}
+              type="button"
+              className={cn(
+                "mt-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm font-medium text-brand-navy transition-colors",
+                isCreateActionActive ? "bg-muted/70" : "hover:bg-muted/50",
+              )}
+              onMouseDown={(event) => event.preventDefault()}
+              onMouseEnter={() => setActiveIndex(createActionIndex)}
+              onClick={handleCreate}
+            >
+              <Plus className="size-4 shrink-0" />
+              {filteredOptions.length === 0 && query.trim()
+                ? config.createLabelWithQuery(query.trim())
+                : config.createLabel}
+            </button>
+          </div>
+        ) : null}
+      </div>
+    ) : null;
 
   return (
     <div ref={containerRef} className={cn("relative", className)}>
@@ -194,68 +334,7 @@ export function CatalogCombobox(props: CatalogComboboxProps) {
         <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       </div>
 
-      {isOpen ? (
-        <div
-          id={listboxId}
-          role="listbox"
-          className="absolute z-50 mt-2 w-full overflow-hidden rounded-xl border border-border/70 bg-background shadow-lg shadow-slate-950/10"
-        >
-          {filteredOptions.length === 0 ? (
-            <div className="px-3 py-3 text-sm text-muted-foreground">
-              {config.emptyMessage}
-            </div>
-          ) : (
-            <div className="max-h-72 overflow-y-auto py-1">
-              {filteredOptions.map((option, index) => {
-                const isActive = index === activeIndex;
-
-                return (
-                  <button
-                    key={option.id}
-                    id={`${listboxId}-option-${index}`}
-                    type="button"
-                    role="option"
-                    aria-selected={option.id === value}
-                    className={cn(
-                      "flex w-full flex-col gap-0.5 px-3 py-2.5 text-left transition-colors",
-                      isActive ? "bg-muted/70" : "hover:bg-muted/40",
-                    )}
-                    onMouseDown={(event) => event.preventDefault()}
-                    onMouseEnter={() => setActiveIndex(index)}
-                    onClick={() => handleSelect(option)}
-                  >
-                    {renderCatalogOptionDetails(kind, option)}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {showCreateFooter ? (
-            <div className="border-t border-border/70 bg-muted/10 px-3 py-3">
-              {filteredOptions.length > 0 ? (
-                <p className="text-xs text-muted-foreground">{config.emptyCreatePrompt}</p>
-              ) : null}
-              <button
-                id={`${listboxId}-create`}
-                type="button"
-                className={cn(
-                  "mt-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm font-medium text-brand-navy transition-colors",
-                  isCreateActionActive ? "bg-muted/70" : "hover:bg-muted/50",
-                )}
-                onMouseDown={(event) => event.preventDefault()}
-                onMouseEnter={() => setActiveIndex(createActionIndex)}
-                onClick={handleCreate}
-              >
-                <Plus className="size-4 shrink-0" />
-                {filteredOptions.length === 0 && query.trim()
-                  ? config.createLabelWithQuery(query.trim())
-                  : config.createLabel}
-              </button>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+      {isMounted && dropdownPanel ? createPortal(dropdownPanel, document.body) : null}
     </div>
   );
 }

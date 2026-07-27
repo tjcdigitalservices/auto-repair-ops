@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   getMechanicPortalClientGuardScript,
+  installMechanicPortalClientGuard,
   isKnownExternalJsonRpcError,
 } from "@/features/attendance/mechanic-portal-client-guard";
 
@@ -24,6 +25,16 @@ describe("isKnownExternalJsonRpcError", () => {
     ).toBe(false);
     expect(isKnownExternalJsonRpcError(new Error("Internal JSON-RPC error."))).toBe(false);
     expect(isKnownExternalJsonRpcError(null)).toBe(false);
+  });
+
+  it("installs the guard only once", () => {
+    installMechanicPortalClientGuard();
+    installMechanicPortalClientGuard();
+
+    expect(
+      (window as Window & { __mechanicPortalClientGuardInstalled?: boolean })
+        .__mechanicPortalClientGuardInstalled,
+    ).toBe(true);
   });
 
   it("builds a guard script that runs before portal hydration", () => {

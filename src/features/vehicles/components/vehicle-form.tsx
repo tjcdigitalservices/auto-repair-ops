@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 
 import {
   FieldError,
@@ -13,6 +13,7 @@ import {
   formSelectClassName,
 } from "@/components/shared/form-status";
 import { FormStickyActions } from "@/components/shared/form-sticky-actions";
+import { InlineCreateCombobox } from "@/components/shared/inline-create-combobox/inline-create-combobox";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { TextAutocomplete } from "@/components/shared/text-autocomplete";
 import { Button } from "@/components/ui/button";
@@ -20,18 +21,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import { QuickCreateCustomerDialog } from "@/features/customers/components/quick-create-customer-dialog";
+import type { CustomerOption } from "@/features/customers/types";
 import {
   createVehicleAction,
   updateVehicleAction,
 } from "@/features/vehicles/actions/vehicle-actions";
 import type { VehicleFormLookupData, VehicleFormValues } from "@/features/vehicles/types";
-import type { CustomerOption } from "@/features/customers/types";
+import { dedupeOptionsById } from "@/features/quotations/utils";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
 
 export function VehicleForm({
   mode,
   initialValues,
-  customerOptions,
+  customerOptions: initialCustomerOptions,
   lookupData,
 }: {
   mode: "create" | "edit";
@@ -44,6 +47,15 @@ export function VehicleForm({
     INITIAL_FORM_ACTION_STATE,
   );
   const [values, setValues] = useState(initialValues);
+  const [customerOptions, setCustomerOptions] = useState(() =>
+    dedupeOptionsById(initialCustomerOptions),
+  );
+  const [isCreateCustomerOpen, setIsCreateCustomerOpen] = useState(false);
+  const [createCustomerPrefill, setCreateCustomerPrefill] = useState({
+    firstName: "",
+    lastName: "",
+  });
+  const customerComboboxRef = useRef<HTMLInputElement | null>(null);
 
   const normalizedMake = values.make.trim().toLowerCase();
   const filteredModels = normalizedMake
@@ -52,6 +64,7 @@ export function VehicleForm({
   const yearOptions = getVehicleYearOptions();
 
   return (
+    <>
     <form action={formAction} className="space-y-6">
       {initialValues.vehicleId ? (
         <input type="hidden" name="vehicleId" value={initialValues.vehicleId} />
@@ -73,26 +86,27 @@ export function VehicleForm({
               <Label htmlFor="customerId" required>
                 Customer
               </Label>
-              <select
+              <InlineCreateCombobox
                 id="customerId"
                 name="customerId"
+                options={customerOptions}
                 value={values.customerId}
-                className={formSelectClassName(actionState.fieldErrors, "customerId")}
-                {...fieldAriaProps({
-                  errors: actionState.fieldErrors,
-                  name: "customerId",
-                  required: true,
-                  errorId: fieldErrorId("customerId"),
-                })}
-                onChange={(event) => updateFormValue("customerId", event.target.value)}
-              >
-                <option value="">Select customer</option>
-                {customerOptions.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                inputRef={customerComboboxRef}
+                fieldErrors={actionState.fieldErrors}
+                fieldName="customerId"
+                required
+                ariaLabel="Customer"
+                placeholder="Search customers..."
+                emptyMessage="No customers found."
+                createLabel="Create New Customer"
+                onValueChange={(nextCustomerId) =>
+                  updateFormValue("customerId", nextCustomerId)
+                }
+                onCreateNew={(searchQuery) => {
+                  setCreateCustomerPrefill(parseCustomerCreatePrefill(searchQuery));
+                  setIsCreateCustomerOpen(true);
+                }}
+              />
               <FieldError errors={actionState.fieldErrors} name="customerId" id={fieldErrorId("customerId")} />
             </div>
 
@@ -404,6 +418,21 @@ export function VehicleForm({
         </SubmitButton>
       </FormStickyActions>
     </form>
+
+    <QuickCreateCustomerDialog
+      open={isCreateCustomerOpen}
+      onOpenChange={setIsCreateCustomerOpen}
+      initialFirstName={createCustomerPrefill.firstName}
+      initialLastName={createCustomerPrefill.lastName}
+      onCreated={(customer) => {
+        setCustomerOptions((current) => dedupeOptionsById([...current, customer]));
+        updateFormValue("customerId", customer.id);
+        window.requestAnimationFrame(() => {
+          customerComboboxRef.current?.focus();
+        });
+      }}
+    />
+    </>
   );
 
   function updateFormValue<Key extends keyof VehicleFormValues>(
@@ -420,4 +449,21 @@ export function VehicleForm({
 function getVehicleYearOptions() {
   const currentYear = new Date().getFullYear();
   return Array.from({ length: 50 }, (_, index) => String(currentYear - index));
+}
+
+function parseCustomerCreatePrefill(searchQuery: string) {
+  const parts = searchQuery.trim().split(/\s+/).filter(Boolean);
+
+  if (parts.length === 0) {
+    return { firstName: "", lastName: "" };
+  }
+
+  if (parts.length === 1) {
+    return { firstName: "", lastName: parts[0] ?? "" };
+  }
+
+  return {
+    firstName: parts.slice(0, -1).join(" "),
+    lastName: parts.at(-1) ?? "",
+  };
 }

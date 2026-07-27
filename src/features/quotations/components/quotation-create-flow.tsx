@@ -42,6 +42,7 @@ import {
   getQuotationItemTypeResetPatch,
   QuotationLineItemFields,
 } from '@/features/quotations/components/quotation-line-item-fields';
+import { QuotationIntakeContextSummary } from '@/features/quotations/components/quotation-intake-context-summary';
 import {
   calculateQuotationDiscountAmount,
   calculateQuotationGrandTotal,
@@ -50,6 +51,7 @@ import {
   calculateQuotationTaxAmount,
   createQuotationItem,
   dedupeOptionsById,
+  isQuotationIntakeComplete,
   toNumeric,
   type QuotationDiscountMode,
 } from '@/features/quotations/utils';
@@ -128,10 +130,16 @@ export function QuotationCreateFlow({
     useState<QuotationDiscountMode>('fixed');
   const [discountInput, setDiscountInput] = useState(initialValues.discount);
   const [taxRate, setTaxRate] = useState('0');
-  const [customerMode, setCustomerMode] = useState<IntakeSelectionMode>(
-    prefillLastName.trim() ? 'new' : 'choose',
+  const [customerMode, setCustomerMode] = useState<IntakeSelectionMode>(() => {
+    if (initialValues.customerId) {
+      return 'existing';
+    }
+
+    return prefillLastName.trim() ? 'new' : 'choose';
+  });
+  const [vehicleMode, setVehicleMode] = useState<IntakeSelectionMode>(() =>
+    initialValues.vehicleId ? 'existing' : 'choose',
   );
-  const [vehicleMode, setVehicleMode] = useState<IntakeSelectionMode>('choose');
   const { values, setValues, updateFormValue } = useFormValues(initialValues);
   const [currentStep, setCurrentStep] = useState<QuotationCreateStep>(
     deriveCreateStep(initialValues),
@@ -180,6 +188,17 @@ export function QuotationCreateFlow({
     tax: formatMoneyInputValue(taxAmount),
   });
   const canReview = isQuotationDraftReady(values);
+  const intakeComplete = isQuotationIntakeComplete(values);
+
+  function openCustomerStep() {
+    setCustomerMode(values.customerId ? 'existing' : 'choose');
+    setCurrentStep('customer');
+  }
+
+  function openVehicleStep() {
+    setVehicleMode(values.vehicleId ? 'existing' : 'choose');
+    setCurrentStep('vehicle');
+  }
 
   useEffect(() => {
     setValues((current) => {
@@ -624,6 +643,15 @@ export function QuotationCreateFlow({
 
           {currentStep === 'items' ? (
             <>
+              {intakeComplete && selectedCustomer && selectedVehicle ? (
+                <QuotationIntakeContextSummary
+                  customerLabel={selectedCustomer.label}
+                  vehicleLabel={selectedVehicle.label}
+                  onChangeCustomer={openCustomerStep}
+                  onChangeVehicle={openVehicleStep}
+                />
+              ) : null}
+
               <SectionCard
                 title="Step 3. Build the quotation"
                 description="Add products, services, and manual labor. Quotations remain estimates only and do not deduct stock."
@@ -1702,6 +1730,14 @@ function getStepStatus(
 
   if (stepIndex === currentIndex) {
     return 'current';
+  }
+
+  if (step === 'customer' && values.customerId) {
+    return 'complete';
+  }
+
+  if (step === 'vehicle' && values.vehicleId) {
+    return 'complete';
   }
 
   if (stepIndex < currentIndex) {

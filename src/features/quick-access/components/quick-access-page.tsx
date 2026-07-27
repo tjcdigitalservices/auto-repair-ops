@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 import { EmptyState } from '@/components/shared/empty-state';
 import { PageHeader } from '@/components/shared/page-header';
@@ -28,17 +28,9 @@ export function QuickAccessPage({
         title="Quick Access"
         description="Use this intake workspace to pull up a returning customer or vehicle record quickly, then jump into the next action."
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button asChild variant="bluePrimary">
-              <Link href="/quotations/new">
-                <Plus className="size-4" />
-                New Quotation
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/dashboard">Back to dashboard</Link>
-            </Button>
-          </div>
+          <Button asChild variant="outline">
+            <Link href="/dashboard">Back to dashboard</Link>
+          </Button>
         }
       />
 
@@ -68,6 +60,7 @@ export function QuickAccessPage({
           canViewQuotations={searchState.permissions.canViewQuotations}
           canViewServiceHistory={searchState.permissions.canViewServiceHistory}
           canRecordPastService={searchState.permissions.canRecordPastService}
+          permissions={searchState.permissions}
         />
       ) : (
         <div className="flex min-h-[55vh] flex-1 items-center justify-center">

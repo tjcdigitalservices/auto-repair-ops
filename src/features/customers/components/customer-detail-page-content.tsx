@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Car } from "lucide-react";
+import { Car, Pencil } from "lucide-react";
 
 import {
   EntityDetailHeader,
@@ -24,6 +24,7 @@ import { CustomerVehiclesTab } from "@/features/customers/components/customer-ve
 import type { CustomerDetail } from "@/features/customers/types";
 import type { ServiceHistoryEntry } from "@/features/service-history/types";
 import { formatDate } from "@/lib/dates";
+import { buildQuotationNewHref } from "@/features/quotations/utils";
 
 const CUSTOMER_DETAIL_TABS = [
   { id: "vehicles", label: "Vehicles" },
@@ -37,10 +38,12 @@ export function CustomerDetailPageContent({
   customer,
   serviceHistory,
   canViewServiceHistory,
+  canCreateQuotations,
 }: {
   customer: CustomerDetail;
   serviceHistory: ServiceHistoryEntry[];
   canViewServiceHistory: boolean;
+  canCreateQuotations: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -94,12 +97,25 @@ export function CustomerDetailPageContent({
           actions={
             <PageHeaderActions
               primary={
-                <PagePrimaryAction href={`/customers/${customer.id}/edit`}>
-                  Edit Customer
-                </PagePrimaryAction>
+                canCreateQuotations ? (
+                  <PagePrimaryAction
+                    href={buildQuotationNewHref({ customerId: customer.id })}
+                  >
+                    New Quotation
+                  </PagePrimaryAction>
+                ) : (
+                  <PagePrimaryAction href={`/customers/${customer.id}/edit`}>
+                    Edit Customer
+                  </PagePrimaryAction>
+                )
               }
               overflow={
                 <TableRowActionsMenu label="Customer actions" variant="page">
+                  <TableRowActionsMenuLink
+                    href={`/customers/${customer.id}/edit`}
+                    label="Edit customer"
+                    icon={Pencil}
+                  />
                   <TableRowActionsMenuLink
                     href={`/vehicles/new?customerId=${customer.id}`}
                     label="Add vehicle"

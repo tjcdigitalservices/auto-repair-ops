@@ -12,6 +12,7 @@ import type {
   QuickAccessRecordMatch,
   QuickAccessSearchState,
 } from "@/features/quick-access/types";
+import type { QuickAccessLinkedJobOrder } from "@/features/quick-access/workflow";
 import {
   isPossiblePlateMatch,
   normalizeQuickAccessPlate,
@@ -24,6 +25,7 @@ import type { TableRow } from "@/types/database";
 type CustomerRow = TableRow<"customers">;
 type VehicleRow = TableRow<"vehicles">;
 type QuotationRow = TableRow<"quotations">;
+type JobOrderRow = TableRow<"job_orders">;
 
 export async function getQuickAccessSearchState({
   query,
@@ -46,6 +48,7 @@ export async function getQuickAccessSearchState({
   const permissions = {
     canCreateQuotations: context.capabilities.includes("quotations:write"),
     canViewQuotations: context.capabilities.includes("quotations:read"),
+    canViewJobOrders: context.capabilities.includes("job_orders:read"),
     canViewServiceHistory: context.capabilities.includes("job_orders:read"),
     canRecordPastService: context.capabilities.includes("job_orders:write"),
   };
@@ -272,6 +275,12 @@ async function buildQuickAccessRecords(params: {
     branchId: params.branchId,
     canViewQuotations: params.canViewQuotations,
   });
+  const linkedJobOrdersByQuotationId = await listLinkedJobOrdersByQuotationId({
+    supabase: params.supabase,
+    branchId: params.branchId,
+    quotationsByCustomerId,
+    canViewJobOrders: params.capabilities.includes("job_orders:read"),
+  });
   const serviceHistoryEntries = await listServiceHistoryByVehicleIdsForContext({
     supabase: params.supabase,
     capabilities: params.capabilities,
@@ -306,6 +315,10 @@ async function buildQuickAccessRecords(params: {
         customer,
         vehicles,
         recentQuotations,
+        linkedJobOrdersByQuotationId: pickLinkedJobOrdersForCustomer(
+          linkedJobOrdersByQuotationId,
+          recentQuotations,
+        ),
         serviceHistory,
         highlightedVehicleId: match.highlightedVehicleId,
         match: match.match,
@@ -357,6 +370,97 @@ async function listRecentQuotationsByCustomerId(params: {
     ]);
     return groups;
   }, new Map());
+}
+
+async function listLinkedJobOrdersByQuotationId(params: {
+  supabase: Awaited<ReturnType<typeof getBranchScopedServerClient>>["supabase"];
+  branchId: string | null;
+  quotationsByCustomerId: Map<string, QuotationListItem[]>;
+  canViewJobOrders: boolean;
+}) {
+  if (!params.canViewJobOrders) {
+    return {} as Record<string, QuickAccessLinkedJobOrder>;
+  }
+
+  const quotationIds = [...params.quotationsByCustomerId.values()]
+    .flat()
+    .filter((quotation) => quotation.status === "approved")
+    .map((quotation) => quotation.id);
+
+  if (quotationIds.length === 0) {
+    return {};
+  }
+
+  const { data, error } = await applyBranchFilter(
+    params.supabase
+      .from("job_orders")
+      .select("id, quotation_id, vehicle_id, status")
+      .in("quotation_id", quotationIds),
+    params.branchId,
+  );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const jobOrderRows = (data ?? []) as Pick<
+    JobOrderRow,
+    "id" | "quotation_id" | "vehicle_id" | "status"
+  >[];
+
+  if (jobOrderRows.length === 0) {
+    return {};
+  }
+
+  const jobOrderIds = jobOrderRows.map((row) => row.id);
+  const { data: invoiceRows, error: invoiceError } = await applyBranchFilter(
+    params.supabase.from("invoices").select("id, job_order_id").in("job_order_id", jobOrderIds),
+    params.branchId,
+  );
+
+  if (invoiceError) {
+    throw new Error(invoiceError.message);
+  }
+
+  const invoiceIdByJobOrderId = new Map(
+    ((invoiceRows ?? []) as Pick<TableRow<"invoices">, "id" | "job_order_id">[]).map((row) => [
+      row.job_order_id,
+      row.id,
+    ]),
+  );
+
+  return jobOrderRows.reduce<Record<string, QuickAccessLinkedJobOrder>>((result, row) => {
+    if (!row.quotation_id) {
+      return result;
+    }
+
+    result[row.quotation_id] = {
+      id: row.id,
+      quotationId: row.quotation_id,
+      vehicleId: row.vehicle_id,
+      status: row.status,
+      invoiceId: invoiceIdByJobOrderId.get(row.id) ?? null,
+    };
+    return result;
+  }, {});
+}
+
+function pickLinkedJobOrdersForCustomer(
+  linkedJobOrdersByQuotationId: Record<string, QuickAccessLinkedJobOrder>,
+  recentQuotations: QuotationListItem[],
+) {
+  return recentQuotations.reduce<Record<string, QuickAccessLinkedJobOrder>>(
+    (result, quotation) => {
+      const linkedJobOrder = linkedJobOrdersByQuotationId[quotation.id];
+
+      if (linkedJobOrder) {
+        result[quotation.id] = linkedJobOrder;
+      }
+
+      return result;
+    },
+    {},
+  );
 }
 
 function sortQuotationsForMatch(

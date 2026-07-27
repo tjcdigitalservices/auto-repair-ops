@@ -108,6 +108,52 @@ export function resolveQuotationCreateFlowSelection(params: {
   };
 }
 
+export function buildQuotationNewHref(params: {
+  customerId?: string;
+  vehicleId?: string;
+  lastName?: string;
+}) {
+  const searchParams = new URLSearchParams();
+
+  if (params.customerId) {
+    searchParams.set("customerId", params.customerId);
+  }
+
+  if (params.vehicleId) {
+    searchParams.set("vehicleId", params.vehicleId);
+  }
+
+  if (params.lastName?.trim()) {
+    searchParams.set("lastName", params.lastName.trim());
+  }
+
+  const query = searchParams.toString();
+  return query ? `/quotations/new?${query}` : "/quotations/new";
+}
+
+export function splitQuotationVehicleIntakeLabel(label: string) {
+  const parts = label.split(" · ").map((part) => part.trim()).filter(Boolean);
+
+  if (parts.length >= 2) {
+    return {
+      title: parts.slice(0, -1).join(" · "),
+      plate: parts.at(-1) ?? "",
+    };
+  }
+
+  return {
+    title: label.trim(),
+    plate: "",
+  };
+}
+
+export function isQuotationIntakeComplete(values: {
+  customerId: string;
+  vehicleId: string;
+}) {
+  return Boolean(values.customerId && values.vehicleId);
+}
+
 export function canDeleteQuotation(status: QuotationStatus) {
   return status !== "approved";
 }

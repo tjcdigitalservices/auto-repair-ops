@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Eye, History } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -20,8 +20,9 @@ import { IconActionGroup, IconActionLink } from "@/components/shared/icon-action
 import { SectionCard } from "@/components/shared/section-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { QuotationStatusBadge } from "@/features/quotations/components/quotation-status-badge";
+import { QuickAccessRecordWorkflowActions } from "@/features/quick-access/components/quick-access-workflow-hooks";
 import { MobileServiceHistoryAccordion } from "@/features/service-history/components/mobile-service-history-accordion";
-import type { QuickAccessCustomerRecord } from "@/features/quick-access/types";
+import type { QuickAccessCustomerRecord, QuickAccessPermissions } from "@/features/quick-access/types";
 import { formatCurrency } from "@/lib/currency";
 import { formatDateTime } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ export function QuickAccessResultsWorkspace({
   canViewQuotations,
   canViewServiceHistory,
   canRecordPastService,
+  permissions,
 }: {
   records: QuickAccessCustomerRecord[];
   plateQuery: string;
@@ -42,13 +44,26 @@ export function QuickAccessResultsWorkspace({
   canViewQuotations: boolean;
   canViewServiceHistory: boolean;
   canRecordPastService: boolean;
+  permissions: QuickAccessPermissions;
 }) {
   const [activeRecordId, setActiveRecordId] = useState(records[0]?.id ?? "");
   const activeRecord =
     records.find((record) => record.id === activeRecordId) ?? records[0] ?? null;
+  const [activeVehicleId, setActiveVehicleId] = useState<string | null>(null);
   const searchSummary = plateQuery
     ? `Plate lookup for ${plateQuery}`
     : `Customer lookup for ${customerLastNameQuery}`;
+
+  useEffect(() => {
+    if (!activeRecord) {
+      setActiveVehicleId(null);
+      return;
+    }
+
+    setActiveVehicleId(
+      activeRecord.highlightedVehicleId ?? activeRecord.vehicles[0]?.id ?? null,
+    );
+  }, [activeRecord]);
 
   if (!activeRecord) {
     return null;
@@ -103,10 +118,13 @@ export function QuickAccessResultsWorkspace({
         key={activeRecord.id}
         record={activeRecord}
         searchSummary={searchSummary}
+        activeVehicleId={activeVehicleId}
+        onActiveVehicleChange={setActiveVehicleId}
         canCreateQuotations={canCreateQuotations}
         canViewQuotations={canViewQuotations}
         canViewServiceHistory={canViewServiceHistory}
         canRecordPastService={canRecordPastService}
+        permissions={permissions}
       />
     </div>
   );
@@ -115,17 +133,23 @@ export function QuickAccessResultsWorkspace({
 function QuickAccessRecordPanel({
   record,
   searchSummary,
+  activeVehicleId,
+  onActiveVehicleChange,
   canCreateQuotations,
   canViewQuotations,
   canViewServiceHistory,
   canRecordPastService,
+  permissions,
 }: {
   record: QuickAccessCustomerRecord;
   searchSummary: string;
+  activeVehicleId: string | null;
+  onActiveVehicleChange: (vehicleId: string) => void;
   canCreateQuotations: boolean;
   canViewQuotations: boolean;
   canViewServiceHistory: boolean;
   canRecordPastService: boolean;
+  permissions: QuickAccessPermissions;
 }) {
   const highlightedVehicle =
     record.vehicles.find((vehicle) => vehicle.id === record.highlightedVehicleId) ?? null;
@@ -141,26 +165,11 @@ function QuickAccessRecordPanel({
           title={`${highlightedVehicle.make} ${highlightedVehicle.model}`}
           description={searchSummary}
           action={
-            <div className="flex flex-wrap gap-2">
-              {canCreateQuotations ? (
-                <Button asChild size="sm">
-                  <Link
-                    href={getQuickAccessQuotationHref(
-                      record.customer.id,
-                      record.highlightedVehicleId ?? undefined,
-                    )}
-                  >
-                    New quotation
-                  </Link>
-                </Button>
-              ) : null}
-              <Button asChild size="sm" variant="outline">
-                <Link href={`/vehicles/${highlightedVehicle.id}`}>Open vehicle</Link>
-              </Button>
-              <Button asChild size="sm" variant="ghost">
-                <Link href={`/customers/${record.customer.id}`}>Open customer</Link>
-              </Button>
-            </div>
+            <QuickAccessRecordWorkflowActions
+              record={record}
+              activeVehicleId={activeVehicleId}
+              permissions={permissions}
+            />
           }
         >
           <div className="space-y-5">
@@ -269,26 +278,11 @@ function QuickAccessRecordPanel({
           title={record.customer.displayName}
           description={searchSummary}
           action={
-            <div className="flex flex-wrap gap-2">
-              {canCreateQuotations ? (
-                <Button asChild size="sm">
-                  <Link
-                    href={getQuickAccessQuotationHref(
-                      record.customer.id,
-                      record.highlightedVehicleId ?? undefined,
-                    )}
-                  >
-                    New quotation
-                  </Link>
-                </Button>
-              ) : null}
-              <Button asChild size="sm" variant="outline">
-                <Link href={`/customers/${record.customer.id}`}>Open customer</Link>
-              </Button>
-              <Button asChild size="sm" variant="ghost">
-                <Link href={`/vehicles?customerId=${record.customer.id}`}>View all vehicles</Link>
-              </Button>
-            </div>
+            <QuickAccessRecordWorkflowActions
+              record={record}
+              activeVehicleId={activeVehicleId}
+              permissions={permissions}
+            />
           }
         >
           <div className="space-y-5">
@@ -362,13 +356,16 @@ function QuickAccessRecordPanel({
         <QuickAccessVehiclesTable
           vehicles={record.vehicles}
           highlightedVehicleId={record.highlightedVehicleId}
+          selectedVehicleId={activeVehicleId}
+          onSelectVehicle={onActiveVehicleChange}
           canRecordPastService={canRecordPastService}
         />
       </SectionCard>
 
       {canViewServiceHistory ? (
-        <SectionCard
-          title="Service history"
+        <div id="quick-access-service-history">
+          <SectionCard
+            title="Service history"
           description={
             isVehicleLookup
               ? "Collapsed service records for the matched vehicle."
@@ -380,6 +377,7 @@ function QuickAccessRecordPanel({
             showVehicleLabel={!isVehicleLookup}
           />
         </SectionCard>
+        </div>
       ) : null}
 
       {canViewQuotations ? (
@@ -449,10 +447,14 @@ function QuickAccessRecordPanel({
 function QuickAccessVehiclesTable({
   vehicles,
   highlightedVehicleId,
+  selectedVehicleId,
+  onSelectVehicle,
   canRecordPastService,
 }: {
   vehicles: QuickAccessCustomerRecord["vehicles"];
   highlightedVehicleId: string | null;
+  selectedVehicleId: string | null;
+  onSelectVehicle: (vehicleId: string) => void;
   canRecordPastService: boolean;
 }) {
   const pageSize = 5;
@@ -490,11 +492,17 @@ function QuickAccessVehiclesTable({
           <TableBody>
             {paginatedVehicles.map((vehicle) => {
               const isHighlighted = vehicle.id === highlightedVehicleId;
+              const isSelected = vehicle.id === selectedVehicleId;
 
               return (
                 <TableRow
                   key={vehicle.id}
-                  className={cn(isHighlighted ? "bg-primary/5 hover:bg-primary/10" : "")}
+                  className={cn(
+                    "cursor-pointer",
+                    isSelected ? "bg-primary/10 hover:bg-primary/15" : "",
+                    !isSelected && isHighlighted ? "bg-primary/5 hover:bg-primary/10" : "",
+                  )}
+                  onClick={() => onSelectVehicle(vehicle.id)}
                 >
                   <TableCell>
                     <div className="space-y-1">
@@ -510,6 +518,7 @@ function QuickAccessVehiclesTable({
                     <div className="space-y-1">
                       <p>{vehicle.plateNumber ?? "No plate"}</p>
                       {isHighlighted ? <Badge variant="secondary">Matched vehicle</Badge> : null}
+                      {isSelected ? <Badge variant="outline">Intake vehicle</Badge> : null}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -526,7 +535,7 @@ function QuickAccessVehiclesTable({
                     </StatusBadge>
                   </TableCell>
                   <TableCell>{formatDateTime(vehicle.updatedAt)}</TableCell>
-                  <TableCell className="w-24 text-right">
+                  <TableCell className="w-24 text-right" onClick={(event) => event.stopPropagation()}>
                     <IconActionGroup>
                       <IconActionLink
                         href={`/vehicles/${vehicle.id}`}
@@ -578,16 +587,6 @@ function QuickAccessVehiclesTable({
       ) : null}
     </div>
   );
-}
-
-function getQuickAccessQuotationHref(customerId: string, vehicleId?: string) {
-  const searchParams = new URLSearchParams({ customerId });
-
-  if (vehicleId) {
-    searchParams.set("vehicleId", vehicleId);
-  }
-
-  return `/quotations/new?${searchParams.toString()}`;
 }
 
 function formatMileage(value: number | null) {

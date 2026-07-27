@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CalendarClock, User } from "lucide-react";
+import { CalendarClock, FileText, User } from "lucide-react";
 
 import {
   EntityDetailHeader,
@@ -24,6 +24,7 @@ import type { ServiceHistoryEntry } from "@/features/service-history/types";
 import { VehicleDetailSidebar } from "@/features/vehicles/components/vehicle-detail-sidebar";
 import type { VehicleDetail } from "@/features/vehicles/types";
 import { formatDate } from "@/lib/dates";
+import { buildQuotationNewHref } from "@/features/quotations/utils";
 
 const VEHICLE_DETAIL_TABS = [
   { id: "service-history", label: "Service history" },
@@ -38,6 +39,7 @@ export function VehicleDetailPageContent({
   documents,
   canViewServiceHistory,
   canManageVehicles,
+  canCreateQuotations,
   canRecordPastService,
   historicalSaved = false,
 }: {
@@ -46,6 +48,7 @@ export function VehicleDetailPageContent({
   documents: CustomerDocumentHistoryItem[];
   canViewServiceHistory: boolean;
   canManageVehicles: boolean;
+  canCreateQuotations: boolean;
   canRecordPastService: boolean;
   historicalSaved?: boolean;
 }) {
@@ -100,7 +103,43 @@ export function VehicleDetailPageContent({
               </>
             }
             actions={
-              canManageVehicles ? (
+              canCreateQuotations ? (
+                <PageHeaderActions
+                  primary={
+                    <PagePrimaryAction
+                      href={buildQuotationNewHref({
+                        customerId: vehicle.customerId,
+                        vehicleId: vehicle.id,
+                      })}
+                    >
+                      New Quotation
+                    </PagePrimaryAction>
+                  }
+                  overflow={
+                    <TableRowActionsMenu label="Vehicle actions" variant="page">
+                      {canManageVehicles ? (
+                        <TableRowActionsMenuLink
+                          href={`/vehicles/${vehicle.id}/edit`}
+                          label="Edit vehicle"
+                          icon={FileText}
+                        />
+                      ) : null}
+                      <TableRowActionsMenuLink
+                        href={`/customers/${vehicle.customerId}`}
+                        label="View customer"
+                        icon={User}
+                      />
+                      {canRecordPastService ? (
+                        <TableRowActionsMenuLink
+                          href={`/vehicles/${vehicle.id}/past-service/new`}
+                          label="Record past service"
+                          icon={CalendarClock}
+                        />
+                      ) : null}
+                    </TableRowActionsMenu>
+                  }
+                />
+              ) : canManageVehicles ? (
                 <PageHeaderActions
                   primary={
                     <PagePrimaryAction href={`/vehicles/${vehicle.id}/edit`}>

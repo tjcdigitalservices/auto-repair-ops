@@ -13,7 +13,9 @@ import { PageHeader } from "@/components/shared/page-header";
 import { PageHeaderActions, PagePrimaryAction } from "@/components/shared/page-header-actions";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { SupplierPageActionsMenu } from "@/features/suppliers/components/supplier-page-actions-menu";
 import { SupplierRowActions } from "@/features/suppliers/components/supplier-row-actions";
+import { Button } from "@/components/ui/button";
 import { listSuppliers } from "@/features/suppliers/queries/supplier-queries";
 import { paginateItems } from "@/lib/pagination";
 
@@ -39,6 +41,7 @@ export default async function SuppliersPage({ searchParams }: SuppliersPageProps
         actions={
           <PageHeaderActions
             primary={<PagePrimaryAction href="/suppliers/new">New Supplier</PagePrimaryAction>}
+            overflow={<SupplierPageActionsMenu />}
           />
         }
       />

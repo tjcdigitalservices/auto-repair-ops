@@ -300,16 +300,24 @@ function formatCoordinate(value: number) {
   return value.toFixed(6);
 }
 
-/** Resolve a tenant theme HSL channel var (e.g. `--brand-navy`) for Mapbox paint props. */
+/** Mapbox paint props require rgb/hex — not CSS hsl() strings. */
 function resolveThemeCssColor(cssVariable: string) {
-  const fallback = "225 75% 17%";
+  const fallbackChannels = "225 75% 17%";
+  const fallbackRgb = "rgb(11, 26, 58)";
+
   if (typeof window === "undefined") {
-    return `hsl(${fallback})`;
+    return fallbackRgb;
   }
 
-  const raw = getComputedStyle(document.documentElement)
-    .getPropertyValue(cssVariable)
-    .trim();
+  const raw =
+    getComputedStyle(document.documentElement).getPropertyValue(cssVariable).trim() ||
+    fallbackChannels;
 
-  return `hsl(${raw || fallback})`;
+  const probe = document.createElement("div");
+  probe.style.color = `hsl(${raw})`;
+  document.documentElement.appendChild(probe);
+  const resolved = getComputedStyle(probe).color.trim();
+  probe.remove();
+
+  return resolved.startsWith("rgb") ? resolved : fallbackRgb;
 }

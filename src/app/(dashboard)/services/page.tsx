@@ -20,7 +20,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ServicePageActionsMenu } from "@/features/services/components/service-page-actions-menu";
 import { ServiceRowActions } from "@/features/services/components/service-row-actions";
+import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/currency";
 import { listServices } from "@/features/services/queries/service-queries";
 import { paginateItems } from "@/lib/pagination";
@@ -49,6 +51,7 @@ export default async function ServicesPage({
         actions={
           <PageHeaderActions
             primary={<PagePrimaryAction href="/services/new">New Service</PagePrimaryAction>}
+            overflow={<ServicePageActionsMenu />}
           />
         }
       />

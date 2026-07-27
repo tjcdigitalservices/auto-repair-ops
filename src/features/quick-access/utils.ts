@@ -1,3 +1,5 @@
+import { buildQuotationNewHref } from "@/features/quotations/utils";
+
 export function normalizeQuickAccessPlate(value: string) {
   return value.toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
@@ -51,7 +53,7 @@ export function buildQuickAccessNoMatchRedirectPath({
   }
 
   if (customerLastNameQuery && canCreateQuotation) {
-    return `/quotations/new?lastName=${encodeURIComponent(customerLastNameQuery)}`;
+    return buildQuotationNewHref({ lastName: customerLastNameQuery });
   }
 
   return null;

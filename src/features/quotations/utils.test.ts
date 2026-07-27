@@ -1,12 +1,53 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildQuotationNewHref,
   calculateQuotationDiscountAmount,
   calculateQuotationGrandTotal,
   calculateQuotationTaxAmount,
   canReviseQuotation,
   createQuotationItem,
+  resolveQuotationCreateFlowSelection,
+  splitQuotationVehicleIntakeLabel,
 } from "@/features/quotations/utils";
+
+describe("quotation create intake helpers", () => {
+  it("builds new quotation href with customer and vehicle context", () => {
+    expect(
+      buildQuotationNewHref({
+        customerId: "customer-1",
+        vehicleId: "vehicle-1",
+      }),
+    ).toBe("/quotations/new?customerId=customer-1&vehicleId=vehicle-1");
+  });
+
+  it("resolves vehicle-first intake selection", () => {
+    expect(
+      resolveQuotationCreateFlowSelection({
+        requestedCustomerId: "other-customer",
+        requestedVehicleId: "vehicle-1",
+        customers: [{ id: "customer-1", label: "Ana Reyes" }],
+        vehicles: [
+          {
+            id: "vehicle-1",
+            customerId: "customer-1",
+            label: "Nissan Navara · FAO9630",
+          },
+        ],
+      }),
+    ).toEqual({
+      customerId: "customer-1",
+      vehicleId: "vehicle-1",
+    });
+  });
+
+  it("splits vehicle intake labels into title and plate", () => {
+    expect(splitQuotationVehicleIntakeLabel("Nissan Navara (2020) · FAO9630")).toEqual({
+      title: "Nissan Navara (2020)",
+      plate: "FAO9630",
+    });
+  });
+});
 
 describe("canReviseQuotation", () => {
   it("allows revise for approved quotations with an active editable job order", () => {

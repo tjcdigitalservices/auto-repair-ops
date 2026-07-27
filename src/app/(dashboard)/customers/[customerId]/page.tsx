@@ -23,6 +23,7 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
   }
 
   const canViewServiceHistory = session.capabilities.includes("job_orders:read");
+  const canCreateQuotations = session.capabilities.includes("quotations:write");
   const serviceHistory = canViewServiceHistory
     ? await listServiceHistoryByVehicleIds(customer.vehicles.map((vehicle) => vehicle.id))
     : [];
@@ -32,6 +33,7 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
       customer={customer}
       serviceHistory={serviceHistory}
       canViewServiceHistory={canViewServiceHistory}
+      canCreateQuotations={canCreateQuotations}
     />
   );
 }

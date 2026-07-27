@@ -6,9 +6,11 @@ import { MechanicPortalMenu } from "@/features/attendance/components/mechanic-po
 export function MechanicPortalHeaderCard({
   displayName,
   businessName,
+  businessMarkUrl,
 }: {
   displayName: string;
   businessName?: string;
+  businessMarkUrl?: string | null;
 }) {
   const companyLabel = businessName?.trim() || "Mechanic portal";
 
@@ -20,6 +22,7 @@ export function MechanicPortalHeaderCard({
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <BrandLogo
+            src={businessMarkUrl}
             alt={`${companyLabel} mark`}
             variant="mark"
             width={42}

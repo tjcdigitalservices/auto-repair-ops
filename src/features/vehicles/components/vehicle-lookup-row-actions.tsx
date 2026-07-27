@@ -1,6 +1,15 @@
 "use client";
 
+import { Trash2 } from "lucide-react";
+
 import {
+  TableRowActionsMenu,
+  TableRowActionsMenuConfirm,
+  TableRowActionsMenuSeparator,
+} from "@/components/shared/table-row-actions-menu";
+import {
+  deleteVehicleMakeAction,
+  deleteVehicleModelAction,
   updateVehicleLookupOptionStatusAction,
   updateVehicleMakeStatusAction,
   updateVehicleModelStatusAction,
@@ -12,7 +21,6 @@ import type {
 } from "@/features/vehicles/types";
 
 import { LookupStatusFormMenuItem } from "@/features/vehicles/components/vehicle-lookup-status-menu-item";
-import { TableRowActionsMenu } from "@/components/shared/table-row-actions-menu";
 
 export function VehicleMakeRowActions({ make }: { make: VehicleMakeItem }) {
   const nextStatus = make.status === "active" ? "inactive" : "active";
@@ -29,12 +37,25 @@ export function VehicleMakeRowActions({ make }: { make: VehicleMakeItem }) {
         tone={make.status === "active" ? "destructive" : "default"}
         iconName="power"
       />
+      <TableRowActionsMenuSeparator />
+      <TableRowActionsMenuConfirm
+        label="Delete make"
+        title={`Delete ${make.name}?`}
+        description="This make and all of its models will be removed from the registration catalog. Existing vehicle records keep their saved make and model text."
+        confirmLabel="Delete make"
+        cancelLabel="Keep make"
+        action={deleteVehicleMakeAction}
+        fields={[{ name: "makeId", value: make.id }]}
+        icon={Trash2}
+        tone="destructive"
+      />
     </TableRowActionsMenu>
   );
 }
 
 export function VehicleModelRowActions({ model }: { model: VehicleModelItem }) {
   const nextStatus = model.status === "active" ? "inactive" : "active";
+  const modelLabel = model.makeName ? `${model.makeName} ${model.name}` : model.name;
 
   return (
     <TableRowActionsMenu label={`Open actions for ${model.name}`}>
@@ -47,6 +68,18 @@ export function VehicleModelRowActions({ model }: { model: VehicleModelItem }) {
         }}
         tone={model.status === "active" ? "destructive" : "default"}
         iconName="power"
+      />
+      <TableRowActionsMenuSeparator />
+      <TableRowActionsMenuConfirm
+        label="Delete model"
+        title={`Delete ${modelLabel}?`}
+        description="This model will be removed from the registration catalog. Existing vehicle records keep their saved make and model text."
+        confirmLabel="Delete model"
+        cancelLabel="Keep model"
+        action={deleteVehicleModelAction}
+        fields={[{ name: "modelId", value: model.id }]}
+        icon={Trash2}
+        tone="destructive"
       />
     </TableRowActionsMenu>
   );

@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 
-import { mapCustomerRowToOption } from "@/features/customers/mappers";
+import { quickCreateCustomerAction as createInlineCustomerAction } from "@/features/customers/actions/inline-customer-actions";
 import {
-  customerFormSchema,
-  deriveCustomerDisplayName,
-} from "@/features/customers/schemas/customer-form-schema";
-import type { CustomerFormValues, CustomerOption } from "@/features/customers/types";
+  INITIAL_INLINE_CUSTOMER_CREATE_ACTION_STATE,
+  type InlineCustomerCreateActionState as QuotationQuickCustomerActionState,
+} from "@/features/customers/inline-customer-action-state";
+import type { CustomerOption } from "@/features/customers/types";
 import { getBranchScopedServerClient } from "@/lib/branches";
 import { toFormActionState } from "@/lib/forms";
 import {
@@ -23,7 +23,7 @@ type QuotationCreateFlowActionState<TData> = {
   data?: TData;
 };
 
-export type QuotationQuickCustomerActionState = QuotationCreateFlowActionState<CustomerOption>;
+export type { QuotationQuickCustomerActionState };
 export type QuotationQuickVehicleActionState = QuotationCreateFlowActionState<QuotationVehicleOption>;
 
 const INITIAL_QUOTATION_CREATE_FLOW_ACTION_STATE = {
@@ -31,56 +31,10 @@ const INITIAL_QUOTATION_CREATE_FLOW_ACTION_STATE = {
 } as const satisfies QuotationCreateFlowActionState<never>;
 
 export async function quickCreateCustomerForQuotationAction(
-  _prevState: QuotationQuickCustomerActionState = INITIAL_QUOTATION_CREATE_FLOW_ACTION_STATE,
+  prevState: QuotationQuickCustomerActionState = INITIAL_INLINE_CUSTOMER_CREATE_ACTION_STATE,
   formData: FormData,
 ): Promise<QuotationQuickCustomerActionState> {
-  const parsed = customerFormSchema.safeParse(parseQuickCustomerFormData(formData));
-
-  if (!parsed.success) {
-    return {
-      ...toFormActionState(parsed.error),
-      status: "error",
-    };
-  }
-
-  const values = parsed.data;
-  const { branchScope, supabase } = await getBranchScopedServerClient("customers:write");
-  const payload = {
-    branch_id: branchScope.writeBranchId,
-    customer_type: values.customerType,
-    display_name: deriveCustomerDisplayName(values),
-    first_name: values.firstName || null,
-    last_name: values.lastName || null,
-    company_name: values.companyName || null,
-    contact_number: values.contactNumber || null,
-    email: values.email || null,
-    address: values.address || null,
-    notes: values.notes || null,
-    status: values.status,
-  };
-
-  const { data, error } = await supabase
-    .from("customers")
-    .insert(payload)
-    .select("id, display_name")
-    .single();
-
-  if (error) {
-    return {
-      status: "error",
-      message: error.message,
-    };
-  }
-
-  revalidatePath("/customers");
-  revalidatePath("/quotations");
-  revalidatePath("/quotations/new");
-
-  return {
-    status: "success",
-    message: `${data.display_name} is ready for quotation intake.`,
-    data: mapCustomerRowToOption(data),
-  };
+  return createInlineCustomerAction(prevState, formData);
 }
 
 export async function quickCreateVehicleForQuotationAction(
@@ -193,20 +147,6 @@ export async function quickCreateVehicleForQuotationAction(
     status: "success",
     message: `${data.make} ${data.model} is ready for quotation intake.`,
     data: mapVehicleRowToQuotationOption(data),
-  };
-}
-
-function parseQuickCustomerFormData(formData: FormData): CustomerFormValues {
-  return {
-    customerType: readString(formData, "customerType") as CustomerFormValues["customerType"],
-    firstName: readString(formData, "firstName"),
-    lastName: readString(formData, "lastName"),
-    companyName: readString(formData, "companyName"),
-    contactNumber: readString(formData, "contactNumber"),
-    email: readString(formData, "email"),
-    address: readString(formData, "address"),
-    notes: readString(formData, "notes"),
-    status: "active",
   };
 }
 

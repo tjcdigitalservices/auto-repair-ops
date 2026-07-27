@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
+    "dev:lan": "node scripts/dev-lan.mjs",
+    "dev:lan:https": "node scripts/dev-lan.mjs --https",
     "dev:turbo": "next dev --turbo",
     "build": "next build",
     "import:catalog": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/import-catalog.ts",

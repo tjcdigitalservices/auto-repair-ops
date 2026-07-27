@@ -9,14 +9,41 @@ const localOrigins = [
   "127.0.0.1:3005",
 ];
 
-// Optional: add LAN/network IP used in the "Network:" line from next dev.
-if (process.env.NEXT_PUBLIC_DEV_ORIGIN) {
-  localOrigins.push(process.env.NEXT_PUBLIC_DEV_ORIGIN.replace(/^https?:\/\//, ""));
+function appendOriginsFromEnv(origins: string[]) {
+  const raw = process.env.DEV_ALLOWED_ORIGINS ?? process.env.NEXT_PUBLIC_DEV_ORIGIN;
+  if (!raw) {
+    return origins;
+  }
+
+  const merged = [...origins];
+  for (const part of raw.split(",")) {
+    const host = part.trim().replace(/^https?:\/\//, "");
+    if (host && !merged.includes(host)) {
+      merged.push(host);
+    }
+  }
+
+  return merged;
 }
+
+// RFC1918-style patterns for phone/tablet testing on the same Wi‑Fi (hostname only).
+const privateLanHostPatterns = ["192.168.*.*", "10.*.*.*", "172.*.*.*"];
+
+const serverActionAllowedOrigins = appendOriginsFromEnv([
+  ...localOrigins,
+  ...privateLanHostPatterns,
+]);
+
+const isDev = process.env.NODE_ENV !== "production";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ["sharp"],
+  ...(isDev
+    ? {
+        allowedDevOrigins: appendOriginsFromEnv([...privateLanHostPatterns]),
+      }
+    : {}),
   images: supabaseUrl
     ? {
         remotePatterns: [
@@ -30,7 +57,7 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: "4mb",
-      allowedOrigins: localOrigins,
+      allowedOrigins: serverActionAllowedOrigins,
     },
   },
 };

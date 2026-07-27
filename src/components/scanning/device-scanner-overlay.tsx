@@ -6,6 +6,11 @@ import { Loader2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { decodeScanFrame } from "@/components/scanning/decode-scan-frame";
+import {
+  isCameraApiAvailable,
+  resolveCameraBlockMessage,
+  resolveGetUserMediaErrorMessage,
+} from "@/components/scanning/camera-access";
 import { canUseNativeTextDetector } from "@/components/scanning/plate-ocr";
 import {
   DEVICE_SCANNER_COPY,
@@ -34,7 +39,7 @@ export function DeviceScannerOverlay({
   const scanTimerRef = useRef<number | null>(null);
   const isScanningFrameRef = useRef(false);
   const hasSubmittedRef = useRef(false);
-  const [cameraState, setCameraState] = useState<"idle" | "loading" | "ready">("idle");
+  const [cameraState, setCameraState] = useState<"idle" | "loading" | "ready" | "blocked">("idle");
   const [statusMessage, setStatusMessage] = useState(copy.aligning);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -114,7 +119,15 @@ export function DeviceScannerOverlay({
       return;
     }
 
-    if (!navigator.mediaDevices?.getUserMedia) {
+    const blockMessage = resolveCameraBlockMessage(copy.permissionError);
+    if (blockMessage) {
+      setCameraState("blocked");
+      setErrorMessage(blockMessage);
+      return;
+    }
+
+    if (!isCameraApiAvailable()) {
+      setCameraState("blocked");
       setErrorMessage(copy.permissionError);
       return;
     }
@@ -140,11 +153,15 @@ export function DeviceScannerOverlay({
             video: { facingMode: { ideal: "environment" } },
             audio: false,
           });
-        } catch {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: false,
-          });
+        } catch (firstError) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: true,
+              audio: false,
+            });
+          } catch (secondError) {
+            throw secondError ?? firstError;
+          }
         }
 
         if (cancelled) {
@@ -167,10 +184,10 @@ export function DeviceScannerOverlay({
         scanTimerRef.current = window.setInterval(() => {
           void captureAndDecode();
         }, scanIntervalMs);
-      } catch {
+      } catch (error) {
         if (!cancelled) {
-          setCameraState("idle");
-          setErrorMessage(copy.permissionError);
+          setCameraState("blocked");
+          setErrorMessage(resolveGetUserMediaErrorMessage(error, copy.permissionError));
         }
       }
     }
@@ -219,7 +236,7 @@ export function DeviceScannerOverlay({
             autoPlay
           />
 
-          {cameraState !== "ready" ? (
+          {cameraState === "loading" ? (
             <div className="absolute inset-0 flex items-center justify-center">
               <Loader2 className="size-8 animate-spin text-white/80" />
             </div>
@@ -243,7 +260,7 @@ export function DeviceScannerOverlay({
 
         <footer className="space-y-3 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
           {errorMessage ? (
-            <p className="text-center text-sm text-red-300">{errorMessage}</p>
+            <p className="text-center text-sm leading-relaxed text-red-300">{errorMessage}</p>
           ) : (
             <p className="text-center text-sm text-white/80">{statusMessage}</p>
           )}

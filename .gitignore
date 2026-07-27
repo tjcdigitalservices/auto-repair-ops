@@ -9,3 +9,5 @@ coverage
 .env.test.local
 dist
 *.log
+
+certificates

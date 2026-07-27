@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { PageHeader } from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
 import type { ArrivalQueueItem } from '@/features/quick-access/arrivals/arrival-queue-types';
+import { ArrivalQueueSetupNotice } from '@/features/quick-access/components/arrival-queue-setup-notice';
 import {
   ActiveIntakeBanner,
   ActiveIntakeFinishedNotice,
@@ -29,6 +30,7 @@ import type { QuickAccessSearchState } from '@/features/quick-access/types';
 export function QuickAccessPageClient({
   searchState,
   arrivals,
+  queueAvailable,
   finished,
   focusVehicleId,
   arrivalSourceFromScan,
@@ -36,6 +38,7 @@ export function QuickAccessPageClient({
 }: {
   searchState: QuickAccessSearchState;
   arrivals: ArrivalQueueItem[];
+  queueAvailable: boolean;
   finished?: boolean;
   focusVehicleId?: string | null;
   arrivalSourceFromScan?: boolean;
@@ -47,6 +50,7 @@ export function QuickAccessPageClient({
         <QuickAccessPageContent
           searchState={searchState}
           arrivals={arrivals}
+          queueAvailable={queueAvailable}
           finished={Boolean(finished)}
           focusVehicleId={focusVehicleId ?? null}
           arrivalSourceFromScan={Boolean(arrivalSourceFromScan)}
@@ -60,6 +64,7 @@ export function QuickAccessPageClient({
 function QuickAccessPageContent({
   searchState,
   arrivals,
+  queueAvailable,
   finished,
   focusVehicleId,
   arrivalSourceFromScan,
@@ -67,6 +72,7 @@ function QuickAccessPageContent({
 }: {
   searchState: QuickAccessSearchState;
   arrivals: ArrivalQueueItem[];
+  queueAvailable: boolean;
   finished: boolean;
   focusVehicleId: string | null;
   arrivalSourceFromScan: boolean;
@@ -122,6 +128,8 @@ function QuickAccessPageContent({
       />
 
       <div className="sticky top-0 z-30 -mx-1 space-y-3 bg-muted/20 px-1 pb-3 pt-1 backdrop-blur-md">
+        <ArrivalQueueSetupNotice show={!queueAvailable} />
+
         <TodaysArrivalsSection
           items={arrivals}
           focusVehicleId={focusVehicleId}
@@ -162,7 +170,7 @@ function QuickAccessPageContent({
         </>
       ) : null}
 
-      {!hasSearch && !session && !finished && arrivals.length === 0 ? (
+      {!hasSearch && !session && !finished && queueAvailable && arrivals.length === 0 ? (
         <EmptyState
           title="No arrivals yet today"
           description="Search, scan a plate, or manually add a vehicle to start Today's Arrivals."

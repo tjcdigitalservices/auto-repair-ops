@@ -12,6 +12,7 @@ import {
   type ArrivalQueueItem,
   type ArrivalSource,
 } from "@/features/quick-access/arrivals/arrival-queue-types";
+import { isMissingDailyArrivalsTable } from "@/features/quick-access/arrivals/arrival-queue-schema";
 import type { QuickAccessPermissions } from "@/features/quick-access/types";
 import {
   findLatestActiveQuotationForVehicle,
@@ -34,7 +35,11 @@ function todayQueueDate() {
 
 export async function listTodayArrivalQueue(params?: {
   activeIntakeVehicleId?: string | null;
-}): Promise<{ items: ArrivalQueueItem[]; permissions: QuickAccessPermissions }> {
+}): Promise<{
+  items: ArrivalQueueItem[];
+  permissions: QuickAccessPermissions;
+  queueAvailable: boolean;
+}> {
   const { branchScope, context, supabase } = await getBranchScopedServerClient("vehicles:read");
   const branchId = branchScope.selectedBranchId ?? branchScope.writeBranchId;
   const queueDate = todayQueueDate();
@@ -58,13 +63,17 @@ export async function listTodayArrivalQueue(params?: {
   );
 
   if (arrivalError) {
+    if (isMissingDailyArrivalsTable(arrivalError)) {
+      return { items: [], permissions, queueAvailable: false };
+    }
+
     throw new Error(arrivalError.message);
   }
 
   const arrivals = (arrivalRows ?? []) as DailyArrivalRow[];
 
   if (arrivals.length === 0) {
-    return { items: [], permissions };
+    return { items: [], permissions, queueAvailable: true };
   }
 
   const customerIds = [...new Set(arrivals.map((row) => row.customer_id))];
@@ -170,7 +179,7 @@ export async function listTodayArrivalQueue(params?: {
     ];
   });
 
-  return { items, permissions };
+  return { items, permissions, queueAvailable: true };
 }
 
 async function listRecentQuotationsByCustomerId(params: {

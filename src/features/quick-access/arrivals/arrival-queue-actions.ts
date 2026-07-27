@@ -5,6 +5,10 @@ import { DateTime } from "luxon";
 
 import { applyBranchFilter, getBranchScopedServerClient } from "@/lib/branches";
 import type { ArrivalSource } from "@/features/quick-access/arrivals/arrival-queue-types";
+import {
+  DAILY_ARRIVALS_SETUP_MESSAGE,
+  isMissingDailyArrivalsTable,
+} from "@/features/quick-access/arrivals/arrival-queue-schema";
 
 const QUICK_ACCESS_PATH = "/quick-access";
 
@@ -35,13 +39,21 @@ export async function addDailyArrivalAction(input: {
     return { ok: false as const, message: "Vehicle not found for this customer." };
   }
 
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("daily_arrivals")
     .select("id")
     .eq("branch_id", branchId)
     .eq("vehicle_id", input.vehicleId)
     .eq("queue_date", queueDate)
     .maybeSingle();
+
+  if (existingError && isMissingDailyArrivalsTable(existingError)) {
+    return { ok: false as const, message: DAILY_ARRIVALS_SETUP_MESSAGE };
+  }
+
+  if (existingError) {
+    return { ok: false as const, message: existingError.message };
+  }
 
   if (existing) {
     const { error: touchError } = await supabase
@@ -50,6 +62,10 @@ export async function addDailyArrivalAction(input: {
       .eq("id", existing.id);
 
     if (touchError) {
+      if (isMissingDailyArrivalsTable(touchError)) {
+        return { ok: false as const, message: DAILY_ARRIVALS_SETUP_MESSAGE };
+      }
+
       return { ok: false as const, message: touchError.message };
     }
 
@@ -73,6 +89,10 @@ export async function addDailyArrivalAction(input: {
     .single();
 
   if (error) {
+    if (isMissingDailyArrivalsTable(error)) {
+      return { ok: false as const, message: DAILY_ARRIVALS_SETUP_MESSAGE };
+    }
+
     return { ok: false as const, message: error.message };
   }
 
@@ -98,6 +118,10 @@ export async function markDailyArrivalIntakeStartedAction(vehicleId: string) {
     .is("intake_started_at", null);
 
   if (error) {
+    if (isMissingDailyArrivalsTable(error)) {
+      return { ok: true as const };
+    }
+
     return { ok: false as const, message: error.message };
   }
 
@@ -118,12 +142,16 @@ export async function touchDailyArrivalActivityAction(vehicleId: string) {
   const queueDate = todayQueueDate();
   const now = new Date().toISOString();
 
-  await supabase
+  const { error } = await supabase
     .from("daily_arrivals")
     .update({ last_activity_at: now })
     .eq("branch_id", branchId)
     .eq("vehicle_id", vehicleId)
     .eq("queue_date", queueDate);
+
+  if (error && !isMissingDailyArrivalsTable(error)) {
+    return { ok: false as const, message: error.message };
+  }
 
   revalidatePath(QUICK_ACCESS_PATH);
   return { ok: true as const };

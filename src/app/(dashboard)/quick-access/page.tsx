@@ -41,6 +41,7 @@ export default async function QuickAccessRoute({
     <QuickAccessPageClient
       searchState={searchState}
       arrivals={arrivalQueue.items}
+      queueAvailable={arrivalQueue.queueAvailable}
       finished={finished === "1"}
       showQueueView={view === "queue" || finished === "1"}
       focusVehicleId={focusVehicleId ?? null}

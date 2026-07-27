@@ -3,6 +3,7 @@ import type { QuotationListItem, QuotationStatus } from "@/features/quotations/t
 import { buildQuotationNewHref } from "@/features/quotations/utils";
 
 import type { QuickAccessPermissions } from "@/features/quick-access/types";
+import { appendQuickAccessReturnTo } from "@/features/quick-access/intake/active-intake-session";
 
 export type QuickAccessLinkedJobOrder = {
   id: string;
@@ -154,6 +155,28 @@ export function resolveQuickAccessPrimaryAction(params: {
     href: `/customers/${customerId}`,
     state: "view_service_history",
   };
+}
+
+function withIntakeReturnTo(action: QuickAccessWorkflowAction): QuickAccessWorkflowAction {
+  return {
+    ...action,
+    href: appendQuickAccessReturnTo(action.href),
+  };
+}
+
+export function resolveQuickAccessPrimaryActionWithIntakeContext(params: Parameters<
+  typeof resolveQuickAccessPrimaryAction
+>[0]): QuickAccessWorkflowAction {
+  return withIntakeReturnTo(resolveQuickAccessPrimaryAction(params));
+}
+
+export function buildQuickAccessSecondaryActionsWithIntakeContext(params: Parameters<
+  typeof buildQuickAccessSecondaryActions
+>[0]): QuickAccessSecondaryAction[] {
+  return buildQuickAccessSecondaryActions(params).map((action) => ({
+    ...action,
+    href: appendQuickAccessReturnTo(action.href),
+  }));
 }
 
 export function buildQuickAccessBillingHref(jobOrder: Pick<QuickAccessLinkedJobOrder, "id" | "invoiceId">) {

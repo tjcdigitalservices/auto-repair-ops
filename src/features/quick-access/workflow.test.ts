@@ -10,6 +10,7 @@ import type { QuotationListItem } from "@/features/quotations/types";
 
 const basePermissions: QuickAccessPermissions = {
   canCreateQuotations: true,
+  canCreateVehicle: true,
   canViewQuotations: true,
   canViewJobOrders: true,
   canViewServiceHistory: true,

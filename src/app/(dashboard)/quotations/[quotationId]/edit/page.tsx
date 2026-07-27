@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { PageHeader } from "@/components/shared/page-header";
 import { QuotationForm } from "@/features/quotations/components/quotation-form";
+import { QuotationEditIntakeMarker } from "@/features/quick-access/intake/use-intake-unsaved-work-marker";
 import { mapQuotationDetailToFormValues } from "@/features/quotations/mappers";
 import { getQuotationById, getQuotationFormOptions } from "@/features/quotations/queries/quotation-queries";
 
@@ -40,6 +41,7 @@ export default async function EditQuotationPage({ params }: EditQuotationPagePro
           </div>
         }
       />
+      <QuotationEditIntakeMarker isDraft={quotation.status === "draft"} />
       <QuotationForm
         mode="edit"
         options={options}

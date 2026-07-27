@@ -23,6 +23,7 @@ export type QuickAccessCustomerRecord = {
 
 export type QuickAccessPermissions = {
   canCreateQuotations: boolean;
+  canCreateVehicle: boolean;
   canViewQuotations: boolean;
   canViewJobOrders: boolean;
   canViewServiceHistory: boolean;
@@ -35,4 +36,6 @@ export type QuickAccessSearchState = {
   customerLastNameQuery: string;
   records: QuickAccessCustomerRecord[];
   permissions: QuickAccessPermissions;
+  intakeCustomerId: string | null;
+  intakeVehicleId: string | null;
 };

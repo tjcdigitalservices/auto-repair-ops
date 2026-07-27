@@ -7,8 +7,8 @@ import type {
   QuickAccessPermissions,
 } from "@/features/quick-access/types";
 import {
-  buildQuickAccessSecondaryActions,
-  resolveQuickAccessPrimaryAction,
+  buildQuickAccessSecondaryActionsWithIntakeContext,
+  resolveQuickAccessPrimaryActionWithIntakeContext,
   type QuickAccessLinkedJobOrder,
 } from "@/features/quick-access/workflow";
 import { QuickAccessWorkflowActions } from "@/features/quick-access/components/quick-access-workflow-actions";
@@ -22,14 +22,14 @@ export function useQuickAccessWorkflowActions(params: {
     const jobOrdersByQuotationId = new Map<string, QuickAccessLinkedJobOrder>(
       Object.entries(params.record.linkedJobOrdersByQuotationId),
     );
-    const primaryAction = resolveQuickAccessPrimaryAction({
+    const primaryAction = resolveQuickAccessPrimaryActionWithIntakeContext({
       customerId: params.record.customer.id,
       vehicleId: params.activeVehicleId,
       recentQuotations: params.record.recentQuotations,
       jobOrdersByQuotationId,
       permissions: params.permissions,
     });
-    const secondaryActions = buildQuickAccessSecondaryActions({
+    const secondaryActions = buildQuickAccessSecondaryActionsWithIntakeContext({
       customerId: params.record.customer.id,
       customerDisplayName: params.record.customer.displayName,
       vehicleId: params.activeVehicleId,

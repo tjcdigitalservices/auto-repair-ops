@@ -442,6 +442,38 @@ export type Database = {
           },
         ];
       };
+      daily_arrivals: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          branch_id: string;
+          customer_id: string;
+          vehicle_id: string;
+          queue_date: string;
+          arrived_at: string;
+          intake_started_at: string | null;
+          last_activity_at: string;
+          arrival_source: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          branch_id: string;
+          customer_id: string;
+          vehicle_id: string;
+          queue_date: string;
+          arrived_at?: string;
+          intake_started_at?: string | null;
+          last_activity_at?: string;
+          arrival_source?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["daily_arrivals"]["Insert"]>;
+        Relationships: [];
+      };
       customers: {
         Row: {
           id: string;

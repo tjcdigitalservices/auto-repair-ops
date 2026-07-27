@@ -17,7 +17,6 @@ import {
   isPossiblePlateMatch,
   normalizeQuickAccessPlate,
   resolveQuickAccessQuery,
-  buildQuickAccessNoMatchRedirectPath,
 } from "@/features/quick-access/utils";
 import { mapVehicleDetail } from "@/features/vehicles/mappers";
 import type { TableRow } from "@/types/database";
@@ -31,10 +30,14 @@ export async function getQuickAccessSearchState({
   query,
   plate,
   lastName,
+  customerId,
+  vehicleId,
 }: {
   query?: string;
   plate?: string;
   lastName?: string;
+  customerId?: string;
+  vehicleId?: string;
 }): Promise<QuickAccessSearchState> {
   const { branchScope, context, supabase } = await getBranchScopedServerClient("vehicles:read");
 
@@ -47,6 +50,7 @@ export async function getQuickAccessSearchState({
 
   const permissions = {
     canCreateQuotations: context.capabilities.includes("quotations:write"),
+    canCreateVehicle: context.capabilities.includes("vehicles:write"),
     canViewQuotations: context.capabilities.includes("quotations:read"),
     canViewJobOrders: context.capabilities.includes("job_orders:read"),
     canViewServiceHistory: context.capabilities.includes("job_orders:read"),
@@ -62,41 +66,116 @@ export async function getQuickAccessSearchState({
       };
   const plateQuery = resolvedSearchInput.plateQuery;
   const customerLastNameQuery = resolvedSearchInput.customerLastNameQuery;
-  const records = plateQuery
-    ? await searchQuickAccessByPlate(
-        supabase,
-        context.capabilities,
-        branchScope.selectedBranchId,
-        plateQuery,
-        permissions.canViewQuotations,
-      )
-    : customerLastNameQuery
-      ? await searchQuickAccessByCustomerLastName(
+  const intakeCustomerId = customerId?.trim() ?? "";
+  const intakeVehicleId = vehicleId?.trim() ?? "";
+
+  const records =
+    intakeCustomerId && intakeVehicleId
+      ? await searchQuickAccessByIntakeIds(
           supabase,
           context.capabilities,
           branchScope.selectedBranchId,
-          customerLastNameQuery,
+          intakeCustomerId,
+          intakeVehicleId,
           permissions.canViewQuotations,
         )
-      : [];
+      : plateQuery
+        ? await searchQuickAccessByPlate(
+            supabase,
+            context.capabilities,
+            branchScope.selectedBranchId,
+            plateQuery,
+            permissions.canViewQuotations,
+          )
+        : customerLastNameQuery
+          ? await searchQuickAccessByCustomerLastName(
+              supabase,
+              context.capabilities,
+              branchScope.selectedBranchId,
+              customerLastNameQuery,
+              permissions.canViewQuotations,
+            )
+          : [];
 
-  const noMatchRedirectPath = buildQuickAccessNoMatchRedirectPath({
-    plateQuery,
-    customerLastNameQuery,
-    canCreateVehicle: context.capabilities.includes("vehicles:write"),
-    canCreateQuotation: context.capabilities.includes("quotations:write"),
-  });
+  let resolvedPlateQuery = plateQuery;
 
-  if (records.length === 0 && noMatchRedirectPath) {
-    redirect(noMatchRedirectPath);
+  if (!resolvedPlateQuery && records.length > 0 && intakeVehicleId) {
+    const vehicle = records[0]?.vehicles.find((item) => item.id === intakeVehicleId);
+    resolvedPlateQuery = normalizeQuickAccessPlate(vehicle?.plateNumber ?? "");
   }
 
   return {
-    plateQuery,
+    plateQuery: resolvedPlateQuery,
     customerLastNameQuery,
     records,
     permissions,
+    intakeCustomerId: intakeCustomerId || null,
+    intakeVehicleId: intakeVehicleId || null,
   };
+}
+
+async function searchQuickAccessByIntakeIds(
+  supabase: Awaited<ReturnType<typeof getBranchScopedServerClient>>["supabase"],
+  capabilities: readonly AppCapability[],
+  branchId: string | null,
+  customerId: string,
+  vehicleId: string,
+  canViewQuotations: boolean,
+) {
+  const { data: vehicleRow, error: vehicleError } = await applyBranchFilter(
+    supabase.from("vehicles").select("*").eq("id", vehicleId),
+    branchId,
+  ).maybeSingle();
+
+  if (vehicleError) {
+    throw new Error(vehicleError.message);
+  }
+
+  if (!vehicleRow || vehicleRow.customer_id !== customerId) {
+    return [];
+  }
+
+  const { data: customerRow, error: customerError } = await applyBranchFilter(
+    supabase.from("customers").select("*").eq("id", customerId),
+    branchId,
+  ).maybeSingle();
+
+  if (customerError) {
+    throw new Error(customerError.message);
+  }
+
+  if (!customerRow) {
+    return [];
+  }
+
+  const { data: relatedVehicles, error: relatedVehiclesError } = await applyBranchFilter(
+    supabase.from("vehicles").select("*").eq("customer_id", customerId),
+    branchId,
+  );
+
+  if (relatedVehiclesError) {
+    throw new Error(relatedVehiclesError.message);
+  }
+
+  return buildQuickAccessRecords({
+    supabase,
+    capabilities,
+    branchId,
+    customerRows: [customerRow as CustomerRow],
+    vehicleRows: (relatedVehicles ?? []) as VehicleRow[],
+    matches: [
+      {
+        customerId,
+        highlightedVehicleId: vehicleId,
+        match: {
+          source: "plate",
+          label: "Active intake",
+          plateMatchKind: "exact",
+        },
+      },
+    ],
+    canViewQuotations,
+  });
 }
 
 async function searchQuickAccessByPlate(

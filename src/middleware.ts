@@ -1,5 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import {
+  copyResponseCookies,
+  updateSupabaseSession,
+} from "@/lib/supabase/middleware";
+
 const TENANT_SLUG_COOKIE = "tenant_slug";
 const TENANT_SLUG_HEADER = "x-tenant-slug";
 
@@ -31,10 +36,9 @@ function extractTenantSlug(request: NextRequest): string {
   );
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Never touch framework / HMR traffic (prevents Turbopack compile loops).
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
@@ -43,7 +47,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Leave Server Action POSTs untouched — mutating them causes "Failed to fetch".
   if (
     request.method !== "GET" &&
     (request.headers.has("next-action") ||
@@ -56,7 +59,8 @@ export function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(TENANT_SLUG_HEADER, slug);
 
-  // Rewrite /t/{slug}/... → /... for public tenant path prefix
+  const sessionResponse = await updateSupabaseSession(request, requestHeaders);
+
   const rewriteMatch = pathname.match(/^\/t\/([a-z0-9-]+)(\/.*)?$/);
   if (rewriteMatch) {
     const rest = rewriteMatch[2] || "/";
@@ -65,6 +69,8 @@ export function middleware(request: NextRequest) {
     const rewriteResponse = NextResponse.rewrite(url, {
       request: { headers: requestHeaders },
     });
+    copyResponseCookies(sessionResponse, rewriteResponse);
+
     const rewrittenSlug = rewriteMatch[1].toLowerCase();
     if (request.cookies.get(TENANT_SLUG_COOKIE)?.value !== rewrittenSlug) {
       rewriteResponse.cookies.set(TENANT_SLUG_COOKIE, rewrittenSlug, {
@@ -72,37 +78,25 @@ export function middleware(request: NextRequest) {
         sameSite: "lax",
       });
     }
+
     return rewriteResponse;
   }
 
-  const response = NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  });
-
-  // Avoid mutating cookies on Server Action / mutation POSTs (can break Next CSRF).
   if (
     request.method === "GET" &&
     request.cookies.get(TENANT_SLUG_COOKIE)?.value !== slug
   ) {
-    response.cookies.set(TENANT_SLUG_COOKIE, slug, {
+    sessionResponse.cookies.set(TENANT_SLUG_COOKIE, slug, {
       path: "/",
       sameSite: "lax",
     });
   }
 
-  return response;
+  return sessionResponse;
 }
 
 export const config = {
   matcher: [
-    /*
-     * Run on all paths except:
-     * - api
-     * - _next (all Turbopack / webpack / HMR / static internals)
-     * - static file extensions
-     */
     "/((?!api|_next|.*\\..*).*)",
   ],
 };

@@ -114,6 +114,7 @@ export function mapJobOrderRowToListItem(params: {
   customerName: string;
   vehicleLabel: string;
   quotationNumber: string | null;
+  quotationApprovedAt?: string | null;
   assignedMechanicCount: number;
   items: JobOrderItemDetail[];
   hasInvoice: boolean;
@@ -123,6 +124,7 @@ export function mapJobOrderRowToListItem(params: {
     jobOrderNumber: params.row.job_order_number,
     quotationId: params.row.quotation_id,
     quotationNumber: params.quotationNumber,
+    quotationApprovedAt: params.quotationApprovedAt ?? null,
     customerId: params.row.customer_id,
     customerName: params.customerName,
     vehicleId: params.row.vehicle_id,
@@ -153,6 +155,7 @@ export function mapJobOrderDetail(params: {
   customerName: string;
   vehicleLabel: string;
   quotationNumber: string | null;
+  quotationApprovedAt: string | null;
   invoice: {
     id: string;
     invoice_number: string;
@@ -178,6 +181,7 @@ export function mapJobOrderDetail(params: {
     customerName: params.customerName,
     vehicleLabel: params.vehicleLabel,
     quotationNumber: params.quotationNumber,
+    quotationApprovedAt: params.quotationApprovedAt,
     assignedMechanicCount: params.mechanics.length,
     items: params.items,
     hasInvoice: params.invoice !== null && params.invoice.status !== "cancelled",
@@ -202,7 +206,7 @@ export function mapJobOrderDetail(params: {
       requireInvoiceBeforeJobCompletion:
         params.settings?.require_invoice_before_job_completion ?? false,
       requireInvoiceBeforeVehicleRelease:
-        params.settings?.require_invoice_before_vehicle_release ?? false,
+        params.settings?.require_invoice_before_vehicle_release ?? true,
       invoiceId: params.invoice?.id ?? null,
       invoiceNumber: params.invoice?.invoice_number ?? null,
       invoiceStatus: params.invoice?.status ?? null,

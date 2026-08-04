@@ -37,6 +37,22 @@ export function resolveQuickAccessQuery(value: string) {
   };
 }
 
+export function resolveGlobalLookupDestination(query: string) {
+  const value = query.trim();
+
+  if (!value) {
+    return null;
+  }
+
+  const resolvedQuery = resolveQuickAccessQuery(value);
+  const lookupValue =
+    resolvedQuery.plateQuery || resolvedQuery.customerLastNameQuery;
+
+  return lookupValue
+    ? `/quick-access?q=${encodeURIComponent(lookupValue)}`
+    : null;
+}
+
 export function buildQuickAccessNoMatchRedirectPath({
   plateQuery,
   customerLastNameQuery,

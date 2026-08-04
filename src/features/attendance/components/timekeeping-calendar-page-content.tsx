@@ -2,50 +2,50 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import { BranchSelector } from "@/components/shared/branch-selector";
 import { EmptyState } from "@/components/shared/empty-state";
-import { DataTableCard } from "@/components/shared/data-table-card";
-import { DataTableRecordSummary } from "@/components/shared/data-table-pagination";
 import { FormStatusMessage } from "@/components/shared/form-status";
-import { MetricGrid } from "@/components/shared/metric-grid";
 import { PageHeader } from "@/components/shared/page-header";
-import { StatCard } from "@/components/shared/stat-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AttendanceAccessSettingsForm } from "@/features/attendance/components/attendance-access-settings-form";
-import { AttendanceAllowedIpForm } from "@/features/attendance/components/attendance-allowed-ip-form";
+import { AttendanceAllowedIpDialog } from "@/features/attendance/components/attendance-allowed-ip-dialog";
 import { AttendanceAllowedIpRowActions } from "@/features/attendance/components/attendance-allowed-ip-row-actions";
 import { AttendanceDevicesPageContent } from "@/features/attendance/components/attendance-devices-page-content";
 import { BranchHolidayDialog } from "@/features/attendance/components/branch-holiday-dialog";
 import { PhilippineHolidayImportDialog } from "@/features/attendance/components/philippine-holiday-import-dialog";
 import { BranchHolidayRowActions } from "@/features/attendance/components/branch-holiday-row-actions";
-import type { BranchHolidaySummary, TimekeepingCalendarPageData } from "@/features/attendance/types";
+import {
+  AttendanceWorkspaceFilterToolbar,
+  AttendanceWorkspacePanel,
+  AttendanceWorkspaceTableShell,
+} from "@/features/attendance/components/attendance-workspace-panel";
+import type {
+  AttendanceAllowedIpSummary,
+  BranchHolidaySummary,
+  TimekeepingCalendarPageData,
+} from "@/features/attendance/types";
 import {
   formatBranchHolidayKindLabel,
   formatBranchHolidayPayTreatmentLabel,
 } from "@/features/attendance/utils";
-import { formatDate, getBusinessNow } from "@/lib/dates";
+import { formatDate } from "@/lib/dates";
+import type { PageBranchSelectorProps } from "@/lib/branches";
+import { cn } from "@/lib/utils";
 
 export function TimekeepingCalendarPageContent({
   data,
+  branchSelector,
 }: {
   data: TimekeepingCalendarPageData;
+  branchSelector: PageBranchSelectorProps;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const today = getBusinessNow().toFormat("yyyy-LL-dd");
-  const upcomingHolidayCount = data.holidays.filter(
-    (holiday) => holiday.holidayDate >= today,
-  ).length;
+  const showBranchContext = branchSelector.showBranchContext;
   const activeTab = (() => {
     const tab = searchParams.get("tab");
 
@@ -76,14 +76,14 @@ export function TimekeepingCalendarPageContent({
     <div className="space-y-0">
       <PageHeader
         title="Timekeeping"
-        description="Attendance calendar and shop timekeeping rules."
+        description="Configure shop access rules, device approvals, and branch calendar dates."
       />
 
       <Tabs
         defaultValue="access"
         value={activeTab}
         onValueChange={updateTab}
-        className="min-w-0"
+        className="mt-6 min-w-0"
       >
         <TabsList>
           <TabsTrigger value="access">Access & IP</TabsTrigger>
@@ -101,233 +101,199 @@ export function TimekeepingCalendarPageContent({
 
         <TabsContent value="access" className="space-y-6">
           <Card className="border-border/70 shadow-sm">
-            <CardHeader className="space-y-1">
+            <CardHeader className="space-y-1 pb-4">
               <CardTitle className="text-base font-semibold text-foreground">
                 Mechanic portal access
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Enable shop IP and/or shop location verification for mechanic punches.
-                At least one on-site check must stay enabled.
+                Enable shop IP and/or location verification for mechanic punches.
               </p>
             </CardHeader>
             <CardContent>
-              <AttendanceAccessSettingsForm
-                initialValues={data.attendanceAccessSettings}
-              />
+              <AttendanceAccessSettingsForm initialValues={data.attendanceAccessSettings} />
             </CardContent>
           </Card>
 
-          <Card className="border-border/70 shadow-sm">
-              <CardHeader className="space-y-1">
-                <CardTitle className="text-base font-semibold text-foreground">
-                  Approved shop IPs
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Used when shop IP verification is enabled. Attendance punches are treated
-                  as on-site only when the current public internet IP matches one of these
-                  branch addresses.
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  <div className="rounded-2xl border border-border/70 bg-muted/20 px-4 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                      Detected public IP
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-foreground">
-                      {data.currentDetectedIp ?? "Unable to detect"}
-                    </p>
-                    {data.currentDetectedIp ? (
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Use this to register the current branch connection after
-                        confirming you are on-site.
-                      </p>
-                    ) : (
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Public IP could not be detected on this request.
-                        {data.observedRequestIp
-                          ? ` Observed request IP: ${data.observedRequestIp}.`
-                          : ""}
-                      </p>
-                    )}
-                  </div>
-                  <div className="rounded-2xl border border-border/70 bg-muted/20 px-4 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                      Pending amendments
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-foreground">
-                      {data.pendingAmendmentCount}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Requests waiting for attendance review and payroll readiness.
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-border/70 bg-muted/20 px-4 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                      Pending devices
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-foreground">
-                      {data.pendingDeviceCount}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      New mechanic phones and browsers waiting for approval.
-                    </p>
-                  </div>
-                </div>
-
-                <AttendanceAllowedIpForm
-                  currentDetectedIp={data.currentDetectedIp}
+          <AttendanceWorkspacePanel
+            contextBar={
+              <div className={cn("grid gap-3", showBranchContext && "sm:grid-cols-2")}>
+                {showBranchContext ? (
+                  <TimekeepingContextCard label="Branch" value={data.branchName} />
+                ) : null}
+                <TimekeepingContextCard
+                  label="Current public IP"
+                  value={data.currentDetectedIp ?? "Unable to detect"}
+                  helper={
+                    data.currentDetectedIp
+                      ? "Detected on this request."
+                      : data.observedRequestIp
+                        ? `Observed request IP: ${data.observedRequestIp}`
+                        : "Public IP could not be detected on this request."
+                  }
                 />
-
-                {data.allowedIpAddresses.length === 0 ? (
-                  <EmptyState
-                    title="No approved shop IPs yet"
-                    description="Register branch internet addresses used to validate on-site mechanic punches."
-                  />
-                ) : (
-                  <div className="overflow-hidden rounded-[1.25rem] border border-border/70">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>IP address</TableHead>
-                          <TableHead>Label</TableHead>
-                          <TableHead>Updated</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {data.allowedIpAddresses.map((allowedIp) => (
-                          <TableRow key={allowedIp.id}>
-                            <TableCell className="font-medium text-foreground">
-                              {allowedIp.ipAddress}
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {allowedIp.label?.trim() || "No label"}
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {formatDate(allowedIp.updatedAt)}
-                            </TableCell>
-                            <TableCell className="w-14 text-right">
-                              <AttendanceAllowedIpRowActions
-                                allowedIp={allowedIp}
-                              />
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-        </TabsContent>
-
-        <TabsContent value="devices" className="space-y-6">
-          <MetricGrid className="xl:grid-cols-2">
-            <StatCard
-              title="Pending devices"
-              value={String(data.pendingDeviceCount)}
-              tone={data.pendingDeviceCount > 0 ? "warning" : "neutral"}
-            />
-            <StatCard
-              title="Branch"
-              value={data.branchName}
-            />
-          </MetricGrid>
-
-          <AttendanceDevicesPageContent
-            data={data.devicesReview}
-            embedded
-            paramPrefix="device"
-          />
-        </TabsContent>
-
-        <TabsContent value="holidays" className="space-y-6">
-          <MetricGrid className="xl:grid-cols-2">
-            <StatCard
-              title="Branch holidays"
-              value={String(data.holidays.length)}
-              badge={`${upcomingHolidayCount} upcoming`}
-              tone={upcomingHolidayCount > 0 ? "info" : "neutral"}
-            />
-            <StatCard
-              title="Branch"
-              value={data.branchName}
-            />
-          </MetricGrid>
-
-          <DataTableCard
-            toolbar={
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                <PhilippineHolidayImportDialog existingHolidays={data.holidays} />
-                <BranchHolidayDialog triggerLabel="Add calendar date" />
               </div>
             }
-            footer={<DataTableRecordSummary totalItems={data.holidays.length} />}
+            toolbar={
+              <div className="flex justify-end">
+                <AttendanceAllowedIpDialog currentDetectedIp={data.currentDetectedIp} />
+              </div>
+            }
           >
-            {data.holidays.length === 0 ? (
-              <EmptyState
-                title="No branch holidays configured"
-                description="Add calendar dates that affect attendance and payroll calculations."
-                action={
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    <PhilippineHolidayImportDialog existingHolidays={data.holidays} />
-                    <BranchHolidayDialog triggerLabel="Add calendar date" />
-                  </div>
-                }
-              />
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Label</TableHead>
-                      <TableHead>Event type</TableHead>
-                      <TableHead>Pay treatment</TableHead>
-                      <TableHead>Notes</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {data.holidays.map((holiday) => (
-                      <TableRow key={holiday.id}>
+            <AttendanceWorkspaceTableShell
+              isEmpty={data.allowedIpAddresses.length === 0}
+              emptyState={
+                <EmptyState
+                  title="No approved shop IPs yet"
+                  description="Add branch internet addresses used to validate on-site mechanic punches."
+                />
+              }
+            >
+              <Table className="min-w-[640px] xl:min-w-0">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Public IP</TableHead>
+                    <TableHead>Label</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.allowedIpAddresses.map((allowedIp) => {
+                    const ipStatus = resolveAllowedIpStatus(allowedIp, data.currentDetectedIp);
+
+                    return (
+                      <TableRow key={allowedIp.id}>
                         <TableCell className="font-medium text-foreground">
-                          {formatDate(holiday.holidayDate)}
+                          {allowedIp.ipAddress}
                         </TableCell>
-                        <TableCell>{holiday.label}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {allowedIp.label?.trim() || "—"}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(allowedIp.createdAt)}
+                        </TableCell>
                         <TableCell>
-                          <StatusBadge tone="neutral" className={getBranchHolidayTypeBadgeClass(holiday)}>
-                            {formatBranchHolidayKindLabel(holiday.holidayKind)}
-                          </StatusBadge>
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge
-                            tone="neutral"
-                            className={getBranchHolidayPayTreatmentBadgeClass(holiday)}
-                          >
-                            {formatBranchHolidayPayTreatmentLabel(holiday.payTreatment)}
-                          </StatusBadge>
-                        </TableCell>
-                        <TableCell className="max-w-[320px] text-sm text-muted-foreground">
-                          <span className="line-clamp-2">
-                            {holiday.notes?.trim() ? holiday.notes : "No notes"}
-                          </span>
+                          <StatusBadge tone={ipStatus.tone}>{ipStatus.label}</StatusBadge>
                         </TableCell>
                         <TableCell className="w-14 text-right">
-                          <BranchHolidayRowActions holiday={holiday} />
+                          <AttendanceAllowedIpRowActions allowedIp={allowedIp} />
                         </TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </DataTableCard>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </AttendanceWorkspaceTableShell>
+          </AttendanceWorkspacePanel>
+        </TabsContent>
+
+        <TabsContent value="devices">
+          <AttendanceDevicesPageContent data={data.devicesReview} embedded paramPrefix="device" />
+        </TabsContent>
+
+        <TabsContent value="holidays">
+          <AttendanceWorkspacePanel
+            toolbar={
+              showBranchContext ? (
+                <AttendanceWorkspaceFilterToolbar
+                  filters={<BranchSelector {...branchSelector} />}
+                  actions={
+                    <div className="flex flex-wrap gap-2">
+                      <PhilippineHolidayImportDialog existingHolidays={data.holidays} />
+                      <BranchHolidayDialog triggerLabel="Add holiday" />
+                    </div>
+                  }
+                />
+              ) : (
+                <div className="flex flex-wrap justify-end gap-2">
+                  <PhilippineHolidayImportDialog existingHolidays={data.holidays} />
+                  <BranchHolidayDialog triggerLabel="Add holiday" />
+                </div>
+              )
+            }
+          >
+            <AttendanceWorkspaceTableShell
+              isEmpty={data.holidays.length === 0}
+              emptyState={
+                <EmptyState
+                  title="No branch holidays configured"
+                  description="Add calendar dates that affect attendance and payroll calculations."
+                />
+              }
+            >
+              <Table className="min-w-[760px] xl:min-w-0">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Label</TableHead>
+                    <TableHead>Event type</TableHead>
+                    <TableHead>Pay treatment</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.holidays.map((holiday) => (
+                    <TableRow key={holiday.id}>
+                      <TableCell className="font-medium text-foreground">
+                        {formatDate(holiday.holidayDate)}
+                      </TableCell>
+                      <TableCell>{holiday.label}</TableCell>
+                      <TableCell>
+                        <StatusBadge tone="neutral" className={getBranchHolidayTypeBadgeClass(holiday)}>
+                          {formatBranchHolidayKindLabel(holiday.holidayKind)}
+                        </StatusBadge>
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge
+                          tone="neutral"
+                          className={getBranchHolidayPayTreatmentBadgeClass(holiday)}
+                        >
+                          {formatBranchHolidayPayTreatmentLabel(holiday.payTreatment)}
+                        </StatusBadge>
+                      </TableCell>
+                      <TableCell className="w-28 text-right">
+                        <BranchHolidayRowActions holiday={holiday} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </AttendanceWorkspaceTableShell>
+          </AttendanceWorkspacePanel>
         </TabsContent>
       </Tabs>
     </div>
   );
+}
+
+function TimekeepingContextCard({
+  label,
+  value,
+  helper,
+}: {
+  label: string;
+  value: string;
+  helper?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-border/70 bg-muted/15 px-4 py-3">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 text-base font-semibold text-foreground">{value}</p>
+      {helper ? <p className="mt-1 text-sm text-muted-foreground">{helper}</p> : null}
+    </div>
+  );
+}
+
+function resolveAllowedIpStatus(
+  allowedIp: AttendanceAllowedIpSummary,
+  currentDetectedIp: string | null,
+) {
+  if (currentDetectedIp && allowedIp.ipAddress === currentDetectedIp) {
+    return { label: "Current", tone: "success" as const };
+  }
+
+  return { label: "Approved", tone: "neutral" as const };
 }
 
 function getBranchHolidayTypeBadgeClass(holiday: BranchHolidaySummary) {

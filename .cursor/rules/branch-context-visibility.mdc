@@ -1,0 +1,40 @@
+---
+description: Hide branch selectors and branch names for single-branch tenants in admin UI
+globs: src/app/(dashboard)/**/*.{tsx,ts},src/features/**/components/**/*.{tsx,ts},src/components/shared/branch-selector.tsx
+alwaysApply: false
+---
+
+# Branch context visibility
+
+Single-branch tenants should never see branch names like "Main Branch" in admin UI.
+
+## Rule
+
+Use `shouldShowBranchContext()` from `@/lib/branch-selector-visibility` (or `branchSelector.showBranchContext` from `getPageBranchSelectorProps()`) before rendering:
+
+- `BranchSelector`
+- Static branch labels/cards ("Branch", "Main Branch", etc.)
+- Page descriptions that append a branch name
+
+When `showBranchContext` is `false`, render nothing — do not fall back to a read-only branch name card.
+
+## Helpers
+
+- `BranchSelector` already returns `null` when context is hidden.
+- For copy, use `appendBranchContext(description, branchName, showBranchContext)`.
+- Prefer passing `showBranchContext` from server-side `getPageBranchSelectorProps()` rather than re-deriving in client components.
+
+## Examples
+
+```tsx
+// Good — selector only when multi-branch
+{branchSelector.showBranchContext ? <BranchSelector {...branchSelector} /> : null}
+
+// Bad — fallback branch name for single-branch tenants
+{showBranchSelector ? <BranchSelector /> : <p>{branchName}</p>}
+
+// Good — generic description when branch context is hidden
+appendBranchContext("Compose and print A4 documents", branchName, showBranchContext)
+```
+
+Reference: `src/features/attendance/components/timekeeping-calendar-page-content.tsx`, `src/app/(dashboard)/pos/page.tsx`

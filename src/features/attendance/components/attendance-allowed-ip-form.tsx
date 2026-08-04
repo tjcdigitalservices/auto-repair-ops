@@ -22,8 +22,10 @@ import { useFormValues } from "@/lib/use-form-values";
 
 export function AttendanceAllowedIpForm({
   currentDetectedIp,
+  closeDialog,
 }: {
   currentDetectedIp: string | null;
+  closeDialog?: () => void;
 }) {
   const [state, formAction] = useActionState(
     addAttendanceAllowedIpAction,
@@ -43,12 +45,13 @@ export function AttendanceAllowedIpForm({
       ipAddress: "",
       label: "",
     });
-  }, [setValues, state.status]);
+    closeDialog?.();
+  }, [closeDialog, setValues, state.status]);
 
   return (
     <form action={formAction} className="space-y-4">
       <FormRequiredFieldsNote />
-      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+      <div className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="attendanceAllowedIpAddress" required>
             Public IP address
@@ -69,14 +72,15 @@ export function AttendanceAllowedIpForm({
             })}
           />
           <p className="text-xs text-muted-foreground">
-            Register the public internet IP seen by the server, not the phone&apos;s local Wi-Fi
-            address like <span className="font-medium">192.168.1.9</span>.
+            Use the branch&apos;s public internet IP, not a local address like 192.168.1.9.
           </p>
           <FieldError errors={state.fieldErrors} name="ipAddress" id={fieldErrorId("ipAddress")} />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="attendanceAllowedIpLabel" optional>Label</Label>
+          <Label htmlFor="attendanceAllowedIpLabel" optional>
+            Label
+          </Label>
           <Input
             id="attendanceAllowedIpLabel"
             name="label"
@@ -94,25 +98,31 @@ export function AttendanceAllowedIpForm({
           <FieldError errors={state.fieldErrors} name="label" id={fieldErrorId("label")} />
         </div>
 
-        <div className="flex items-end gap-2">
-          {currentDetectedIp ? (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => updateFormValue("ipAddress", currentDetectedIp)}
-            >
-              Use detected public IP
-            </Button>
-          ) : null}
-          <SubmitButton pendingLabel="Adding..." variant="add">
-            <Plus className="size-4" />
-            Add IP
-          </SubmitButton>
-        </div>
+        {currentDetectedIp ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => updateFormValue("ipAddress", currentDetectedIp)}
+          >
+            Use detected public IP
+          </Button>
+        ) : null}
+      </div>
+
+      <div className="flex justify-end gap-2">
+        {closeDialog ? (
+          <Button type="button" variant="outline" onClick={closeDialog}>
+            Cancel
+          </Button>
+        ) : null}
+        <SubmitButton pendingLabel="Adding...">
+          <Plus className="size-4" />
+          Add IP
+        </SubmitButton>
       </div>
 
       <FormStatusMessage message={state.status === "error" ? state.message : undefined} />
-      {state.status === "success" ? (
+      {state.status === "success" && !closeDialog ? (
         <p className="text-sm text-emerald-700">{state.message}</p>
       ) : null}
     </form>

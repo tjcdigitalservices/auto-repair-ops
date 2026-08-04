@@ -12,17 +12,21 @@ import type {
   DocumentBusinessProfile,
   DocumentTemplateName,
 } from "@/components/document-engine/types";
+import { formatRevisionMetadataLabel } from "@/components/document-engine/revisions";
 import { DocumentComposerHeaderActions } from "@/features/documents/components/document-composer-header-actions";
 import { useDocumentPersistence } from "@/features/documents/hooks/use-document-persistence";
+import { appendBranchContext } from "@/lib/branch-selector-visibility";
 
 export function DocumentEditorWorkspace({
   businessProfile,
   branchName,
+  showBranchContext,
   document,
   template = "blank",
 }: {
   businessProfile: DocumentBusinessProfile;
   branchName: string;
+  showBranchContext: boolean;
   document?: DocumentRecord;
   template?: DocumentTemplateName;
 }) {
@@ -112,7 +116,11 @@ export function DocumentEditorWorkspace({
       template={resolvedTemplate}
       document={resolvedDocument}
       moduleTitle={documentId ? "Edit Document" : "New Document"}
-      moduleDescription={`Compose and print A4 documents for ${branchName}.`}
+      moduleDescription={appendBranchContext(
+        "Compose and print A4 documents",
+        branchName,
+        showBranchContext,
+      )}
       documentTitle={title}
       onDocumentTitleChange={setTitle}
       titleInputRef={titleInputRef}
@@ -120,12 +128,18 @@ export function DocumentEditorWorkspace({
       businessProfile={businessProfile}
       onContentJsonChange={setContentJson}
       saveStatus={saveStatus}
+      revisionMetadataLabel={
+        typeof document?.revisionNumber === "number"
+          ? formatRevisionMetadataLabel({
+              revisionNumber: document.revisionNumber,
+              isCurrentRevision: document?.isCurrentRevision ?? true,
+            })
+          : undefined
+      }
       headerActions={
         <DocumentComposerHeaderActions
           documentId={documentId}
           status={status}
-          revisionNumber={document?.revisionNumber}
-          isCurrentRevision={document?.isCurrentRevision}
           onPublish={() => void handlePublish()}
           onPrint={() => window.print()}
           onRename={handleRename}

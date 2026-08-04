@@ -15,6 +15,7 @@ import type {
 } from "@/features/attendance/types";
 import {
   buildAttendanceSummary,
+  matchesRosterStatusFilter,
   doesLeaveCoverDate,
   getDefaultAttendanceDate,
   hasMissingTimeout,
@@ -166,11 +167,27 @@ export async function getAttendanceRosterData(
   const summary = buildAttendanceSummary(rosterBase, {
     branchHoliday,
   });
-  const filteredRoster = rosterBase.filter((item) =>
-    matchesAttendanceStatusFilter(item, filters.status, {
-      branchHoliday,
-    }),
-  );
+  const filteredRoster = rosterBase.filter((item) => {
+    if (
+      filters.rosterStatus
+      && !matchesRosterStatusFilter(item, filters.rosterStatus, {
+        branchHoliday,
+      })
+    ) {
+      return false;
+    }
+
+    if (
+      filters.status
+      && !matchesAttendanceStatusFilter(item, filters.status, {
+        branchHoliday,
+      })
+    ) {
+      return false;
+    }
+
+    return true;
+  });
 
   return {
     branchName,

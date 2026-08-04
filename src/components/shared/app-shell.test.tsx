@@ -98,15 +98,6 @@ describe("AppShell", () => {
             iconName: "dashboard",
           },
           {
-            href: "/quick-access",
-            label: "Quick Access",
-            description: "Look up a customer or vehicle.",
-            group: "Overview",
-            iconName: "quick-access",
-            showInSidebar: false,
-            showAsMobileShortcut: true,
-          },
-          {
             href: "/customers",
             label: "Customers",
             description: "Manage customer records",
@@ -128,7 +119,6 @@ describe("AppShell", () => {
 
     fireEvent.click(screen.getAllByRole("button", { name: "Toggle sidebar" })[0]);
 
-    expect(screen.getByRole("link", { name: /Quick Access/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Close navigation menu" })).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "Customers" }).length).toBeGreaterThan(0);
   });

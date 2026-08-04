@@ -49,25 +49,25 @@ export function JobOrderDetailTabs({
         <TabsTrigger value="overview" className="px-2.5 py-1.5 text-xs sm:px-3 sm:py-2 sm:text-sm lg:min-h-10 lg:px-4">
           Overview
         </TabsTrigger>
-        <TabsTrigger value="billing" className="px-2.5 py-1.5 text-xs sm:px-3 sm:py-2 sm:text-sm lg:min-h-10 lg:px-4">
-          Billing
-        </TabsTrigger>
         <TabsTrigger value="work-items" className="px-2.5 py-1.5 text-xs sm:px-3 sm:py-2 sm:text-sm lg:min-h-10 lg:px-4">
           Work Items
         </TabsTrigger>
         <TabsTrigger value="parts-usage" className="px-2.5 py-1.5 text-xs sm:px-3 sm:py-2 sm:text-sm lg:min-h-10 lg:px-4">
-          Parts Usage
+          Parts
         </TabsTrigger>
         <TabsTrigger value="mechanics" className="px-2.5 py-1.5 text-xs sm:px-3 sm:py-2 sm:text-sm lg:min-h-10 lg:px-4">
           Mechanics
         </TabsTrigger>
+        <TabsTrigger value="billing" className="px-2.5 py-1.5 text-xs sm:px-3 sm:py-2 sm:text-sm lg:min-h-10 lg:px-4">
+          Billing
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="overview">{overview}</TabsContent>
-      <TabsContent value="billing">{billing}</TabsContent>
       <TabsContent value="work-items">{workItems}</TabsContent>
       <TabsContent value="parts-usage">{partsUsage}</TabsContent>
       <TabsContent value="mechanics">{mechanics}</TabsContent>
+      <TabsContent value="billing">{billing}</TabsContent>
     </Tabs>
   );
 }

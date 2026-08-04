@@ -128,7 +128,7 @@ export function QuotationForm({
                   ? "Customer, vehicle, and status stay linked to the approved quotation. Line items load from the linked job order and save to both documents."
                   : mode === "create"
                     ? "Quotations are estimates only. They should not touch inventory until approval and later job-order usage."
-                    : "Update customer, vehicle, notes, and line items for this draft quotation."}
+                    : "Update customer, vehicle, notes, and line items for this quotation."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -223,8 +223,8 @@ export function QuotationForm({
                         errorId: fieldErrorId("status"),
                       })}
                     >
-                      <option value="draft">Draft</option>
                       <option value="pending_approval">Pending approval</option>
+                      <option value="draft">Draft</option>
                     </select>
                     <FieldError errors={state.fieldErrors} name="status" id={fieldErrorId("status")} />
                   </div>

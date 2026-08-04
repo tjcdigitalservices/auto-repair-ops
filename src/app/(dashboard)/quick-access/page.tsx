@@ -1,5 +1,6 @@
+import { redirect } from "next/navigation";
+
 import { QuickAccessPageClient } from "@/features/quick-access/components/quick-access-page-client";
-import { listTodayArrivalQueue } from "@/features/quick-access/arrivals/arrival-queue-queries";
 import { getQuickAccessSearchState } from "@/features/quick-access/queries/quick-access-queries";
 
 export const dynamic = "force-dynamic";
@@ -11,41 +12,41 @@ type QuickAccessRouteProps = {
     lastName?: string;
     customerId?: string;
     vehicleId?: string;
-    finished?: string;
-    view?: string;
-    focusVehicleId?: string;
-    arrivalSource?: string;
-    addArrival?: string;
   }>;
 };
+
+function hasQuickAccessLookupParams(params: {
+  q?: string;
+  plate?: string;
+  lastName?: string;
+  customerId?: string;
+  vehicleId?: string;
+}) {
+  return Boolean(
+    params.q?.trim() ||
+      params.plate?.trim() ||
+      params.lastName?.trim() ||
+      (params.customerId?.trim() && params.vehicleId?.trim()),
+  );
+}
 
 export default async function QuickAccessRoute({
   searchParams,
 }: QuickAccessRouteProps) {
   const params = await searchParams;
-  const { q, plate, lastName, customerId, vehicleId, finished, view, focusVehicleId, arrivalSource } =
-    params;
+  const { q, plate, lastName, customerId, vehicleId } = params;
 
-  const [searchState, arrivalQueue] = await Promise.all([
-    getQuickAccessSearchState({
-      query: q,
-      plate,
-      lastName,
-      customerId,
-      vehicleId,
-    }),
-    listTodayArrivalQueue(),
-  ]);
+  if (!hasQuickAccessLookupParams(params)) {
+    redirect("/dashboard");
+  }
 
-  return (
-    <QuickAccessPageClient
-      searchState={searchState}
-      arrivals={arrivalQueue.items}
-      queueAvailable={arrivalQueue.queueAvailable}
-      finished={finished === "1"}
-      showQueueView={view === "queue" || finished === "1"}
-      focusVehicleId={focusVehicleId ?? null}
-      arrivalSourceFromScan={arrivalSource === "plate_scanner"}
-    />
-  );
+  const searchState = await getQuickAccessSearchState({
+    query: q,
+    plate,
+    lastName,
+    customerId,
+    vehicleId,
+  });
+
+  return <QuickAccessPageClient searchState={searchState} />;
 }

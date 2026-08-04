@@ -9,29 +9,20 @@ vi.mock("@/features/attendance/actions/timekeeping-actions", () => ({
   deleteBranchHolidayAction: vi.fn(),
 }));
 
-vi.mock("@/components/shared/table-row-actions-menu", () => ({
-  TableRowActionsMenu: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TableRowActionsMenuButton: ({
+vi.mock("@/components/shared/icon-action", () => ({
+  IconActionButton: ({
     label,
-    onSelect,
+    onClick,
   }: {
     label: string;
-    onSelect: () => void;
+    onClick?: () => void;
   }) => (
-    <button type="button" onClick={onSelect}>
+    <button type="button" aria-label={label} onClick={onClick}>
       {label}
     </button>
   ),
-}));
-
-vi.mock("@/components/shared/confirm-action-dialog", () => ({
-  ConfirmActionDialog: ({
-    open,
-    title,
-  }: {
-    open?: boolean;
-    title: string;
-  }) => <div data-testid="delete-holiday-dialog">{title}:{open ? "open" : "closed"}</div>,
+  IconActionConfirm: ({ label }: { label: string }) => <button type="button">{label}</button>,
+  IconActionGroup: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock("@/features/attendance/components/branch-holiday-dialog", () => ({
@@ -55,23 +46,13 @@ const holiday: BranchHolidaySummary = {
 };
 
 describe("BranchHolidayRowActions", () => {
-  it("opens the edit holiday dialog from row action menu state", () => {
+  it("opens the edit holiday dialog from the edit action", () => {
     render(<BranchHolidayRowActions holiday={holiday} />);
 
     expect(screen.getByTestId("branch-holiday-dialog")).toHaveTextContent("New Year's Day:closed");
 
-    fireEvent.click(screen.getByText("Edit New Year's Day"));
+    fireEvent.click(screen.getByRole("button", { name: "Edit New Year's Day" }));
 
     expect(screen.getByTestId("branch-holiday-dialog")).toHaveTextContent("New Year's Day:open");
-  });
-
-  it("opens the delete confirmation dialog outside the row action menu", () => {
-    render(<BranchHolidayRowActions holiday={holiday} />);
-
-    expect(screen.getByTestId("delete-holiday-dialog")).toHaveTextContent("closed");
-
-    fireEvent.click(screen.getByText("Delete calendar date"));
-
-    expect(screen.getByTestId("delete-holiday-dialog")).toHaveTextContent("Delete New Year's Day?:open");
   });
 });

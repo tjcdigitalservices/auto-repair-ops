@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, Loader2, X } from "lucide-react";
 import { createPortal } from "react-dom";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatBranchHolidayKindLabel, formatBranchHolidayPayTreatmentLabel } from "@/features/attendance/utils";
+import { fetchPayrollItemBreakdown } from "@/features/payroll/payroll-item-breakdown-api";
 import type {
   PayrollPeriodItemBreakdownData,
   PayrollPeriodItemSummary,
@@ -18,45 +19,50 @@ import {
   formatPayBasisLabel,
   formatPayrollCoverage,
   formatPayrollDayUnits,
-  formatPayrollReadinessLabel,
   formatPayrollWarningLabel,
   formatWorkedDuration,
   getPayrollAttendedDayCount,
-  getPayrollReadinessTone,
 } from "@/features/payroll/utils";
 import { formatCurrency } from "@/lib/currency";
 import { formatDate, fromUtcIso } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
-async function fetchPayrollItemBreakdown(periodId: string, itemId: string) {
-  const response = await fetch(`/api/payroll/${periodId}/items/${itemId}`, {
-    method: "GET",
-    cache: "no-store",
-    headers: {
-      Accept: "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(payload?.message ?? "Unable to load the payroll breakdown.");
-  }
-
-  return (await response.json()) as PayrollPeriodItemBreakdownData;
+async function loadPayrollItemBreakdown(periodId: string, itemId: string) {
+  return fetchPayrollItemBreakdown(periodId, itemId);
 }
 
 export function PayrollPeriodItemBreakdownDrawer({
   periodId,
   item,
+  open: controlledOpen,
+  onOpenChange,
+  triggerVariant = "link",
+  hideTrigger = false,
 }: {
   periodId: string;
-  item: PayrollPeriodItemSummary;
+  item: PayrollPeriodItemSummary | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  triggerVariant?: "link" | "button" | "none";
+  hideTrigger?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+
+  function setOpen(nextOpen: boolean) {
+    if (onOpenChange) {
+      onOpenChange(nextOpen);
+      return;
+    }
+
+    setInternalOpen(nextOpen);
+  }
+
   const query = useQuery({
-    queryKey: ["payroll-period-item-breakdown", periodId, item.id],
-    queryFn: () => fetchPayrollItemBreakdown(periodId, item.id),
-    enabled: open,
+    queryKey: ["payroll-period-item-breakdown", periodId, item?.id],
+    queryFn: () => loadPayrollItemBreakdown(periodId, item!.id),
+    enabled: open && Boolean(item),
   });
 
   useEffect(() => {
@@ -81,21 +87,34 @@ export function PayrollPeriodItemBreakdownDrawer({
     };
   }, [open]);
 
+  if (!item) {
+    return null;
+  }
+
   const hasAttendanceRecords = query.data?.days.some((day) => day.hasAttendanceRecord) ?? false;
   const regularMinutes = Math.max(item.workedMinutes - item.overtimeMinutes, 0);
   const adjustmentsNet = item.manualAdditionsTotal - item.manualDeductionsTotal;
+  const showTrigger = !hideTrigger && triggerVariant !== "none";
 
   return (
     <>
-      <button
-        type="button"
-        className="text-left font-semibold text-foreground transition hover:text-brand-red hover:underline focus:outline-none focus:ring-2 focus:ring-brand-red/30 focus:ring-offset-2 focus:ring-offset-background"
-        onClick={() => setOpen(true)}
-        aria-label={`Open payroll breakdown for ${item.fullName}`}
-        title="Open payroll breakdown"
-      >
-        {item.fullName}
-      </button>
+      {showTrigger ? (
+        triggerVariant === "button" ? (
+          <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
+            View Payroll
+          </Button>
+        ) : (
+          <button
+            type="button"
+            className="text-left font-semibold text-foreground transition hover:text-brand-red hover:underline focus:outline-none focus:ring-2 focus:ring-brand-red/30 focus:ring-offset-2 focus:ring-offset-background"
+            onClick={() => setOpen(true)}
+            aria-label={`Open payroll breakdown for ${item.fullName}`}
+            title="Open payroll breakdown"
+          >
+            {item.fullName}
+          </button>
+        )
+      ) : null}
 
       {open
         ? createPortal(
@@ -212,84 +231,66 @@ function PayrollBreakdownContent({
     0,
   );
   const regularPay = data.item.basePay - approvedLeavePay;
-  const summaryCards = useMemo(
-    () => [
-      { label: "Paid days", value: formatPayrollDayUnits(data.item.paidDayUnits) },
-      { label: "Approved leave", value: String(approvedLeaveDayCount) },
-      { label: "Worked during leave", value: String(workedDuringLeaveDayCount) },
-      { label: "Attended days", value: String(attendedDayCount) },
-      { label: "Late", value: String(data.item.lateCount) },
-      { label: "Half days", value: String(data.item.halfDayCount) },
-      { label: "Absent", value: String(data.item.absentCount) },
-      { label: "Missing attendance", value: String(data.item.missingAttendanceDayCount) },
-      { label: "Missing timeout", value: String(data.item.missingTimeoutCount) },
-      { label: "Regular hours", value: formatWorkedDuration(regularMinutes) },
-      { label: "OT hours", value: formatWorkedDuration(data.item.overtimeMinutes) },
-      { label: "Gross pay", value: formatCurrency(data.item.grossPay) },
-      { label: "Net pay", value: formatCurrency(data.item.netPay) },
-    ],
-    [
-      approvedLeaveDayCount,
-      attendedDayCount,
-      data.item,
-      regularMinutes,
-      workedDuringLeaveDayCount,
-    ],
-  );
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {summaryCards.map((card) => (
-          <Card key={card.label} className="border-border/70 bg-muted/10">
-            <CardContent className="space-y-2 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                {card.label}
-              </p>
-              <p className="text-xl font-semibold text-foreground">{card.value}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <Card className="border-border/70">
-          <CardHeader className="space-y-2 pb-3">
-            <CardTitle className="text-base">Payroll calculation notes</CardTitle>
-            <p className="text-sm text-muted-foreground">{data.recordedVsPaidExplanation}</p>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Attendance breakdown</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <StatusBadge tone={getPayrollReadinessTone(data.item.readinessStatus)}>
-                {formatPayrollReadinessLabel(data.item.readinessStatus)}
-              </StatusBadge>
-              {data.item.warningCodes.map((warningCode) => (
-                <StatusBadge key={warningCode} tone="warning">
-                  {formatPayrollWarningLabel(warningCode)}
-                </StatusBadge>
-              ))}
+          <CardContent className="space-y-3 text-sm">
+            <BreakdownRow
+              label="Paid days"
+              value={formatPayrollDayUnits(data.item.paidDayUnits)}
+            />
+            <BreakdownRow label="Approved leave" value={String(approvedLeaveDayCount)} />
+            <BreakdownRow
+              label="Worked during leave"
+              value={String(workedDuringLeaveDayCount)}
+            />
+            <BreakdownRow label="Attended days" value={String(attendedDayCount)} />
+            <BreakdownRow
+              label="Late"
+              value={String(data.item.lateCount)}
+              valueClassName={data.item.lateCount > 0 ? "text-amber-600" : undefined}
+            />
+            <BreakdownRow
+              label="Half days"
+              value={String(data.item.halfDayCount)}
+              valueClassName={data.item.halfDayCount > 0 ? "text-amber-600" : undefined}
+            />
+            <BreakdownRow
+              label="Absent"
+              value={String(data.item.absentCount)}
+              valueClassName={data.item.absentCount > 0 ? "text-amber-600" : undefined}
+            />
+            <BreakdownRow
+              label="Missing attendance"
+              value={String(data.item.missingAttendanceDayCount)}
+              valueClassName={
+                data.item.missingAttendanceDayCount > 0 ? "text-amber-600" : undefined
+              }
+            />
+            <BreakdownRow
+              label="Missing timeout"
+              value={String(data.item.missingTimeoutCount)}
+              valueClassName={data.item.missingTimeoutCount > 0 ? "text-amber-600" : undefined}
+            />
+            <div className="border-t border-border/70 pt-3">
+              <BreakdownRow
+                label="Regular hours"
+                value={formatWorkedDuration(regularMinutes)}
+                labelClassName="font-semibold text-foreground"
+                valueClassName="font-semibold text-foreground"
+              />
+              <BreakdownRow
+                label="OT hours"
+                value={formatWorkedDuration(data.item.overtimeMinutes)}
+                labelClassName="font-semibold text-foreground"
+                valueClassName="font-semibold text-foreground"
+              />
             </div>
-
-            {data.differenceDetails.length > 0 ? (
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                {data.differenceDetails.map((detail) => (
-                  <li key={`${detail.date}-${detail.statusLabel}-${detail.reason}`}>
-                    <span className="font-medium text-foreground">{formatDate(detail.date)}</span>
-                    {" — "}
-                    {detail.statusLabel}
-                    {" — "}
-                    {detail.reason}
-                    {detail.paidDayUnits > 0 && detail.paidDayUnits !== 1
-                      ? ` (${formatPayrollDayUnits(detail.paidDayUnits)} paid day${detail.paidDayUnits === 1 ? "" : "s"})`
-                      : ""}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Paid days, status counts, and warning dates line up for this payroll row.
-              </p>
-            )}
           </CardContent>
         </Card>
 

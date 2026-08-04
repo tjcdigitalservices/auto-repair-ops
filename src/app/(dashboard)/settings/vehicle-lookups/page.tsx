@@ -1,6 +1,7 @@
 import { AppLink } from "@/components/shared/app-link";
 
 import { PageHeader } from "@/components/shared/page-header";
+import { PageHeaderActions } from "@/components/shared/page-header-actions";
 import { Button } from "@/components/ui/button";
 import { VehicleLookupsPageContent } from "@/features/vehicles/components/vehicle-lookups-page-content";
 import { getVehicleLookupPageData } from "@/features/vehicles/queries/vehicle-lookup-queries";
@@ -18,11 +19,13 @@ export default async function VehicleLookupsPage() {
         title="Vehicle lookups"
         description="Internal make, model, and dropdown reference data for vehicle registration."
         actions={
-          <Button asChild variant="outline">
-            <AppLink href="/settings">
-              Back to settings
-            </AppLink>
-          </Button>
+          <PageHeaderActions
+            primary={
+              <Button asChild variant="outline">
+                <AppLink href="/settings">Back to settings</AppLink>
+              </Button>
+            }
+          />
         }
       />
       <VehicleLookupsPageContent data={data} />

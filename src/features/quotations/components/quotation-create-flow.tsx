@@ -709,10 +709,10 @@ export function QuotationCreateFlow({
                           )
                         }
                       >
-                        <option value="draft">Draft</option>
                         <option value="pending_approval">
                           Pending approval
                         </option>
+                        <option value="draft">Draft</option>
                       </NativeSelect>
                       <FieldError
                         errors={quotationState.fieldErrors}
@@ -968,10 +968,10 @@ export function QuotationCreateFlow({
                           )
                         }
                       >
-                        <option value="draft">Draft</option>
                         <option value="pending_approval">
                           Pending approval
                         </option>
+                        <option value="draft">Draft</option>
                       </NativeSelect>
                       <FieldError
                         errors={quotationState.fieldErrors}

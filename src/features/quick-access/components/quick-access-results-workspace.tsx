@@ -21,7 +21,6 @@ import { SectionCard } from "@/components/shared/section-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { QuotationStatusBadge } from "@/features/quotations/components/quotation-status-badge";
 import { QuickAccessRecordWorkflowActions } from "@/features/quick-access/components/quick-access-workflow-hooks";
-import { QuickAccessIntakeSync } from "@/features/quick-access/components/quick-access-intake-sync";
 import { MobileServiceHistoryAccordion } from "@/features/service-history/components/mobile-service-history-accordion";
 import type { QuickAccessCustomerRecord, QuickAccessPermissions } from "@/features/quick-access/types";
 import { formatCurrency } from "@/lib/currency";
@@ -72,11 +71,6 @@ export function QuickAccessResultsWorkspace({
 
   return (
     <div className="space-y-6">
-      <QuickAccessIntakeSync
-        records={records}
-        permissions={permissions}
-        activeVehicleId={activeVehicleId}
-      />
       {records.length > 1 ? (
         <SectionCard
           title="Matched records"

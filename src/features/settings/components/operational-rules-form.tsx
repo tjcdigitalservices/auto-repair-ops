@@ -89,7 +89,7 @@ export function OperationalRulesForm({
           <RuleToggle
             name="requireInvoiceBeforeVehicleRelease"
             title="Require invoice before vehicle release"
-            description="Block vehicle release when no invoice has been generated for the job order."
+            description="Standard shop workflow. Disable this only when a branch should be allowed to release vehicles without generating an invoice."
             checked={values.requireInvoiceBeforeVehicleRelease}
             onCheckedChange={(checked) =>
               updateFormValue("requireInvoiceBeforeVehicleRelease", checked)

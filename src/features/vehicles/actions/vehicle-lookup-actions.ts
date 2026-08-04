@@ -321,9 +321,8 @@ export async function deleteVehicleModelAction(formData: FormData) {
   const { context, supabase } = await getAuthorizedSupabaseServerClient("settings:write");
   const { data: model, error: modelError } = await supabase
     .from("vehicle_models")
-    .select("*, vehicle_makes!inner(tenant_id, name)")
+    .select("id, name, make_id")
     .eq("id", modelId)
-    .eq("vehicle_makes.tenant_id", context.tenantId)
     .maybeSingle();
 
   if (modelError) {
@@ -331,6 +330,21 @@ export async function deleteVehicleModelAction(formData: FormData) {
   }
 
   if (!model) {
+    redirect(`${LOOKUPS_PATH}?error=${encodeURIComponent("Vehicle model not found.")}`);
+  }
+
+  const { data: make, error: makeError } = await supabase
+    .from("vehicle_makes")
+    .select("tenant_id, name")
+    .eq("id", model.make_id)
+    .eq("tenant_id", context.tenantId)
+    .maybeSingle();
+
+  if (makeError) {
+    redirect(`${LOOKUPS_PATH}?error=${encodeURIComponent(makeError.message)}`);
+  }
+
+  if (!make) {
     redirect(`${LOOKUPS_PATH}?error=${encodeURIComponent("Vehicle model not found.")}`);
   }
 

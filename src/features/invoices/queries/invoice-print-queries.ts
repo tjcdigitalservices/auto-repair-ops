@@ -16,26 +16,29 @@ export const getInvoicePrintDocument = cache(
     }
 
     const { supabase, context } = await getAuthorizedSupabaseServerClient("invoices:read");
-    const [{ data: invoiceSupport, error: invoiceSupportError }, sourceResult] = await Promise.all([
-      supabase
-        .from("invoices")
-        .select("created_by")
-        .eq("id", invoiceId)
-        .maybeSingle(),
-      invoice.jobOrderId
-        ? supabase
-            .from("job_orders")
-            .select("branch_id")
-            .eq("id", invoice.jobOrderId)
-            .maybeSingle()
-        : invoice.saleId
+    const [{ data: invoiceSupport, error: invoiceSupportError }, sourceResult] =
+      await Promise.all([
+        supabase
+          .from("invoices")
+          .select("created_by")
+          .eq("id", invoiceId)
+          .maybeSingle(),
+        invoice.jobOrderId
           ? supabase
-              .from("sales")
-              .select("branch_id")
-              .eq("id", invoice.saleId)
+              .from("job_orders")
+              .select(
+                "branch_id, customer_concern, diagnosis, work_performed, quotation_id",
+              )
+              .eq("id", invoice.jobOrderId)
               .maybeSingle()
-          : Promise.resolve({ data: null, error: null }),
-    ]);
+          : invoice.saleId
+            ? supabase
+                .from("sales")
+                .select("branch_id")
+                .eq("id", invoice.saleId)
+                .maybeSingle()
+            : Promise.resolve({ data: null, error: null }),
+      ]);
 
     if (invoiceSupportError) {
       throw new Error(invoiceSupportError.message);
@@ -46,6 +49,7 @@ export const getInvoicePrintDocument = cache(
     }
 
     const branchId = sourceResult.data?.branch_id ?? null;
+    const jobOrderRow = invoice.jobOrderId ? sourceResult.data : null;
 
     const preparedByResultPromise = invoiceSupport?.created_by
       ? supabase
@@ -55,31 +59,39 @@ export const getInvoicePrintDocument = cache(
           .maybeSingle()
       : Promise.resolve({ data: null, error: null });
 
+    const quotationId =
+      jobOrderRow && "quotation_id" in jobOrderRow
+        ? (jobOrderRow.quotation_id as string | null)
+        : null;
+
     const [
       { data: customer, error: customerError },
       { data: vehicle, error: vehicleError },
       { data: businessSettings, error: settingsError },
       { data: tenantBranding, error: brandingError },
+      { data: quotation, error: quotationError },
       preparedByResult,
     ] = await Promise.all([
       invoice.customerId
         ? supabase
             .from("customers")
-            .select("contact_number, address")
+            .select("contact_number, address, company_name, email")
             .eq("id", invoice.customerId)
             .maybeSingle()
         : Promise.resolve({ data: null, error: null }),
       invoice.vehicleId
         ? supabase
             .from("vehicles")
-            .select("make, model, year, plate_number, vin")
+            .select("make, model, year, plate_number, vin, color, mileage")
             .eq("id", invoice.vehicleId)
             .maybeSingle()
         : Promise.resolve({ data: null, error: null }),
       branchId
         ? supabase
             .from("business_settings")
-            .select("business_name, business_logo_path, business_vat_registration_no, business_contact, business_email, business_address, updated_at")
+            .select(
+              "business_name, business_logo_path, business_vat_registration_no, business_contact, business_email, business_address, updated_at",
+            )
             .eq("branch_id", branchId)
             .maybeSingle()
         : Promise.resolve({ data: null, error: null }),
@@ -88,6 +100,13 @@ export const getInvoicePrintDocument = cache(
         .select("website_url, facebook_label")
         .eq("tenant_id", context.tenantId)
         .maybeSingle(),
+      quotationId
+        ? supabase
+            .from("quotations")
+            .select("quotation_number")
+            .eq("id", quotationId)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
       preparedByResultPromise,
     ]);
 
@@ -105,6 +124,10 @@ export const getInvoicePrintDocument = cache(
 
     if (brandingError) {
       throw new Error(brandingError.message);
+    }
+
+    if (quotationError) {
+      throw new Error(quotationError.message);
     }
 
     let preparedBy = preparedByResult.data;
@@ -131,6 +154,7 @@ export const getInvoicePrintDocument = cache(
           }
         : null;
     }
+
     const preparedByProfile = preparedBy
       ? buildPreparedByProfile({
           displayName: `${preparedBy.first_name} ${preparedBy.last_name}`.trim(),
@@ -139,6 +163,25 @@ export const getInvoicePrintDocument = cache(
           documentTitle: preparedBy.document_title,
         })
       : null;
+
+    const jobOrderSnapshot =
+      jobOrderRow && invoice.jobOrderId
+        ? {
+            customerConcern:
+              "customer_concern" in jobOrderRow
+                ? (jobOrderRow.customer_concern as string | null)
+                : null,
+            diagnosis:
+              "diagnosis" in jobOrderRow
+                ? (jobOrderRow.diagnosis as string | null)
+                : null,
+            workPerformed:
+              "work_performed" in jobOrderRow
+                ? (jobOrderRow.work_performed as string | null)
+                : null,
+            quotationNumber: quotation?.quotation_number ?? null,
+          }
+        : null;
 
     return {
       invoice: {
@@ -154,6 +197,15 @@ export const getInvoicePrintDocument = cache(
         preparedByTitle: preparedByProfile?.title ?? null,
       },
       businessProfile: buildPrintBusinessProfile(businessSettings, tenantBranding),
+      customerSnapshot: {
+        companyName: customer?.company_name ?? null,
+        email: customer?.email ?? null,
+      },
+      vehicleSnapshot: {
+        color: vehicle?.color ?? null,
+        mileage: vehicle?.mileage ?? null,
+      },
+      jobOrderSnapshot,
     };
   },
 );

@@ -24,7 +24,6 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { FilterBar } from "@/components/shared/filter-bar";
 import { MetricGrid } from "@/components/shared/metric-grid";
 import { SearchInput } from "@/components/shared/search-input";
-import { SectionCard } from "@/components/shared/section-card";
 import { StatCard } from "@/components/shared/stat-card";
 import {
   TableRowActionsMenu,
@@ -45,7 +44,6 @@ import { JobOrderDetailsForm } from "@/features/job-orders/components/job-order-
 import { JobOrderItemApprovalAction } from "@/features/job-orders/components/job-order-item-approval-action";
 import { JobOrderItemEditDialog } from "@/features/job-orders/components/job-order-item-edit-dialog";
 import { JobOrderPartsUsagePanel } from "@/features/job-orders/components/job-order-parts-usage-panel";
-import { JobOrderStatusWorkflow } from "@/features/job-orders/components/job-order-status-workflow";
 import type {
   JobOrderDetail,
   JobOrderDetailTab,
@@ -59,10 +57,10 @@ import { cn } from "@/lib/utils";
 
 const JOB_ORDER_TABS = [
   { id: "overview", label: "Overview" },
-  { id: "billing", label: "Billing" },
-  { id: "work-items", label: "Work items" },
-  { id: "parts-usage", label: "Parts usage" },
+  { id: "work-items", label: "Work Items" },
+  { id: "parts-usage", label: "Parts" },
   { id: "mechanics", label: "Mechanics" },
+  { id: "billing", label: "Billing" },
 ] as const;
 
 export function JobOrderDetailPage({
@@ -132,6 +130,7 @@ export function JobOrderDetailPage({
             actions={
               <JobOrderDetailHeaderActions
                 jobOrder={jobOrder}
+                redirectTab={activeTab}
                 canDeleteJobOrder={canDeleteJobOrder}
               />
             }
@@ -150,13 +149,6 @@ export function JobOrderDetailPage({
         />
 
         <EntityDetailTabPanel activeTab={activeTab} tabId="overview" className="space-y-5 pt-6">
-          <SectionCard
-            title="Job progress"
-            description="Advance the job through the shop workflow from here."
-          >
-            <JobOrderStatusWorkflow jobOrder={jobOrder} redirectTab={activeTab} />
-          </SectionCard>
-
           {jobOrder.canEditDetails ? (
             <JobOrderDetailsForm detail={jobOrder} redirectTab={activeTab} />
           ) : (
@@ -243,12 +235,23 @@ function BillingTab({ jobOrder }: { jobOrder: JobOrderDetail }) {
         ) : jobOrder.canGenerateInvoice ? (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              {jobOrder.requireInvoiceBeforeJobCompletion ||
-              jobOrder.requireInvoiceBeforeVehicleRelease
-                ? "No invoice generated yet. Generate one now to satisfy the current branch completion or release rules."
-                : "No invoice generated yet. This job order can still move through completion or release because invoice generation is optional for this branch."}
+              Generate an invoice to continue the billing workflow
+              {jobOrder.requireInvoiceBeforeVehicleRelease
+                ? " before this vehicle can be released."
+                : "."}
             </p>
             <CreateInvoiceForm jobOrderId={jobOrder.id} />
+          </div>
+        ) : jobOrder.invoiceId && !jobOrder.canReleaseVehicle ? (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {jobOrder.requireFullPaymentBeforeRelease
+                ? "Record full payment on the invoice before releasing the vehicle."
+                : "Review the linked invoice before releasing the vehicle."}
+            </p>
+            <Button asChild variant="outline">
+              <Link href={`/invoices/${jobOrder.invoiceId}`}>Open invoice</Link>
+            </Button>
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">

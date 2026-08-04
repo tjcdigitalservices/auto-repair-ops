@@ -10,6 +10,8 @@ import { DataTableCard } from "@/components/shared/data-table-card";
 import { DataTableFilters } from "@/components/shared/data-table-filters";
 import { DataTablePagination, DataTableRecordSummary } from "@/components/shared/data-table-pagination";
 import { EmptyState } from "@/components/shared/empty-state";
+import { PageHeader } from "@/components/shared/page-header";
+import { PageHeaderActions } from "@/components/shared/page-header-actions";
 import { PageTabToolbar } from "@/components/shared/page-tabs";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { TableCellLink } from "@/components/shared/table-cell-link";
@@ -70,14 +72,15 @@ export function PayrollPageContent({
 
   return (
     <div className="space-y-0">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="min-w-0">
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">Payroll</h1>
-          <p className="text-sm text-muted-foreground">
-            Compensation setup and payroll period processing.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Payroll"
+        description="Compensation setup and payroll period processing."
+        actions={
+          activeTab === "periods" ? (
+            <PageHeaderActions primary={<PayrollPeriodDialog />} />
+          ) : null
+        }
+      />
 
       <PayrollTabNav
         periodCount={summary.payrollPeriodCount}
@@ -86,10 +89,7 @@ export function PayrollPageContent({
 
       {activeTab === "periods" ? (
         <div className="space-y-3 pt-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <PayrollPeriodsSummaryStrip summary={summary} className="flex-1" />
-            <PayrollPeriodDialog />
-          </div>
+          <PayrollPeriodsSummaryStrip summary={summary} />
 
           <DataTableCard
             contentClassName="p-0"

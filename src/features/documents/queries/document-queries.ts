@@ -1,6 +1,7 @@
 import { cache } from "react";
 
 import { applyBranchFilter, getBranchScopedServerClient } from "@/lib/branches";
+import { shouldShowBranchContext } from "@/lib/branch-selector-visibility";
 import {
   getBusinessSettingsValues,
   getPublicPresenceSettingsValues,
@@ -28,6 +29,10 @@ export async function getDocumentEditorPageData(): Promise<DocumentEditorPageDat
 
   return {
     branchName: branchScope.selectedBranch?.name ?? branchScope.selectedBranchLabel,
+    showBranchContext: shouldShowBranchContext({
+      branches: branchScope.accessibleBranches.map((branch) => ({ id: branch.id })),
+      canSwitch: branchScope.canAccessAllBranches,
+    }),
     businessProfile: {
       businessName: settings.businessName,
       businessLogoUrl: settings.businessLogoUrl,

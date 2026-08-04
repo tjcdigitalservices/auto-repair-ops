@@ -8,7 +8,6 @@ import type { DocumentStatus } from "@/components/document-engine/persistence/ty
 import {
   ReviseApprovedDocumentDialog,
   canReviseApprovedDocument,
-  formatRevisionMetadataLabel,
 } from "@/components/document-engine/revisions";
 import { PageHeaderActions } from "@/components/shared/page-header-actions";
 import {
@@ -27,16 +26,12 @@ import { Button } from "@/components/ui/button";
 export function DocumentComposerHeaderActions({
   documentId,
   status,
-  revisionNumber,
-  isCurrentRevision,
   onPublish,
   onPrint,
   onRename,
 }: {
   documentId?: string;
   status: DocumentStatus;
-  revisionNumber?: number;
-  isCurrentRevision?: boolean;
   onPublish: () => void;
   onPrint: () => void;
   onRename: () => void;
@@ -49,39 +44,25 @@ export function DocumentComposerHeaderActions({
   return (
     <PageHeaderActions
       primary={
-        <>
-          {isDraft ? (
-            <Button type="button" onClick={onPublish}>
-              Publish
-            </Button>
-          ) : null}
-          {canRevise && documentId ? (
-            <ReviseApprovedDocumentDialog
-              title="Revise Published Document"
-              description="Creating a revision will preserve the current published document and create a new editable draft linked to it."
-              action={reviseDocumentFormAction}
-              fields={[{ name: "documentId", value: documentId }]}
-              triggerLabel="Revise"
-              confirmLabel="Create Revision"
-              cancelLabel="Cancel"
-            />
-          ) : null}
-          <Button type="button" variant={canRevise ? "outline" : "bluePrimary"} onClick={onPrint}>
-            <Printer className="size-4" />
-            Print
+        isDraft ? (
+          <Button type="button" onClick={onPublish}>
+            Publish
           </Button>
-          {typeof revisionNumber === "number" ? (
-            <span className="text-sm text-muted-foreground">
-              {formatRevisionMetadataLabel({
-                revisionNumber,
-                isCurrentRevision: isCurrentRevision ?? true,
-              })}
-            </span>
-          ) : null}
-        </>
+        ) : canRevise && documentId ? (
+          <ReviseApprovedDocumentDialog
+            title="Revise Published Document"
+            description="Creating a revision will preserve the current published document and create a new editable draft linked to it."
+            action={reviseDocumentFormAction}
+            fields={[{ name: "documentId", value: documentId }]}
+            triggerLabel="Revise"
+            confirmLabel="Create Revision"
+            cancelLabel="Cancel"
+          />
+        ) : null
       }
       overflow={
         <TableRowActionsMenu label="Document actions" variant="page">
+          <TableRowActionsMenuButton label="Print" icon={Printer} onSelect={onPrint} />
           <TableRowActionsMenuButton label="Rename" icon={Pencil} onSelect={onRename} />
           {documentId ? (
             <TableRowActionsMenuButton

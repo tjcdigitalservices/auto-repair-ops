@@ -1,4 +1,6 @@
 import type {
+  WebsiteActivityItem,
+  WebsiteActivityType,
   WebsitePostCategory,
   WebsiteQuoteRequestStatus,
 } from "@/features/website/types";
@@ -111,4 +113,48 @@ export function isUuidLike(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     value.trim(),
   );
+}
+
+export function formatWebsiteActivityTypeLabel(type: WebsiteActivityType) {
+  switch (type) {
+    case "product_updated":
+      return "Product updated";
+    case "product_published":
+      return "Product published";
+    case "quote_request_received":
+      return "Quote request received";
+    case "journal_post_created":
+      return "Journal post created";
+  }
+}
+
+export function buildWebsiteRecentActivity(
+  items: WebsiteActivityItem[],
+  limit = 5,
+): WebsiteActivityItem[] {
+  return [...items]
+    .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt))
+    .slice(0, limit);
+}
+
+export function resolveWebsitePublicUrl({
+  websiteUrl,
+  tenantSlug,
+  requestHost,
+}: {
+  websiteUrl: string | null;
+  tenantSlug: string | null;
+  requestHost: string | null;
+}) {
+  const normalizedWebsiteUrl = websiteUrl?.trim();
+
+  if (normalizedWebsiteUrl) {
+    return normalizedWebsiteUrl;
+  }
+
+  if (tenantSlug && requestHost) {
+    return `https://${requestHost}`;
+  }
+
+  return null;
 }

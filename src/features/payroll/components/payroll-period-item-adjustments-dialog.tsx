@@ -24,8 +24,10 @@ import { useFormValues } from "@/lib/use-form-values";
 
 export function PayrollPeriodItemAdjustmentsDialog({
   item,
+  triggerVariant = "icon",
 }: {
   item: PayrollPeriodItemSummary;
+  triggerVariant?: "icon" | "button";
 }) {
   const router = useRouter();
   const [dialogInstance, setDialogInstance] = useState(0);
@@ -66,16 +68,30 @@ export function PayrollPeriodItemAdjustmentsDialog({
       title="Adjust payroll row"
       description={`Review computed payout details for ${item.fullName} and add manual additions or deductions before printing.`}
       size="lg"
-      trigger={({ openDialog }) => (
-        <IconActionButton
-          label={`Adjust payroll row for ${item.fullName}`}
-          icon={Pencil}
-          onClick={() => {
-            setDialogInstance((currentValue) => currentValue + 1);
-            openDialog();
-          }}
-        />
-      )}
+      trigger={({ openDialog }) =>
+        triggerVariant === "button" ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setDialogInstance((currentValue) => currentValue + 1);
+              openDialog();
+            }}
+          >
+            Edit
+          </Button>
+        ) : (
+          <IconActionButton
+            label={`Adjust payroll row for ${item.fullName}`}
+            icon={Pencil}
+            onClick={() => {
+              setDialogInstance((currentValue) => currentValue + 1);
+              openDialog();
+            }}
+          />
+        )
+      }
     >
       {({ closeDialog }) => (
         <div key={dialogInstance} className="space-y-6">

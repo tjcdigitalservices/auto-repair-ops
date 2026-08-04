@@ -21,10 +21,10 @@ export type SimplifiedJobOrderStatus =
 
 export const JOB_ORDER_DETAIL_TABS = [
   "overview",
-  "billing",
   "work-items",
   "parts-usage",
   "mechanics",
+  "billing",
 ] as const;
 
 export type JobOrderDetailTab = (typeof JOB_ORDER_DETAIL_TABS)[number];
@@ -39,6 +39,7 @@ export type JobOrderListItem = {
   jobOrderNumber: string;
   quotationId: string | null;
   quotationNumber: string | null;
+  quotationApprovedAt: string | null;
   customerId: string;
   customerName: string;
   vehicleId: string;

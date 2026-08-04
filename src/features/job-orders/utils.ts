@@ -83,6 +83,39 @@ export function getJobOrderStatusDescription(status: JobOrderStatus) {
   return SIMPLIFIED_JOB_ORDER_STATUS_DESCRIPTIONS[getSimplifiedJobOrderStatus(status)];
 }
 
+export function getJobOrderPrimaryActionConfig(
+  simplifiedStatus: SimplifiedJobOrderStatus,
+  canUpdateStatus: boolean,
+):
+  | {
+      label: string;
+      nextStatus: JobOrderStatus;
+      pendingLabel: string;
+    }
+  | null {
+  if (!canUpdateStatus) {
+    return null;
+  }
+
+  if (simplifiedStatus === "pending") {
+    return {
+      label: "Start Job",
+      nextStatus: "in_progress",
+      pendingLabel: "Starting...",
+    };
+  }
+
+  if (simplifiedStatus === "in_progress") {
+    return {
+      label: "Mark Completed",
+      nextStatus: "completed",
+      pendingLabel: "Completing...",
+    };
+  }
+
+  return null;
+}
+
 export function toTitleCaseWords(value: string) {
   return value.replace(/\b\w/g, (match) => match.toUpperCase());
 }
@@ -91,6 +124,148 @@ export function resolveJobOrderDetailTab(value: string | undefined): JobOrderDet
   return JOB_ORDER_DETAIL_TABS.includes(value as JobOrderDetailTab)
     ? (value as JobOrderDetailTab)
     : "overview";
+}
+
+export type JobOrderWorkflowTimelineStepState = "completed" | "current" | "pending";
+
+export type JobOrderWorkflowTimelineStep = {
+  id: string;
+  label: string;
+  state: JobOrderWorkflowTimelineStepState;
+  timestamp: string | null;
+};
+
+const JOB_ORDER_WORKFLOW_STAGES = [
+  { id: "created", label: "Created" },
+  { id: "quotation_approved", label: "Quotation Approved" },
+  { id: "in_progress", label: "In Progress" },
+  { id: "ready_for_billing", label: "Ready for Billing" },
+  { id: "completed", label: "Completed" },
+] as const;
+
+function resolveJobOrderWorkflowProgress(params: {
+  status: JobOrderStatus;
+  startedAt: string | null;
+  completedAt: string | null;
+  releasedAt: string | null;
+  quotationId: string | null;
+  quotationApprovedAt: string | null;
+  invoiceId: string | null;
+}) {
+  const quotationApprovedReached =
+    !params.quotationId || params.quotationApprovedAt !== null;
+
+  if (params.status === "cancelled") {
+    let completedThrough = 0;
+
+    if (quotationApprovedReached) {
+      completedThrough = 1;
+    }
+
+    if (params.startedAt) {
+      completedThrough = 2;
+    }
+
+    if (params.completedAt) {
+      completedThrough = 3;
+    }
+
+    if (params.releasedAt) {
+      completedThrough = 4;
+    }
+
+    return { completedThrough, currentIndex: null as number | null };
+  }
+
+  switch (params.status) {
+    case "pending":
+      return {
+        completedThrough: quotationApprovedReached ? 1 : 0,
+        currentIndex: null,
+      };
+    case "in_progress":
+    case "waiting_for_parts":
+    case "waiting_for_customer_approval":
+      return { completedThrough: 1, currentIndex: 2 };
+    case "completed":
+      return {
+        completedThrough: params.invoiceId ? 3 : 2,
+        currentIndex: params.invoiceId ? 4 : 3,
+      };
+    case "ready_for_billing":
+      return { completedThrough: 3, currentIndex: 4 };
+    case "paid":
+    case "released":
+      return { completedThrough: 4, currentIndex: null };
+    default:
+      return { completedThrough: 0, currentIndex: null };
+  }
+}
+
+function resolveJobOrderWorkflowStageTimestamp(
+  stageId: (typeof JOB_ORDER_WORKFLOW_STAGES)[number]["id"],
+  params: {
+    createdAt: string;
+    startedAt: string | null;
+    completedAt: string | null;
+    releasedAt: string | null;
+    quotationId: string | null;
+    quotationApprovedAt: string | null;
+    invoiceStatus: JobOrderDetail["invoiceStatus"];
+  },
+) {
+  switch (stageId) {
+    case "created":
+      return params.createdAt;
+    case "quotation_approved":
+      return params.quotationApprovedAt ?? (!params.quotationId ? params.createdAt : null);
+    case "in_progress":
+      return params.startedAt;
+    case "ready_for_billing":
+      return params.completedAt;
+    case "completed":
+      return params.releasedAt ?? (params.invoiceStatus === "paid" ? params.completedAt : null);
+    default:
+      return null;
+  }
+}
+
+export function buildJobOrderWorkflowTimeline(params: {
+  status: JobOrderStatus;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  releasedAt: string | null;
+  quotationId: string | null;
+  quotationApprovedAt: string | null;
+  invoiceId: string | null;
+  invoiceStatus: JobOrderDetail["invoiceStatus"];
+}): JobOrderWorkflowTimelineStep[] {
+  const { completedThrough, currentIndex } = resolveJobOrderWorkflowProgress(params);
+
+  return JOB_ORDER_WORKFLOW_STAGES.map((stage, index) => {
+    let state: JobOrderWorkflowTimelineStepState = "pending";
+
+    if (index <= completedThrough) {
+      state = "completed";
+    }
+
+    if (currentIndex !== null && index === currentIndex) {
+      state = "current";
+    }
+
+    const timestamp =
+      state === "pending"
+        ? null
+        : resolveJobOrderWorkflowStageTimestamp(stage.id, params);
+
+    return {
+      id: stage.id,
+      label: stage.label,
+      state,
+      timestamp,
+    };
+  });
 }
 
 export function getAllowedJobOrderStatusTransitions(

@@ -7,6 +7,7 @@ import {
   looksLikeQuickAccessPlateLookup,
   normalizeQuickAccessPlate,
   resolveQuickAccessQuery,
+  resolveGlobalLookupDestination,
   buildQuickAccessNoMatchRedirectPath,
 } from "@/features/quick-access/utils";
 
@@ -43,6 +44,16 @@ describe("quick access plate helpers", () => {
       plateQuery: "",
       customerLastNameQuery: "Dela Cruz",
     });
+  });
+
+  it("builds global lookup destinations for the header search bar", () => {
+    expect(resolveGlobalLookupDestination("abc-1234")).toBe(
+      "/quick-access?q=ABC1234",
+    );
+    expect(resolveGlobalLookupDestination("Dela Cruz")).toBe(
+      "/quick-access?q=Dela%20Cruz",
+    );
+    expect(resolveGlobalLookupDestination("   ")).toBeNull();
   });
 
   it("builds redirect paths for unmatched quick access lookups", () => {

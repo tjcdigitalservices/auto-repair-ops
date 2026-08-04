@@ -2,15 +2,18 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { JobOrderStatusWorkflow } from "@/features/job-orders/components/job-order-status-workflow";
+import { JobOrderDetailHeaderActions } from "@/features/job-orders/components/job-order-detail-header-actions";
+import { JobOrderDetailPrimaryAction } from "@/features/job-orders/components/job-order-detail-primary-action";
 import type { JobOrderDetail, JobOrderStatus } from "@/features/job-orders/types";
 
 vi.mock("@/features/job-orders/actions/job-order-actions", () => ({
   updateJobOrderStatusAction: vi.fn(),
+  deleteJobOrderAction: vi.fn(),
 }));
 
 vi.mock("@/features/invoices/actions/invoice-actions", () => ({
   releaseJobOrderVehicleAction: vi.fn(),
+  createInvoiceFromJobOrderAction: vi.fn(),
 }));
 
 function buildJobOrder(
@@ -22,6 +25,7 @@ function buildJobOrder(
     jobOrderNumber: "JO-MAIN-0001",
     quotationId: null,
     quotationNumber: null,
+    quotationApprovedAt: null,
     customerId: "customer-1",
     customerName: "Louise Suresca",
     vehicleId: "vehicle-1",
@@ -81,27 +85,23 @@ function buildJobOrder(
   };
 }
 
-describe("JobOrderStatusWorkflow", () => {
+describe("JobOrderDetailPrimaryAction", () => {
   it("shows Start Job for pending records", () => {
     render(
-      <JobOrderStatusWorkflow
+      <JobOrderDetailPrimaryAction
         jobOrder={buildJobOrder("pending")}
         redirectTab="overview"
       />,
     );
 
-    expect(screen.getByText("Pending")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Start Job/i }),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /Cancel Job/i }),
-    ).not.toBeInTheDocument();
   });
 
-  it("shows Mark Completed and Cancel Job for in-progress records", () => {
+  it("shows Mark Completed for in-progress records", () => {
     render(
-      <JobOrderStatusWorkflow
+      <JobOrderDetailPrimaryAction
         jobOrder={buildJobOrder("in_progress")}
         redirectTab="overview"
       />,
@@ -110,34 +110,26 @@ describe("JobOrderStatusWorkflow", () => {
     expect(
       screen.getByRole("button", { name: /Mark Completed/i }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /Cancel Job/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /Release Vehicle/i }),
-    ).not.toBeInTheDocument();
   });
 
-  it("maps legacy waiting statuses to the simplified in-progress actions", () => {
+  it("maps legacy waiting statuses to Mark Completed", () => {
     render(
-      <JobOrderStatusWorkflow
+      <JobOrderDetailPrimaryAction
         jobOrder={buildJobOrder("waiting_for_parts")}
         redirectTab="overview"
       />,
     );
 
-    expect(screen.getByText("In Progress")).toBeInTheDocument();
-    expect(screen.queryByText("Waiting for Parts")).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Mark Completed/i }),
     ).toBeInTheDocument();
   });
 
-  it("shows Release Vehicle for completed-stage records and opens a small confirmation dialog", async () => {
+  it("shows Release Vehicle for completed-stage records and opens a confirmation dialog", async () => {
     const user = userEvent.setup();
 
     render(
-      <JobOrderStatusWorkflow
+      <JobOrderDetailPrimaryAction
         jobOrder={buildJobOrder("completed")}
         redirectTab="overview"
       />,
@@ -153,29 +145,74 @@ describe("JobOrderStatusWorkflow", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows terminal copy without action buttons for released and cancelled records", () => {
-    const { rerender } = render(
-      <JobOrderStatusWorkflow
+  it("renders nothing for released and cancelled records", () => {
+    const { container, rerender } = render(
+      <JobOrderDetailPrimaryAction
         jobOrder={buildJobOrder("released", { canReleaseVehicle: false })}
         redirectTab="overview"
       />,
     );
 
-    expect(screen.getByText("Vehicle released.")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /Release Vehicle/i }),
-    ).not.toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
 
     rerender(
-      <JobOrderStatusWorkflow
+      <JobOrderDetailPrimaryAction
         jobOrder={buildJobOrder("cancelled", { canUpdateStatus: false })}
         redirectTab="overview"
       />,
     );
 
-    expect(screen.getByText("Job cancelled.")).toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe("JobOrderDetailHeaderActions", () => {
+  it("shows the primary progress action without a visible print button", () => {
+    render(
+      <JobOrderDetailHeaderActions
+        jobOrder={buildJobOrder("in_progress")}
+        redirectTab="overview"
+      />,
+    );
+
     expect(
-      screen.queryByRole("button", { name: /Start Job|Mark Completed|Cancel Job/i }),
+      screen.getByRole("button", { name: /Mark Completed/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Print Job Order/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("exposes print and cancel actions in the overflow menu", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <JobOrderDetailHeaderActions
+        jobOrder={buildJobOrder("in_progress")}
+        redirectTab="overview"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Job order actions/i }));
+
+    expect(screen.getByText("Print job order")).toBeInTheDocument();
+    expect(screen.getByText("Print with prices")).toBeInTheDocument();
+    expect(screen.getByText("Cancel job")).toBeInTheDocument();
+  });
+
+  it("opens the cancel job dialog from the overflow menu", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <JobOrderDetailHeaderActions
+        jobOrder={buildJobOrder("in_progress")}
+        redirectTab="overview"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Job order actions/i }));
+    await user.click(screen.getByText("Cancel job"));
+
+    expect(screen.getByText(/Cancel JO-MAIN-0001\?/i)).toBeInTheDocument();
   });
 });

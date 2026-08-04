@@ -96,17 +96,28 @@ export function InvoiceDetailPageContent({
                   <Button type="button" onClick={() => updateTab("payments")}>
                     Record Payment
                   </Button>
-                ) : null
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={() =>
+                      window.open(`/invoices/${invoice.id}/print`, "_blank", "noopener,noreferrer")
+                    }
+                  >
+                    Print Invoice
+                  </Button>
+                )
               }
               overflow={
                 <TableRowActionsMenu label="Invoice actions" variant="page">
-                  <TableRowActionsMenuButton
-                    label="Print invoice"
-                    icon={Printer}
-                    onSelect={() =>
-                      window.open(`/invoices/${invoice.id}/print`, "_blank", "noopener,noreferrer")
-                    }
-                  />
+                  {invoice.canRecordPayment ? (
+                    <TableRowActionsMenuButton
+                      label="Print invoice"
+                      icon={Printer}
+                      onSelect={() =>
+                        window.open(`/invoices/${invoice.id}/print`, "_blank", "noopener,noreferrer")
+                      }
+                    />
+                  ) : null}
                   <TableRowActionsMenuLink
                     href={`/api/invoices/${invoice.id}/pdf`}
                     label="Download PDF"

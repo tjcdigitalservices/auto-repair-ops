@@ -81,9 +81,38 @@ const documentFixture: InvoicePrintDocument = {
     websiteUrl: null,
     facebookLabel: null,
   },
+  customerSnapshot: {
+    companyName: "Suresca Fleet",
+    email: "louise@example.com",
+  },
+  vehicleSnapshot: {
+    color: "White",
+    mileage: 42000,
+  },
+  jobOrderSnapshot: {
+    customerConcern: "Brake noise on cold starts.",
+    diagnosis: "Front brake pads worn.",
+    workPerformed: "Replaced front brake pads and resurfaced rotors.",
+    quotationNumber: "QT-MAIN-0004",
+  },
 };
 
 describe("InvoicePrintLayout", () => {
+  it("renders quotation-style panels, grouped items, and invoice summary footer", () => {
+    render(<InvoicePrintLayout document={documentFixture} />);
+
+    expect(screen.getByText("CUSTOMER DETAILS")).toBeInTheDocument();
+    expect(screen.getByText("VEHICLE INFORMATION")).toBeInTheDocument();
+    expect(screen.getAllByText("BILLING ITEMS").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("PARTS").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("LABOR / SERVICES").length).toBeGreaterThan(0);
+    expect(screen.getByText("PAYMENTS")).toBeInTheDocument();
+    expect(screen.getByText("WORK SUMMARY")).toBeInTheDocument();
+    expect(screen.getByText("TERMS & CONDITIONS")).toBeInTheDocument();
+    expect(screen.getByText("PAYMENT ACKNOWLEDGMENT")).toBeInTheDocument();
+    expect(screen.getByText("TOTAL INVOICE")).toBeInTheDocument();
+  });
+
   it("renders explicit print pages with repeated footer placement for longer invoices", () => {
     const { container } = render(<InvoicePrintLayout document={documentFixture} />);
     const pageCount = container.querySelectorAll(".print-page").length;
@@ -91,6 +120,24 @@ describe("InvoicePrintLayout", () => {
     expect(pageCount).toBeGreaterThan(1);
     expect(container.querySelectorAll(".print-document-footer").length).toBe(pageCount);
     expect(screen.getAllByRole("heading", { name: "Invoice" }).length).toBeGreaterThan(1);
-    expect(screen.getByText("INVOICE SUMMARY")).toBeInTheDocument();
+  });
+
+  it("renders the cancelled invoice banner", () => {
+    render(
+      <InvoicePrintLayout
+        document={{
+          ...documentFixture,
+          invoice: {
+            ...documentFixture.invoice,
+            status: "cancelled",
+            cancelledAt: "2026-05-21T08:00:00.000Z",
+            cancellationReason: "Customer cancelled the repair.",
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Cancelled Invoice")).toBeInTheDocument();
+    expect(screen.getByText(/Customer cancelled the repair/i)).toBeInTheDocument();
   });
 });

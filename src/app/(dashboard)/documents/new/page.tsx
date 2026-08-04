@@ -32,6 +32,7 @@ export default async function NewDocumentPage({ searchParams }: NewDocumentPageP
     <DocumentEditorWorkspace
       businessProfile={pageData.businessProfile}
       branchName={pageData.branchName}
+      showBranchContext={pageData.showBranchContext}
       template={template}
     />
   );

@@ -118,3 +118,38 @@ export type WebsiteQuoteRequestListItem = {
   createdAt: string;
   contactedAt: string | null;
 };
+
+export type WebsiteActivityType =
+  | "product_updated"
+  | "product_published"
+  | "quote_request_received"
+  | "journal_post_created";
+
+export type WebsiteActivityItem = {
+  id: string;
+  type: WebsiteActivityType;
+  title: string;
+  detail: string;
+  occurredAt: string;
+  href: string | null;
+};
+
+export type WebsiteWorkspaceData = {
+  products: {
+    published: number;
+    draft: number;
+  };
+  journal: {
+    published: number;
+    draft: number;
+  };
+  quoteRequests: {
+    pending: number;
+  };
+  status: {
+    isOnline: boolean;
+    publicUrl: string | null;
+    lastPublishedAt: string | null;
+  };
+  recentActivity: WebsiteActivityItem[];
+};

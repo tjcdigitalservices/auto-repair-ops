@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildJobOrderItemInventoryTracking,
+  buildJobOrderWorkflowTimeline,
   calculateJobOrderChecklistSummary,
   calculateJobOrderBillableTotal,
   calculateJobOrderPendingApprovalCount,
@@ -260,5 +261,69 @@ describe("job order utils", () => {
     expect(tracking.netUsedQuantity).toBe(1);
     expect(tracking.remainingUsageQuantity).toBe(2);
     expect(tracking.isLowStock).toBe(true);
+  });
+});
+
+describe("buildJobOrderWorkflowTimeline", () => {
+  const baseTimelineParams = {
+    createdAt: "2026-07-29T07:52:00.000Z",
+    startedAt: "2026-07-29T08:32:00.000Z",
+    completedAt: null,
+    releasedAt: null,
+    quotationId: "quote-1",
+    quotationApprovedAt: "2026-07-29T08:10:00.000Z",
+    invoiceId: null,
+    invoiceStatus: null,
+  } as const;
+
+  it("marks in-progress jobs at the In Progress stage", () => {
+    const steps = buildJobOrderWorkflowTimeline({
+      ...baseTimelineParams,
+      status: "in_progress",
+    });
+
+    expect(steps.map((step) => step.state)).toEqual([
+      "completed",
+      "completed",
+      "current",
+      "pending",
+      "pending",
+    ]);
+    expect(steps[2]?.label).toBe("In Progress");
+  });
+
+  it("marks completed jobs awaiting invoice at Ready for Billing", () => {
+    const steps = buildJobOrderWorkflowTimeline({
+      ...baseTimelineParams,
+      status: "completed",
+      completedAt: "2026-07-31T11:54:00.000Z",
+    });
+
+    expect(steps.map((step) => step.state)).toEqual([
+      "completed",
+      "completed",
+      "completed",
+      "current",
+      "pending",
+    ]);
+    expect(steps[3]?.timestamp).toBe("2026-07-31T11:54:00.000Z");
+  });
+
+  it("marks released jobs as fully completed", () => {
+    const steps = buildJobOrderWorkflowTimeline({
+      ...baseTimelineParams,
+      status: "released",
+      completedAt: "2026-07-31T11:54:00.000Z",
+      releasedAt: "2026-07-31T12:30:00.000Z",
+    });
+
+    expect(steps.map((step) => step.state)).toEqual([
+      "completed",
+      "completed",
+      "completed",
+      "completed",
+      "completed",
+    ]);
+    expect(steps[4]?.timestamp).toBe("2026-07-31T12:30:00.000Z");
   });
 });

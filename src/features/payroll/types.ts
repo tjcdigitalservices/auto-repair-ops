@@ -162,6 +162,12 @@ export type PayrollPeriodStaffSummary = {
 
 export type PayrollPeriodDetailSummary = {
   totalStaffCount: number;
+  readyStaffCount: number;
+  needsReviewCount: number;
+  missingDtrCount: number;
+  missingSalaryRateCount: number;
+  manualReviewCount: number;
+  blockedStaffCount: number;
   warningStaffCount: number;
   missingScheduleCount: number;
   missingCompensationCount: number;
@@ -174,9 +180,115 @@ export type PayrollPeriodDetailSummary = {
   totalHolidayPremiumPay: number;
   totalOvertimePay: number;
   totalAllowancePay: number;
+  totalManualAdditions: number;
+  totalManualDeductions: number;
   totalGrossPay: number;
   totalNetPay: number;
 };
+
+export type PayrollReviewStatus =
+  | "ready"
+  | "missing_dtr"
+  | "missing_salary_rate"
+  | "missing_attendance"
+  | "missing_schedule"
+  | "manual_review"
+  | "payroll_blocked";
+
+export type PayrollReviewQuickFilter =
+  | ""
+  | "ready"
+  | "needs_review"
+  | "blocking_issues"
+  | "warnings"
+  | "missing_dtr"
+  | "missing_salary_rate"
+  | "manual_adjustments"
+  | "holiday_pay"
+  | "overtime";
+
+export type PayrollIssueSeverity = "blocking" | "warning";
+
+export type PayrollIssueType =
+  | "missing_dtr"
+  | "missing_salary_rate"
+  | "missing_employment_type"
+  | "negative_payroll"
+  | "invalid_attendance"
+  | "manual_adjustments"
+  | "excessive_overtime"
+  | "holiday_overrides"
+  | "missing_leave_configuration";
+
+export type PayrollReviewStatusFilter = "" | "ready" | "needs_review";
+
+export type PayrollReviewIssueFilter = Exclude<
+  PayrollReviewQuickFilter,
+  "" | "ready" | "needs_review"
+>;
+
+export type PayrollEmployeeActionItem = {
+  id: string;
+  itemId: string;
+  staffId: string;
+  employeeName: string;
+  issueType: PayrollIssueType;
+  issueLabel: string;
+  explanation: string;
+  severity: PayrollIssueSeverity;
+  actionLabel: string;
+  actionHref: string;
+};
+
+export type PayrollIssueSummary = {
+  type: PayrollIssueType;
+  label: string;
+  severity: PayrollIssueSeverity;
+  affectedCount: number;
+  affectedStaffIds: string[];
+  actionLabel: string;
+  filter: PayrollReviewQuickFilter;
+};
+
+export type PayrollLifecycleStatus =
+  | "draft"
+  | "reviewing"
+  | "ready_to_lock"
+  | "locked"
+  | "payslips_generated"
+  | "paid";
+
+export type PayrollWorkflowStep =
+  | "generate"
+  | "review"
+  | "resolve_issues"
+  | "lock_payroll"
+  | "generate_payslips"
+  | "mark_paid";
+
+export type PayrollLockValidationCheck = {
+  id: string;
+  label: string;
+  passed: boolean;
+  severity: PayrollIssueSeverity;
+};
+
+export type PayrollLockValidationResult = {
+  canLock: boolean;
+  blockingIssueCount: number;
+  blockingIssueTypes: number;
+  warningIssueTypes: number;
+  checks: PayrollLockValidationCheck[];
+  issues: PayrollIssueSummary[];
+};
+
+export type PayrollEmployeeReviewTab =
+  | "overview"
+  | "attendance"
+  | "payroll"
+  | "adjustments"
+  | "warnings"
+  | "history";
 
 export type PayrollPeriodAdjustmentType = "addition" | "deduction";
 

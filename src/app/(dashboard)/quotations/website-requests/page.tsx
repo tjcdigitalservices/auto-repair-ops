@@ -5,6 +5,7 @@ import { DataTableFilters } from "@/components/shared/data-table-filters";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
+import { PageHeaderActions } from "@/components/shared/page-header-actions";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -37,9 +38,13 @@ export default async function WebsiteQuoteRequestsPage({
         title="Website quote requests"
         description="Inbound estimate requests submitted from the public website."
         actions={
-          <Button asChild variant="outline">
-            <Link href="/quotations">Back to quotations</Link>
-          </Button>
+          <PageHeaderActions
+            primary={
+              <Button asChild variant="outline">
+                <Link href="/quotations">Back to quotations</Link>
+              </Button>
+            }
+          />
         }
       />
 

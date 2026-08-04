@@ -8,9 +8,10 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import type { AppCapability, StaffRole } from "@/lib/auth/permissions";
 import { getAuthorizedSupabaseServerClient } from "@/lib/auth/session";
 import { SELECTED_BRANCH_COOKIE } from "@/lib/tenants";
+import { shouldShowBranchContext } from "@/lib/branch-selector-visibility";
 import type { TableRow } from "@/types/database";
 
-export { shouldShowBranchSelector } from "@/lib/branch-selector-visibility";
+export { shouldShowBranchSelector, shouldShowBranchContext, appendBranchContext } from "@/lib/branch-selector-visibility";
 
 type BranchRow = Pick<
   TableRow<"branches">,
@@ -50,6 +51,10 @@ export function getPageBranchSelectorProps(scope: BranchScope) {
     branches,
     selectedBranchId: scope.selectedBranchId,
     canSwitch: scope.canAccessAllBranches,
+    showBranchContext: shouldShowBranchContext({
+      branches,
+      canSwitch: scope.canAccessAllBranches,
+    }),
   };
 }
 

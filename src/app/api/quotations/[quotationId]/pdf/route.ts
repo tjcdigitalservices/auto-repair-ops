@@ -2,6 +2,13 @@ import type { NextRequest } from "next/server";
 
 import { resolveQuotationPrintMode } from "@/features/quotations/report-utils";
 import { getQuotationPrintDocument } from "@/features/quotations/queries/quotation-print-queries";
+import { getAppSessionState } from "@/lib/auth/session";
+import {
+  assertBearerStaffCapability,
+  isBearerPdfAuthAttempted,
+  resolveBearerPdfAuth,
+  resolvePdfInternalOrigin,
+} from "@/lib/reports/pdf-auth";
 import { renderInternalUrlToPdf } from "@/lib/reports/pdf";
 
 export const runtime = "nodejs";
@@ -16,22 +23,63 @@ type QuotationPdfRouteContext = {
 export async function GET(request: NextRequest, context: QuotationPdfRouteContext) {
   const { quotationId } = await context.params;
   const mode = resolveQuotationPrintMode(request.nextUrl.searchParams.get("mode"));
-  const document = await getQuotationPrintDocument(quotationId);
+  const bearerAttempted = isBearerPdfAuthAttempted(request);
+  const bearerAuth = await resolveBearerPdfAuth(request);
 
-  if (!document) {
-    return new Response("Quotation not found.", { status: 404 });
+  if (bearerAttempted && !bearerAuth) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  let quotationNumber: string;
+  let cookieHeader: string | null = request.headers.get("cookie");
+  let authSession = bearerAuth?.session ?? null;
+  let storageKey = bearerAuth?.storageKey ?? null;
+
+  if (bearerAuth) {
+    const allowed = await assertBearerStaffCapability(bearerAuth.supabase, "quotations:read");
+    if (!allowed) {
+      return new Response("Forbidden", { status: 403 });
+    }
+
+    const { data: quotation, error } = await bearerAuth.supabase
+      .from("quotations")
+      .select("id, quotation_number")
+      .eq("id", quotationId)
+      .maybeSingle();
+
+    if (error || !quotation) {
+      return new Response("Quotation not found.", { status: 404 });
+    }
+
+    quotationNumber = quotation.quotation_number;
+    cookieHeader = bearerAuth.cookieHeader;
+  } else {
+    const session = await getAppSessionState();
+    if (session.status !== "authenticated") {
+      return new Response("Unauthorized", { status: 401 });
+    }
+
+    const document = await getQuotationPrintDocument(quotationId);
+
+    if (!document) {
+      return new Response("Quotation not found.", { status: 404 });
+    }
+
+    quotationNumber = document.quotation.quotationNumber;
   }
 
   try {
-    const printUrl = new URL(`/quotations/${quotationId}/print`, request.nextUrl.origin);
+    const printUrl = new URL(`/quotations/${quotationId}/print`, resolvePdfInternalOrigin(request));
     if (mode !== "full") {
       printUrl.searchParams.set("mode", mode);
     }
     const pdfBuffer = await renderInternalUrlToPdf({
       url: printUrl.toString(),
-      cookieHeader: request.headers.get("cookie"),
+      cookieHeader,
+      authSession,
+      storageKey,
     });
-    const filename = `Quotation-${document.quotation.quotationNumber}${mode === "full" ? "" : `-${mode}`}.pdf`;
+    const filename = `Quotation-${quotationNumber}${mode === "full" ? "" : `-${mode}`}.pdf`;
 
     return new Response(Buffer.from(pdfBuffer), {
       headers: {

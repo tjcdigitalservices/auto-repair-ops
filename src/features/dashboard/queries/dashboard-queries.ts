@@ -30,6 +30,7 @@ type QuotationTrendRow = Pick<
   TableRow<"quotations">,
   "status" | "total_amount" | "approved_at"
 >;
+type InvoiceTrendRow = Pick<TableRow<"invoices">, "total_amount" | "created_at" | "status">;
 type JobOrderReleaseRow = Pick<TableRow<"job_orders">, "released_at">;
 
 export type DashboardData = {
@@ -72,6 +73,8 @@ export type DashboardData = {
     balance: number;
   }>;
   quotationAndServiceTrend: RevenueTrendPoint[];
+  invoiceAndServiceTrend: RevenueTrendPoint[];
+  requireInvoiceBeforeVehicleRelease: boolean;
   serviceTrend: Array<{
     label: string;
     value: number;
@@ -147,7 +150,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       : Promise.resolve(0),
   ]);
 
-  const [recentQuotations, recentJobOrders, inventoryAlerts, unpaidInvoices, quotationAndServiceTrend, serviceTrend] =
+  const [recentQuotations, recentJobOrders, inventoryAlerts, unpaidInvoices, businessSettings, serviceTrend] =
     await Promise.all([
       context.capabilities.includes("quotations:read")
         ? getRecentQuotations(supabase, branchScope.selectedBranchId)
@@ -161,17 +164,31 @@ export async function getDashboardData(): Promise<DashboardData> {
       context.capabilities.includes("invoices:read")
         ? getUnpaidInvoices(supabase, branchScope.selectedBranchId)
         : Promise.resolve([]),
-      context.capabilities.includes("quotations:read")
-        ? getQuotationAndServiceTrend(
-            supabase,
-            branchScope.selectedBranchId,
-            context.capabilities.includes("job_orders:read"),
-          )
-        : Promise.resolve([]),
+      getBranchBusinessSettings(supabase, branchScope.selectedBranchId),
       context.capabilities.includes("job_orders:read")
         ? getServiceTrend(supabase, branchScope.selectedBranchId)
         : Promise.resolve([]),
     ]);
+
+  const requireInvoiceBeforeVehicleRelease =
+    businessSettings?.require_invoice_before_vehicle_release ?? true;
+  const includeJobOrderReleases = context.capabilities.includes("job_orders:read");
+  const [quotationAndServiceTrend, invoiceAndServiceTrend] = await Promise.all([
+    !requireInvoiceBeforeVehicleRelease && context.capabilities.includes("quotations:read")
+      ? getQuotationAndServiceTrend(
+          supabase,
+          branchScope.selectedBranchId,
+          includeJobOrderReleases,
+        )
+      : Promise.resolve([]),
+    requireInvoiceBeforeVehicleRelease && context.capabilities.includes("invoices:read")
+      ? getInvoiceAndServiceTrend(
+          supabase,
+          branchScope.selectedBranchId,
+          includeJobOrderReleases,
+        )
+      : Promise.resolve([]),
+  ]);
 
   return {
     metrics: {
@@ -187,6 +204,8 @@ export async function getDashboardData(): Promise<DashboardData> {
     inventoryAlerts,
     unpaidInvoices,
     quotationAndServiceTrend,
+    invoiceAndServiceTrend,
+    requireInvoiceBeforeVehicleRelease,
     serviceTrend,
   };
 }
@@ -342,18 +361,9 @@ async function getQuotationAndServiceTrend(
   branchId: string | null,
   includeReleases: boolean,
 ) {
-  const now = getBusinessNow();
-  const from = now.startOf("month").minus({ months: 5 });
-  const to = now.endOf("day");
-  const trendFilters = {
-    from: from.toISODate() ?? "",
-    to: to.toISODate() ?? "",
-    groupBy: "monthly" as const,
-  };
-  const buckets = buildTrendBuckets(trendFilters);
-  const rangeStartIso = from.toUTC().toISO() ?? "";
+  const { buckets, rangeStartIso } = getDashboardTrendRange();
 
-  const [quotationsResult, jobOrdersResult] = await Promise.all([
+  const [quotationsResult, releasedJobOrders] = await Promise.all([
     applyBranchFilter(
       supabase
         .from("quotations")
@@ -363,28 +373,14 @@ async function getQuotationAndServiceTrend(
         .gte("approved_at", rangeStartIso),
       branchId,
     ),
-    includeReleases
-      ? applyBranchFilter(
-          supabase
-            .from("job_orders")
-            .select("released_at")
-            .not("released_at", "is", null)
-            .gte("released_at", rangeStartIso),
-          branchId,
-        )
-      : Promise.resolve({ data: [], error: null }),
+    getReleasedJobOrders(supabase, branchId, includeReleases, rangeStartIso),
   ]);
 
   if (quotationsResult.error) {
     throw new Error(quotationsResult.error.message);
   }
 
-  if (jobOrdersResult.error) {
-    throw new Error(jobOrdersResult.error.message);
-  }
-
   const approvedQuotations = (quotationsResult.data ?? []) as QuotationTrendRow[];
-  const releasedJobOrders = (jobOrdersResult.data ?? []) as JobOrderReleaseRow[];
 
   return buildRevenueTrend({
     buckets,
@@ -394,6 +390,107 @@ async function getQuotationAndServiceTrend(
     getApprovedAmount: (row) => row.total_amount,
     getReleaseDate: (row) => row.released_at ?? "",
   });
+}
+
+async function getInvoiceAndServiceTrend(
+  supabase: Awaited<ReturnType<typeof getBranchScopedServerClient>>["supabase"],
+  branchId: string | null,
+  includeReleases: boolean,
+) {
+  const { buckets, rangeStartIso } = getDashboardTrendRange();
+
+  const [invoicesResult, releasedJobOrders] = await Promise.all([
+    applyBranchFilter(
+      supabase
+        .from("invoices")
+        .select("status, total_amount, created_at")
+        .neq("status", "cancelled")
+        .gte("created_at", rangeStartIso),
+      branchId,
+    ),
+    getReleasedJobOrders(supabase, branchId, includeReleases, rangeStartIso),
+  ]);
+
+  if (invoicesResult.error) {
+    throw new Error(invoicesResult.error.message);
+  }
+
+  const invoices = (invoicesResult.data ?? []) as InvoiceTrendRow[];
+
+  return buildRevenueTrend({
+    buckets,
+    approvedQuotations: invoices,
+    releases: releasedJobOrders,
+    getApprovedDate: (row) => row.created_at,
+    getApprovedAmount: (row) => row.total_amount,
+    getReleaseDate: (row) => row.released_at ?? "",
+  });
+}
+
+function getDashboardTrendRange() {
+  const now = getBusinessNow();
+  const from = now.startOf("month").minus({ months: 5 });
+  const to = now.endOf("day");
+  const trendFilters = {
+    from: from.toISODate() ?? "",
+    to: to.toISODate() ?? "",
+    groupBy: "monthly" as const,
+  };
+
+  return {
+    buckets: buildTrendBuckets(trendFilters),
+    rangeStartIso: from.toUTC().toISO() ?? "",
+  };
+}
+
+async function getReleasedJobOrders(
+  supabase: Awaited<ReturnType<typeof getBranchScopedServerClient>>["supabase"],
+  branchId: string | null,
+  includeReleases: boolean,
+  rangeStartIso: string,
+) {
+  if (!includeReleases) {
+    return [] as JobOrderReleaseRow[];
+  }
+
+  const { data, error } = await applyBranchFilter(
+    supabase
+      .from("job_orders")
+      .select("released_at")
+      .not("released_at", "is", null)
+      .gte("released_at", rangeStartIso),
+    branchId,
+  );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as JobOrderReleaseRow[];
+}
+
+async function getBranchBusinessSettings(
+  supabase: Awaited<ReturnType<typeof getBranchScopedServerClient>>["supabase"],
+  branchId: string | null,
+) {
+  if (!branchId) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("business_settings")
+    .select("require_invoice_before_vehicle_release")
+    .eq("branch_id", branchId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as Pick<
+    TableRow<"business_settings">,
+    "require_invoice_before_vehicle_release"
+  > | null;
 }
 
 async function getServiceTrend(

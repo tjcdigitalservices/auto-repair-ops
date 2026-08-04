@@ -11,6 +11,7 @@ import {
   getPayrollAttendedDayCount,
   isCompensationSetupComplete,
   resolvePayrollReadinessStatus,
+  resolvePayrollReviewStatus,
   summarizePayrollAttendance,
 } from "@/features/payroll/utils";
 
@@ -70,6 +71,38 @@ describe("summarizePayrollAttendance", () => {
     expect(result.missingTimeoutCount).toBe(0);
     expect(result.approvedCount).toBe(1);
     expect(result.pendingApprovalCount).toBe(0);
+  });
+});
+
+describe("resolvePayrollReviewStatus", () => {
+  it("maps blocked and warning states into review statuses", () => {
+    expect(
+      resolvePayrollReviewStatus({
+        readinessStatus: "needs_dtr_completion",
+        warningCodes: ["needs_dtr_completion"],
+      }),
+    ).toBe("missing_dtr");
+
+    expect(
+      resolvePayrollReviewStatus({
+        readinessStatus: "missing_compensation",
+        warningCodes: ["missing_compensation"],
+      }),
+    ).toBe("missing_salary_rate");
+
+    expect(
+      resolvePayrollReviewStatus({
+        readinessStatus: "ready",
+        warningCodes: ["custom_holiday_rule"],
+      }),
+    ).toBe("manual_review");
+
+    expect(
+      resolvePayrollReviewStatus({
+        readinessStatus: "ready",
+        warningCodes: [],
+      }),
+    ).toBe("ready");
   });
 });
 
@@ -287,7 +320,7 @@ describe("buildPayrollWarningDetails", () => {
       },
       {
         date: null,
-        label: "Missing compensation",
+        label: "Salary Rate Required",
         reason: "No compensation profile is configured for this staff member.",
       },
     ]);

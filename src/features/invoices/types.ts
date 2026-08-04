@@ -102,9 +102,29 @@ export type InvoicePrintBusinessProfile = {
   facebookLabel: string | null;
 };
 
+export type InvoicePrintCustomerSnapshot = {
+  companyName: string | null;
+  email: string | null;
+};
+
+export type InvoicePrintVehicleSnapshot = {
+  color: string | null;
+  mileage: number | null;
+};
+
+export type InvoicePrintJobOrderSnapshot = {
+  customerConcern: string | null;
+  diagnosis: string | null;
+  workPerformed: string | null;
+  quotationNumber: string | null;
+};
+
 export type InvoicePrintDocument = {
   invoice: InvoicePrintDetail;
   businessProfile: InvoicePrintBusinessProfile;
+  customerSnapshot: InvoicePrintCustomerSnapshot;
+  vehicleSnapshot: InvoicePrintVehicleSnapshot;
+  jobOrderSnapshot: InvoicePrintJobOrderSnapshot | null;
 };
 
 export type PaymentListItem = {

@@ -9,6 +9,8 @@ export type AttendanceFilterStatus =
   | "recorded"
   | "schedule_configured"
   | "absent_unrecorded";
+
+export type RosterFilterStatus = "needs_schedule" | "scheduled" | "leave" | "holiday";
 export type BranchHolidayKind =
   | "branch_closure"
   | "public_holiday"
@@ -190,6 +192,7 @@ export type AttendancePageFilters = {
   search: string;
   role: StaffRole | "";
   status: AttendanceFilterStatus | "";
+  rosterStatus: RosterFilterStatus | "";
 };
 
 export type AttendanceRecordSummary = {
@@ -226,6 +229,7 @@ export type AttendanceDailySummary = {
   missingTimeoutCount: number;
   approvedCount: number;
   scheduleConfiguredCount: number;
+  leaveCount: number;
 };
 
 export type AttendanceRosterData = {

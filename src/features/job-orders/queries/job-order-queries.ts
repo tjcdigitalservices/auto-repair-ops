@@ -40,7 +40,7 @@ type JobOrderMechanicRow = TableRow<"job_order_mechanics">;
 type JobOrderPartUsageRow = TableRow<"job_order_part_usages">;
 type CustomerRow = Pick<TableRow<"customers">, "id" | "display_name">;
 type VehicleRow = TableRow<"vehicles">;
-type QuotationRow = Pick<TableRow<"quotations">, "id" | "quotation_number">;
+type QuotationRow = Pick<TableRow<"quotations">, "id" | "quotation_number" | "approved_at">;
 type InvoiceSummaryRow = Pick<
   TableRow<"invoices">,
   "id" | "invoice_number" | "status" | "total_amount" | "paid_amount" | "balance"
@@ -221,7 +221,7 @@ export const getJobOrderById = cache(async (jobOrderId: string): Promise<JobOrde
     await Promise.all([
     getCustomerNameMap([jobOrderRow.customer_id]),
     getVehicleLabelMap([jobOrderRow.vehicle_id]),
-    getQuotationNumberMap(jobOrderRow.quotation_id ? [jobOrderRow.quotation_id] : []),
+    getQuotationSummaryMap(jobOrderRow.quotation_id ? [jobOrderRow.quotation_id] : []),
     getStaffNameMap([...new Set([...staffIds, ...checklistStaffIds])]),
     getInventoryStockMap(jobOrderRow.branch_id, productIds),
     getProductInventoryMap(productIds),
@@ -263,7 +263,10 @@ export const getJobOrderById = cache(async (jobOrderId: string): Promise<JobOrde
     customerName: customerMap.get(jobOrderRow.customer_id) ?? "Unknown customer",
     vehicleLabel: vehicleMap.get(jobOrderRow.vehicle_id) ?? "Unknown vehicle",
     quotationNumber: jobOrderRow.quotation_id
-      ? quotationMap.get(jobOrderRow.quotation_id) ?? null
+      ? quotationMap.get(jobOrderRow.quotation_id)?.quotationNumber ?? null
+      : null,
+    quotationApprovedAt: jobOrderRow.quotation_id
+      ? quotationMap.get(jobOrderRow.quotation_id)?.approvedAt ?? null
       : null,
     invoice: (invoice as InvoiceSummaryRow | null) ?? null,
     settings: (settings as BusinessSettingsRow | null) ?? null,
@@ -510,22 +513,35 @@ async function getVehicleLabelMap(vehicleIds: string[]) {
   );
 }
 
-async function getQuotationNumberMap(quotationIds: string[]) {
+async function getQuotationSummaryMap(quotationIds: string[]) {
   if (quotationIds.length === 0) {
-    return new Map<string, string>();
+    return new Map<string, { quotationNumber: string; approvedAt: string | null }>();
   }
 
   const supabase = await getSupabaseServerClient();
   const { data, error } = await supabase
     .from("quotations")
-    .select("id, quotation_number")
+    .select("id, quotation_number, approved_at")
     .in("id", quotationIds);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return new Map(((data ?? []) as QuotationRow[]).map((row) => [row.id, row.quotation_number]));
+  return new Map(
+    ((data ?? []) as QuotationRow[]).map((row) => [
+      row.id,
+      { quotationNumber: row.quotation_number, approvedAt: row.approved_at },
+    ]),
+  );
+}
+
+async function getQuotationNumberMap(quotationIds: string[]) {
+  const summaryMap = await getQuotationSummaryMap(quotationIds);
+
+  return new Map(
+    [...summaryMap.entries()].map(([id, summary]) => [id, summary.quotationNumber]),
+  );
 }
 
 async function getStaffNameMap(staffIds: string[]) {

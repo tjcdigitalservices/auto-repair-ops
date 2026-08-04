@@ -1,6 +1,7 @@
 "use client";
 
-import { Download, FileText, Printer, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { Download, FileText, Printer, Trash2, X } from "lucide-react";
 
 import { PageHeaderActions } from "@/components/shared/page-header-actions";
 import {
@@ -10,9 +11,11 @@ import {
   TableRowActionsMenuLink,
   TableRowActionsMenuSeparator,
 } from "@/components/shared/table-row-actions-menu";
-import { Button } from "@/components/ui/button";
+import { JobOrderCancelJobDialog } from "@/features/job-orders/components/job-order-cancel-job-dialog";
+import { JobOrderDetailPrimaryAction } from "@/features/job-orders/components/job-order-detail-primary-action";
 import { deleteJobOrderAction } from "@/features/job-orders/actions/job-order-actions";
-import type { JobOrderDetail } from "@/features/job-orders/types";
+import type { JobOrderDetail, JobOrderDetailTab } from "@/features/job-orders/types";
+import { getSimplifiedJobOrderStatus } from "@/features/job-orders/utils";
 
 function openJobOrderPrint(jobOrderId: string, options?: { showPrices?: boolean }) {
   const params = new URLSearchParams({ autoprint: "1" });
@@ -30,45 +33,62 @@ function openJobOrderPrint(jobOrderId: string, options?: { showPrices?: boolean 
 
 export function JobOrderDetailHeaderActions({
   jobOrder,
+  redirectTab,
   canDeleteJobOrder = false,
 }: {
   jobOrder: JobOrderDetail;
+  redirectTab: JobOrderDetailTab;
   canDeleteJobOrder?: boolean;
 }) {
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const simplifiedStatus = getSimplifiedJobOrderStatus(jobOrder.status);
+  const showCancelJob =
+    simplifiedStatus === "in_progress" && jobOrder.canUpdateStatus;
+  const showSecondaryActions =
+    jobOrder.quotationId !== null || showCancelJob || canDeleteJobOrder;
+
   return (
-    <PageHeaderActions
-      primary={
-        <Button type="button" onClick={() => openJobOrderPrint(jobOrder.id)}>
-          Print Job Order
-        </Button>
-      }
-      overflow={
-        <TableRowActionsMenu label="Job order actions" variant="page">
-          <TableRowActionsMenuButton
-            label="Print with Prices"
-            icon={Printer}
-            onSelect={() => openJobOrderPrint(jobOrder.id, { showPrices: true })}
-          />
-          <TableRowActionsMenuLink
-            href={`/api/job-orders/${jobOrder.id}/pdf?showPrices=1`}
-            label="Download PDF"
-            icon={Download}
-          />
-          {jobOrder.quotationId ? (
-            <>
-              <TableRowActionsMenuSeparator />
+    <>
+      <PageHeaderActions
+        primary={
+          <JobOrderDetailPrimaryAction jobOrder={jobOrder} redirectTab={redirectTab} />
+        }
+        overflow={
+          <TableRowActionsMenu label="Job order actions" variant="page">
+            <TableRowActionsMenuButton
+              label="Print job order"
+              icon={Printer}
+              onSelect={() => openJobOrderPrint(jobOrder.id)}
+            />
+            <TableRowActionsMenuButton
+              label="Print with prices"
+              icon={Printer}
+              onSelect={() => openJobOrderPrint(jobOrder.id, { showPrices: true })}
+            />
+            <TableRowActionsMenuLink
+              href={`/api/job-orders/${jobOrder.id}/pdf?showPrices=1`}
+              label="Download PDF"
+              icon={Download}
+            />
+            {showSecondaryActions ? <TableRowActionsMenuSeparator /> : null}
+            {jobOrder.quotationId ? (
               <TableRowActionsMenuLink
                 href={`/quotations/${jobOrder.quotationId}`}
-                label="View Quotation"
+                label="View quotation"
                 icon={FileText}
               />
-            </>
-          ) : null}
-          {canDeleteJobOrder ? (
-            <>
-              <TableRowActionsMenuSeparator />
+            ) : null}
+            {showCancelJob ? (
+              <TableRowActionsMenuButton
+                label="Cancel job"
+                icon={X}
+                tone="destructive"
+                onSelect={() => setCancelDialogOpen(true)}
+              />
+            ) : null}
+            {canDeleteJobOrder ? (
               <TableRowActionsMenuConfirm
-                label="Delete"
+                label="Delete job order"
                 title={`Delete ${jobOrder.jobOrderNumber}?`}
                 description="This job order and its line items will be removed permanently. Linked approved quotations return to pending approval."
                 confirmLabel="Delete job order"
@@ -77,10 +97,19 @@ export function JobOrderDetailHeaderActions({
                 action={deleteJobOrderAction}
                 fields={[{ name: "jobOrderId", value: jobOrder.id }]}
               />
-            </>
-          ) : null}
-        </TableRowActionsMenu>
-      }
-    />
+            ) : null}
+          </TableRowActionsMenu>
+        }
+      />
+      {showCancelJob ? (
+        <JobOrderCancelJobDialog
+          jobOrderId={jobOrder.id}
+          jobOrderNumber={jobOrder.jobOrderNumber}
+          redirectTab={redirectTab}
+          open={cancelDialogOpen}
+          onOpenChange={setCancelDialogOpen}
+        />
+      ) : null}
+    </>
   );
 }

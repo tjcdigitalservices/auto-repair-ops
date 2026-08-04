@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { PageHeader } from "@/components/shared/page-header";
+import { PageHeaderActions, PagePrimaryAction } from "@/components/shared/page-header-actions";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { SectionCard } from "@/components/shared/section-card";
@@ -20,9 +21,13 @@ export default async function WebsiteJournalManagementPage() {
         title="Garage Journal"
         description="Manage the owner’s public work updates, maintenance tips, and promotions."
         actions={
-          <Button asChild>
-            <Link href="/settings/website/journal/new">New post</Link>
-          </Button>
+          <PageHeaderActions
+            primary={
+              <PagePrimaryAction href="/settings/website/journal/new">
+                New post
+              </PagePrimaryAction>
+            }
+          />
         }
       />
 

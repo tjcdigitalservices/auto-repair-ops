@@ -15,7 +15,7 @@ import type { PosRecentSaleItem, PosTerminalData } from "@/features/pos/types";
 import {
   applyBranchFilter,
   getBranchScopedServerClient,
-  shouldShowBranchSelector,
+  shouldShowBranchContext,
 } from "@/lib/branches";
 import {
   applyCatalogVisibilityFilter,
@@ -145,7 +145,7 @@ export const getPosTerminalData = cache(async (): Promise<PosTerminalData> => {
       branchId: branch.id,
       branchCode: branch.code,
       branchName: branch.name,
-      showBranchContext: shouldShowBranchSelector({
+      showBranchContext: shouldShowBranchContext({
         branches: branchScope.accessibleBranches,
         canSwitch: branchScope.canAccessAllBranches,
       }),

@@ -18,10 +18,15 @@ import type {
   PayrollPeriodFormValues,
   PayrollPeriodStaffSummary,
   PayrollPeriodStatus,
+  PayrollReviewIssueFilter,
+  PayrollReviewQuickFilter,
+  PayrollReviewStatus,
+  PayrollReviewStatusFilter,
   PayrollStaffReadinessStatus,
   PayrollStaffSetupFilter,
   PayrollWarningCode,
 } from "@/features/payroll/types";
+import { itemHasPayrollIssue } from "@/features/payroll/payroll-validation";
 
 export const PAY_BASIS_OPTIONS: Array<{
   value: PayBasis;
@@ -207,11 +212,11 @@ export function formatPayrollWarningLabel(code: PayrollWarningCode) {
     case "missing_schedule":
       return "Missing schedule";
     case "missing_compensation":
-      return "Missing compensation";
+      return "Salary Rate Required";
     case "missing_attendance":
       return "Missing attendance";
     case "needs_dtr_completion":
-      return "Needs time out";
+      return "Missing Time Out";
     case "not_configured":
       return "Not configured";
     case "pending_approval":
@@ -535,6 +540,319 @@ export function isBlockedPayrollStaffSummary(summary: Pick<
     summary.readinessStatus === "missing_schedule" ||
     summary.readinessStatus === "missing_attendance" ||
     summary.readinessStatus === "needs_dtr_completion"
+  );
+}
+
+const MANUAL_REVIEW_WARNING_CODES = new Set<PayrollWarningCode>([
+  "custom_holiday_rule",
+  "worked_during_approved_leave",
+]);
+
+export function resolvePayrollReviewStatus(
+  item: Pick<PayrollPeriodItemSummary, "readinessStatus" | "warningCodes">,
+): PayrollReviewStatus {
+  if (item.readinessStatus === "needs_dtr_completion") {
+    return "missing_dtr";
+  }
+
+  if (
+    item.readinessStatus === "missing_compensation" ||
+    item.readinessStatus === "not_configured"
+  ) {
+    return "missing_salary_rate";
+  }
+
+  if (item.readinessStatus === "missing_attendance") {
+    return "missing_attendance";
+  }
+
+  if (item.readinessStatus === "missing_schedule") {
+    return "missing_schedule";
+  }
+
+  if (
+    item.warningCodes.some((code) => MANUAL_REVIEW_WARNING_CODES.has(code)) ||
+    (item.readinessStatus !== "ready" && item.warningCodes.length > 0)
+  ) {
+    return "manual_review";
+  }
+
+  if (isBlockedPayrollStaffSummary(item)) {
+    return "payroll_blocked";
+  }
+
+  return "ready";
+}
+
+export function isPayrollReviewReady(
+  item: Pick<PayrollPeriodItemSummary, "readinessStatus" | "warningCodes">,
+) {
+  return resolvePayrollReviewStatus(item) === "ready";
+}
+
+export function itemNeedsPayrollReview(
+  item: Pick<PayrollPeriodItemSummary, "readinessStatus" | "warningCodes">,
+) {
+  return !isPayrollReviewReady(item);
+}
+
+export function formatPayrollReviewStatusLabel(status: PayrollReviewStatus) {
+  switch (status) {
+    case "ready":
+      return "Ready";
+    case "missing_dtr":
+      return "Missing DTR";
+    case "missing_salary_rate":
+      return "Missing Salary Rate";
+    case "missing_attendance":
+      return "Missing Attendance";
+    case "missing_schedule":
+      return "Missing Schedule";
+    case "manual_review":
+      return "Manual Review";
+    case "payroll_blocked":
+      return "Payroll Blocked";
+  }
+}
+
+export function getPayrollReviewStatusTone(status: PayrollReviewStatus) {
+  switch (status) {
+    case "ready":
+      return "success";
+    case "manual_review":
+      return "warning";
+    case "missing_dtr":
+    case "missing_salary_rate":
+    case "missing_attendance":
+    case "missing_schedule":
+    case "payroll_blocked":
+      return "destructive";
+  }
+}
+
+export function formatPayrollWorkedHoursSummary(totalMinutes: number) {
+  if (totalMinutes <= 0) {
+    return "0 hrs";
+  }
+
+  const hours = Math.round(totalMinutes / 60);
+  return `${hours} hrs`;
+}
+
+export function formatPayrollPayoutDate(value: string) {
+  const parsed = DateTime.fromISO(value);
+
+  if (!parsed.isValid) {
+    return formatDate(value);
+  }
+
+  return parsed.toFormat("LLL d");
+}
+
+export function formatPayrollRoleLabel(role: string) {
+  return role.replaceAll("_", " ");
+}
+
+export function isPayrollReviewQuickFilter(
+  value: string | null | undefined,
+): value is Exclude<PayrollReviewQuickFilter, ""> {
+  return (
+    value === "ready" ||
+    value === "needs_review" ||
+    value === "blocking_issues" ||
+    value === "warnings" ||
+    value === "missing_dtr" ||
+    value === "missing_salary_rate" ||
+    value === "manual_adjustments" ||
+    value === "holiday_pay" ||
+    value === "overtime"
+  );
+}
+
+export function isPayrollReviewIssueFilter(
+  value: string | null | undefined,
+): value is PayrollReviewIssueFilter {
+  return (
+    value === "blocking_issues" ||
+    value === "warnings" ||
+    value === "missing_dtr" ||
+    value === "missing_salary_rate" ||
+    value === "manual_adjustments" ||
+    value === "holiday_pay" ||
+    value === "overtime"
+  );
+}
+
+export function isPayrollReviewStatusFilter(
+  value: string | null | undefined,
+): value is Exclude<PayrollReviewStatusFilter, ""> {
+  return value === "ready" || value === "needs_review";
+}
+
+export function filterPayrollReviewItems(
+  items: PayrollPeriodItemSummary[],
+  params: {
+    search: string;
+    status: PayrollReviewStatusFilter;
+    issue: PayrollReviewIssueFilter | "";
+    role: string;
+  },
+) {
+  const search = params.search.trim().toLowerCase();
+
+  return items.filter((item) => {
+    if (search && !item.fullName.toLowerCase().includes(search)) {
+      return false;
+    }
+
+    if (params.role && item.role !== params.role) {
+      return false;
+    }
+
+    const reviewStatus = resolvePayrollReviewStatus(item);
+
+    if (params.status === "ready" && reviewStatus !== "ready") {
+      return false;
+    }
+
+    if (params.status === "needs_review" && !itemNeedsPayrollReview(item)) {
+      return false;
+    }
+
+    if (!params.issue) {
+      return true;
+    }
+
+    switch (params.issue) {
+      case "blocking_issues":
+        return (
+          isBlockedPayrollStaffSummary(item) ||
+          item.netPay < 0 ||
+          reviewStatus === "missing_dtr" ||
+          reviewStatus === "missing_salary_rate" ||
+          reviewStatus === "missing_attendance" ||
+          reviewStatus === "missing_schedule" ||
+          reviewStatus === "payroll_blocked"
+        );
+      case "missing_dtr":
+        return reviewStatus === "missing_dtr" || itemHasPayrollIssue(item, "missing_dtr");
+      case "missing_salary_rate":
+        return (
+          reviewStatus === "missing_salary_rate" ||
+          itemHasPayrollIssue(item, "missing_salary_rate") ||
+          itemHasPayrollIssue(item, "missing_employment_type")
+        );
+      case "manual_adjustments":
+        return itemHasPayrollIssue(item, "manual_adjustments");
+      case "holiday_pay":
+        return itemHasPayrollIssue(item, "holiday_overrides");
+      case "overtime":
+        return itemHasPayrollIssue(item, "excessive_overtime");
+      case "warnings":
+        return (
+          item.warningCodes.length > 0 ||
+          itemHasPayrollIssue(item, "manual_adjustments") ||
+          itemHasPayrollIssue(item, "excessive_overtime") ||
+          itemHasPayrollIssue(item, "holiday_overrides") ||
+          itemHasPayrollIssue(item, "missing_leave_configuration")
+        );
+      default:
+        return true;
+    }
+  });
+}
+
+export function summarizePayrollReviewItems(items: PayrollPeriodItemSummary[]) {
+  return items.reduce(
+    (summary, item) => {
+      summary.totalStaffCount += 1;
+      summary.totalWorkedMinutes += item.workedMinutes;
+      summary.totalBasePay += item.basePay;
+      summary.totalLateDeductions += item.lateDeductionAmount;
+      summary.totalHolidayPremiumPay += item.holidayPremiumPay;
+      summary.totalOvertimePay += item.overtimePay;
+      summary.totalAllowancePay += item.allowancePay;
+      summary.totalManualAdditions += item.manualAdditionsTotal;
+      summary.totalManualDeductions += item.manualDeductionsTotal;
+      summary.totalGrossPay += item.grossPay;
+      summary.totalNetPay += item.netPay;
+
+      const reviewStatus = resolvePayrollReviewStatus(item);
+
+      if (reviewStatus === "ready") {
+        summary.readyStaffCount += 1;
+      }
+
+      if (itemNeedsPayrollReview(item)) {
+        summary.needsReviewCount += 1;
+      }
+
+      if (reviewStatus === "missing_dtr") {
+        summary.missingDtrCount += 1;
+      }
+
+      if (reviewStatus === "missing_salary_rate") {
+        summary.missingSalaryRateCount += 1;
+      }
+
+      if (reviewStatus === "manual_review") {
+        summary.manualReviewCount += 1;
+      }
+
+      if (isBlockedPayrollStaffSummary(item)) {
+        summary.blockedStaffCount += 1;
+      }
+
+      if (item.warningCodes.length > 0) {
+        summary.warningStaffCount += 1;
+      }
+
+      if (item.warningCodes.includes("missing_schedule")) {
+        summary.missingScheduleCount += 1;
+      }
+
+      if (
+        item.warningCodes.includes("missing_compensation") ||
+        item.warningCodes.includes("not_configured")
+      ) {
+        summary.missingCompensationCount += 1;
+      }
+
+      if (item.warningCodes.includes("missing_attendance")) {
+        summary.missingAttendanceCount += 1;
+      }
+
+      if (item.missingTimeoutCount > 0) {
+        summary.openShiftCount += 1;
+      }
+
+      return summary;
+    },
+    {
+      totalStaffCount: 0,
+      readyStaffCount: 0,
+      needsReviewCount: 0,
+      missingDtrCount: 0,
+      missingSalaryRateCount: 0,
+      manualReviewCount: 0,
+      blockedStaffCount: 0,
+      warningStaffCount: 0,
+      missingScheduleCount: 0,
+      missingCompensationCount: 0,
+      missingAttendanceCount: 0,
+      openShiftCount: 0,
+      pendingApprovalCount: 0,
+      totalWorkedMinutes: 0,
+      totalBasePay: 0,
+      totalLateDeductions: 0,
+      totalHolidayPremiumPay: 0,
+      totalOvertimePay: 0,
+      totalAllowancePay: 0,
+      totalManualAdditions: 0,
+      totalManualDeductions: 0,
+      totalGrossPay: 0,
+      totalNetPay: 0,
+    },
   );
 }
 

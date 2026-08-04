@@ -42,17 +42,6 @@ export default async function DashboardPage() {
       <PageHeader
         title="Operations dashboard"
         description="Live workshop, billing, and stock activity in one operational view."
-        actions={
-          <Button asChild variant="navyPrimary">
-            <Link
-              href="/quick-access"
-              title="Look up a customer or vehicle"
-              aria-label="Quick Access: look up a customer or vehicle"
-            >
-              Look up customer or vehicle
-            </Link>
-          </Button>
-        }
       />
 
       <MetricGrid className="xl:grid-cols-3">
@@ -230,8 +219,15 @@ export default async function DashboardPage() {
 
       <div className="grid gap-6 xl:grid-cols-[1.35fr_0.95fr]">
         <RevenueTrendChart
-          data={dashboard.quotationAndServiceTrend}
+          data={
+            dashboard.requireInvoiceBeforeVehicleRelease
+              ? dashboard.invoiceAndServiceTrend
+              : dashboard.quotationAndServiceTrend
+          }
           groupBy="monthly"
+          variant={
+            dashboard.requireInvoiceBeforeVehicleRelease ? "invoice" : "quotation"
+          }
         />
 
         <SectionCard

@@ -35,6 +35,7 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
     <DocumentEditorWorkspace
       businessProfile={pageData.businessProfile}
       branchName={pageData.branchName}
+      showBranchContext={pageData.showBranchContext}
       document={document}
     />
   );

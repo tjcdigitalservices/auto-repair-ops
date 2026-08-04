@@ -12,10 +12,14 @@ export function GeneratePayrollCutButton({
   periodId,
   hasGeneratedCut,
   disabled = false,
+  compact = false,
+  formId,
 }: {
   periodId: string;
   hasGeneratedCut: boolean;
   disabled?: boolean;
+  compact?: boolean;
+  formId?: string;
 }) {
   const router = useRouter();
   const [state, formAction] = useActionState(
@@ -32,12 +36,14 @@ export function GeneratePayrollCutButton({
   }, [router, state.status]);
 
   return (
-    <form action={formAction} className="space-y-2">
+    <form action={formAction} id={formId} className={compact ? undefined : "space-y-2"}>
       <input type="hidden" name="periodId" value={periodId} />
       <SubmitButton pendingLabel={hasGeneratedCut ? "Refreshing..." : "Generating..."} disabled={disabled}>
         {hasGeneratedCut ? "Refresh cut summary" : "Generate payroll cut"}
       </SubmitButton>
-      <FormStatusMessage message={state.status === "error" ? state.message : undefined} />
+      {compact ? null : (
+        <FormStatusMessage message={state.status === "error" ? state.message : undefined} />
+      )}
     </form>
   );
 }

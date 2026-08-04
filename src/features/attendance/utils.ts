@@ -27,6 +27,7 @@ import type {
   MechanicPortalIpStatus,
   MechanicPortalLocationStatus,
   MechanicPortalDeviceStatus,
+  RosterFilterStatus,
   StaffLeaveEntrySummary,
   StaffLeaveFormValues,
   StaffLeaveType,
@@ -53,6 +54,16 @@ export const ATTENDANCE_STATUS_OPTIONS: Array<{
   { value: "half_day", label: "Half day" },
   { value: "absent", label: "Absent" },
   { value: "unpaid_day_off", label: UNPAID_DAY_OFF_STATUS_LABEL },
+];
+
+export const ROSTER_FILTER_OPTIONS: Array<{
+  value: RosterFilterStatus;
+  label: string;
+}> = [
+  { value: "needs_schedule", label: "Needs schedule" },
+  { value: "scheduled", label: "Scheduled" },
+  { value: "leave", label: "Leave" },
+  { value: "holiday", label: "Holiday" },
 ];
 
 export const ATTENDANCE_FILTER_OPTIONS: Array<{
@@ -160,12 +171,14 @@ export function resolveAttendancePageFilters(params: {
   search?: string;
   role?: string;
   status?: string;
+  rosterStatus?: string;
 }): AttendancePageFilters {
   return {
     date: isIsoDate(params.date) ? params.date : getDefaultAttendanceDate(),
     search: params.search?.trim() ?? "",
     role: isStaffRole(params.role) ? params.role : "",
     status: isAttendanceFilterStatus(params.status) ? params.status : "",
+    rosterStatus: isRosterFilterStatus(params.rosterStatus) ? params.rosterStatus : "",
   };
 }
 
@@ -648,6 +661,120 @@ export function formatScheduleSummary(schedule: StaffScheduleSummary | null) {
   return `${activeDays.map((day) => day.shortLabel).join(" · ")} · ${formatScheduleTimeRange(schedule)}`;
 }
 
+export function inferShiftLabel(schedule: StaffScheduleSummary) {
+  const shiftStart = parseStaffScheduleTime(schedule.shiftStartTime);
+
+  if (!shiftStart?.isValid) {
+    return "Shift";
+  }
+
+  if (shiftStart.hour < 12) {
+    return "Morning Shift";
+  }
+
+  if (shiftStart.hour < 17) {
+    return "Afternoon Shift";
+  }
+
+  return "Evening Shift";
+}
+
+export function formatRosterScheduleLabel(schedule: StaffScheduleSummary | null) {
+  if (!schedule) {
+    return null;
+  }
+
+  const activeDays = SCHEDULE_DAY_DEFINITIONS.filter((day) => schedule[day.key]);
+
+  if (activeDays.length === 0) {
+    return null;
+  }
+
+  return `${inferShiftLabel(schedule)} (${formatScheduleTimeRange(schedule)})`;
+}
+
+export function formatRosterExceptionLabel(
+  item: AttendanceRosterItem,
+  branchHoliday: BranchHolidaySummary | null,
+) {
+  if (branchHoliday) {
+    return branchHoliday.label.trim() || formatBranchHolidayKindLabel(branchHoliday.holidayKind);
+  }
+
+  if (item.leaveEntry) {
+    return formatStaffLeaveTypeLabel(item.leaveEntry.leaveType);
+  }
+
+  return null;
+}
+
+export function formatRosterExceptionTooltip(
+  item: AttendanceRosterItem,
+  branchHoliday: BranchHolidaySummary | null,
+) {
+  if (branchHoliday) {
+    return [
+      branchHoliday.label,
+      formatBranchHolidayKindLabel(branchHoliday.holidayKind),
+      `Pay treatment: ${formatBranchHolidayPayTreatmentLabel(branchHoliday.payTreatment)}`,
+      branchHoliday.notes?.trim(),
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }
+
+  if (item.leaveEntry) {
+    return [
+      formatStaffLeaveTypeLabel(item.leaveEntry.leaveType),
+      formatLeaveDateRange(item.leaveEntry),
+      item.leaveEntry.notes?.trim(),
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }
+
+  return null;
+}
+
+export function buildStaffInitials(fullName: string) {
+  return fullName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+export function matchesRosterStatusFilter(
+  item: AttendanceRosterItem,
+  statusFilter: RosterFilterStatus | "",
+  options: {
+    branchHoliday?: BranchHolidaySummary | null;
+  } = {},
+) {
+  if (!statusFilter) {
+    return true;
+  }
+
+  if (statusFilter === "needs_schedule") {
+    return item.schedule === null;
+  }
+
+  if (statusFilter === "scheduled") {
+    return item.schedule !== null;
+  }
+
+  if (statusFilter === "leave") {
+    return item.leaveEntry !== null;
+  }
+
+  if (statusFilter === "holiday") {
+    return options.branchHoliday !== null && options.branchHoliday !== undefined;
+  }
+
+  return true;
+}
+
 export function formatBranchHolidayKindLabel(kind: BranchHolidayKind) {
   return BRANCH_HOLIDAY_KIND_OPTIONS.find((option) => option.value === kind)?.label ?? kind;
 }
@@ -892,6 +1019,10 @@ export function buildAttendanceSummary(
         summary.scheduleConfiguredCount += 1;
       }
 
+      if (item.leaveEntry) {
+        summary.leaveCount += 1;
+      }
+
       if (!item.attendance) {
         if (!options.branchHoliday) {
           summary.unrecordedCount += 1;
@@ -938,6 +1069,7 @@ export function buildAttendanceSummary(
       missingTimeoutCount: 0,
       approvedCount: 0,
       scheduleConfiguredCount: 0,
+      leaveCount: 0,
     },
   );
 }
@@ -958,6 +1090,10 @@ function isStaffRole(value: string | undefined): value is StaffRole {
 
 function isAttendanceFilterStatus(value: string | undefined): value is AttendanceFilterStatus {
   return ATTENDANCE_FILTER_OPTIONS.some((option) => option.value === value);
+}
+
+function isRosterFilterStatus(value: string | undefined): value is RosterFilterStatus {
+  return ROSTER_FILTER_OPTIONS.some((option) => option.value === value);
 }
 
 function resolveScheduleTimeForDate(timeValue: string, date: DateTime) {

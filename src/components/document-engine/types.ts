@@ -33,6 +33,7 @@ export type DocumentComposerProps = {
   className?: string;
   headerActions?: ReactNode;
   saveStatus?: DocumentSaveStatus;
+  revisionMetadataLabel?: string;
 };
 
 export type DocumentPageProps = {

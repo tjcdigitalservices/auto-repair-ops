@@ -18,7 +18,7 @@ export function DocumentSaveStatusBadge({
   }
 
   return (
-    <p
+    <span
       className={cn(
         "text-xs text-muted-foreground",
         status.state === "error" && "text-destructive",
@@ -27,7 +27,7 @@ export function DocumentSaveStatusBadge({
       aria-live="polite"
     >
       {label}
-    </p>
+    </span>
   );
 }
 

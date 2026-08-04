@@ -9,6 +9,7 @@ export type { DocumentListItem, DocumentRecord, DocumentStatus };
 
 export type DocumentEditorPageData = {
   branchName: string;
+  showBranchContext: boolean;
   businessProfile: DocumentBusinessProfile;
 };
 

@@ -22,6 +22,7 @@ import {
   buildPayrollDifferenceDetails,
   buildPayrollRecordedVsPaidExplanation,
   buildPayrollWarningDetails,
+  summarizePayrollReviewItems,
 } from "@/features/payroll/utils";
 import type { TableRow } from "@/types/database";
 
@@ -297,61 +298,7 @@ export async function getPayrollPeriodDetailData(periodId: string): Promise<Payr
       return leftItem.fullName.localeCompare(rightItem.fullName);
     });
 
-  const summary = items.reduce<PayrollPeriodDetailSummary>(
-    (currentSummary, item) => {
-      currentSummary.totalStaffCount += 1;
-      currentSummary.totalWorkedMinutes += item.workedMinutes;
-      currentSummary.totalBasePay += item.basePay;
-      currentSummary.totalLateDeductions += item.lateDeductionAmount;
-      currentSummary.totalHolidayPremiumPay += item.holidayPremiumPay;
-      currentSummary.totalOvertimePay += item.overtimePay;
-      currentSummary.totalAllowancePay += item.allowancePay;
-      currentSummary.totalGrossPay += item.grossPay;
-      currentSummary.totalNetPay += item.netPay;
-
-      if (item.warningCodes.length > 0) {
-        currentSummary.warningStaffCount += 1;
-      }
-
-      if (item.warningCodes.includes("missing_schedule")) {
-        currentSummary.missingScheduleCount += 1;
-      }
-
-      if (
-        item.warningCodes.includes("missing_compensation") ||
-        item.warningCodes.includes("not_configured")
-      ) {
-        currentSummary.missingCompensationCount += 1;
-      }
-
-      if (item.warningCodes.includes("missing_attendance")) {
-        currentSummary.missingAttendanceCount += 1;
-      }
-
-      if (item.missingTimeoutCount > 0) {
-        currentSummary.openShiftCount += 1;
-      }
-
-      return currentSummary;
-    },
-    {
-      totalStaffCount: 0,
-      warningStaffCount: 0,
-      missingScheduleCount: 0,
-      missingCompensationCount: 0,
-      missingAttendanceCount: 0,
-      openShiftCount: 0,
-      pendingApprovalCount: 0,
-      totalWorkedMinutes: 0,
-      totalBasePay: 0,
-      totalLateDeductions: 0,
-      totalHolidayPremiumPay: 0,
-      totalOvertimePay: 0,
-      totalAllowancePay: 0,
-      totalGrossPay: 0,
-      totalNetPay: 0,
-    },
-  );
+  const summary = summarizePayrollReviewItems(items);
 
   return {
     period,

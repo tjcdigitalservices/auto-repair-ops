@@ -18,8 +18,10 @@ type AttendancePageProps = {
     tab?: string;
     rosterSearch?: string;
     rosterRole?: string;
+    rosterStatus?: string;
     attendanceSearch?: string;
     attendanceStatus?: string;
+    attendanceRole?: string;
     leaveSearch?: string;
     leaveType?: string;
     amendmentSearch?: string;
@@ -40,12 +42,13 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
     date: alignedDate,
     search: resolvedParams.rosterSearch,
     role: resolvedParams.rosterRole,
+    rosterStatus: resolvedParams.rosterStatus,
     status: "",
   });
   const attendanceFilters = resolveAttendancePageFilters({
     date: alignedDate,
     search: resolvedParams.attendanceSearch,
-    role: "",
+    role: resolvedParams.attendanceRole,
     status: resolvedParams.attendanceStatus,
   });
   const [rosterData, attendanceData, attendanceCalendar, amendmentsReview, leaveManagement] = await Promise.all([

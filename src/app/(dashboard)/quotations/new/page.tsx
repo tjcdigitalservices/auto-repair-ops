@@ -43,7 +43,7 @@ export default async function NewQuotationPage({
           vehicleId: selection.vehicleId,
           natureOfRepair: "",
           inspectionNotes: "",
-          status: "draft",
+          status: "pending_approval",
           discount: formatMoneyInputValue(0),
           tax: formatMoneyInputValue(0),
           items: [createQuotationItem()],

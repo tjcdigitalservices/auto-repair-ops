@@ -4,11 +4,24 @@ import {
   EntityDetailSection,
 } from "@/components/shared/entity-detail";
 import { InvoiceStatusBadge } from "@/features/invoices/components/invoice-status-badge";
+import { JobOrderWorkflowTimeline } from "@/features/job-orders/components/job-order-workflow-timeline";
 import type { JobOrderDetail } from "@/features/job-orders/types";
+import { buildJobOrderWorkflowTimeline } from "@/features/job-orders/utils";
 import { formatCurrency } from "@/lib/currency";
-import { formatDateTime } from "@/lib/dates";
 
 export function JobOrderDetailSidebar({ jobOrder }: { jobOrder: JobOrderDetail }) {
+  const workflowSteps = buildJobOrderWorkflowTimeline({
+    status: jobOrder.status,
+    createdAt: jobOrder.createdAt,
+    startedAt: jobOrder.startedAt,
+    completedAt: jobOrder.completedAt,
+    releasedAt: jobOrder.releasedAt,
+    quotationId: jobOrder.quotationId,
+    quotationApprovedAt: jobOrder.quotationApprovedAt,
+    invoiceId: jobOrder.invoiceId,
+    invoiceStatus: jobOrder.invoiceStatus,
+  });
+
   return (
     <>
       <EntityDetailSection title="Customer & vehicle">
@@ -29,6 +42,9 @@ export function JobOrderDetailSidebar({ jobOrder }: { jobOrder: JobOrderDetail }
                 {jobOrder.quotationNumber}
               </EntityDetailLink>
             ) : null}
+          </EntityDetailField>
+          <EntityDetailField label="Mechanics">
+            {`${jobOrder.mechanics.length} assigned`}
           </EntityDetailField>
         </div>
       </EntityDetailSection>
@@ -61,24 +77,8 @@ export function JobOrderDetailSidebar({ jobOrder }: { jobOrder: JobOrderDetail }
         </div>
       </EntityDetailSection>
 
-      <EntityDetailSection title="Timeline">
-        <div className="space-y-4">
-          <EntityDetailField label="Created">
-            {formatDateTime(jobOrder.createdAt)}
-          </EntityDetailField>
-          <EntityDetailField label="Started">
-            {jobOrder.startedAt ? formatDateTime(jobOrder.startedAt) : null}
-          </EntityDetailField>
-          <EntityDetailField label="Completed">
-            {jobOrder.completedAt ? formatDateTime(jobOrder.completedAt) : null}
-          </EntityDetailField>
-          <EntityDetailField label="Released">
-            {jobOrder.releasedAt ? formatDateTime(jobOrder.releasedAt) : null}
-          </EntityDetailField>
-          <EntityDetailField label="Mechanics">
-            {`${jobOrder.mechanics.length} assigned`}
-          </EntityDetailField>
-        </div>
+      <EntityDetailSection title="Workflow timeline">
+        <JobOrderWorkflowTimeline steps={workflowSteps} />
       </EntityDetailSection>
     </>
   );

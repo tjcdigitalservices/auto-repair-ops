@@ -75,7 +75,7 @@ export function QuickAccessPlateLookupForm({
         </Button>
       ) : (
         <p className="text-sm text-muted-foreground">
-          On a phone or tablet, use the camera icon in the Quick Access search bar to scan a plate.
+          On a phone or tablet, use the camera icon in the top search bar to scan a plate.
         </p>
       )}
 

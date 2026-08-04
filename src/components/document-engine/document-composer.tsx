@@ -7,8 +7,8 @@ import {
   DEFAULT_DOCUMENT_TITLE,
   type DocumentZoomMode,
 } from "@/components/document-engine/constants";
+import { DocumentComposerHeaderDescription } from "@/components/document-engine/document-composer-header-description";
 import { DocumentHeaderActions } from "@/components/document-engine/document-header-actions";
-import { DocumentSaveStatusBadge } from "@/components/document-engine/document-save-status";
 import { DocumentToolbar } from "@/components/document-engine/document-toolbar";
 import { DocumentViewport } from "@/components/document-engine/document-viewport";
 import { DocumentEditorProvider } from "@/components/document-engine/hooks/document-editor-context";
@@ -55,6 +55,7 @@ export function DocumentComposer({
   className,
   headerActions,
   saveStatus,
+  revisionMetadataLabel,
 }: DocumentComposerProps) {
   const [zoomMode, setZoomMode] = useState<DocumentZoomMode>("fit");
   const resolvedTemplateName = resolveTemplateName({ template, document });
@@ -87,7 +88,13 @@ export function DocumentComposer({
         <div className="document-composer-chrome no-print shrink-0 space-y-2">
           <PageHeader
             title={moduleTitle}
-            description={moduleDescription}
+            description={
+              <DocumentComposerHeaderDescription
+                moduleDescription={moduleDescription}
+                saveStatus={saveStatus}
+                revisionMetadataLabel={revisionMetadataLabel}
+              />
+            }
             titleClassName="text-xl font-semibold tracking-tight"
             actions={
               headerActions ?? (
@@ -99,18 +106,15 @@ export function DocumentComposer({
             }
           />
 
-          <div className="flex flex-wrap items-center gap-3">
-            <Input
-              ref={titleInputRef}
-              id="document-composer-title"
-              aria-label="Document title"
-              value={documentTitle}
-              onChange={(event) => onDocumentTitleChange(event.target.value)}
-              placeholder={resolvedDefaultTitle}
-              className="h-9 max-w-xl border-border/70 bg-background text-sm font-medium shadow-none"
-            />
-            {saveStatus ? <DocumentSaveStatusBadge status={saveStatus} /> : null}
-          </div>
+          <Input
+            ref={titleInputRef}
+            id="document-composer-title"
+            aria-label="Document title"
+            value={documentTitle}
+            onChange={(event) => onDocumentTitleChange(event.target.value)}
+            placeholder={resolvedDefaultTitle}
+            className="h-9 max-w-xl border-border/70 bg-background text-sm font-medium shadow-none"
+          />
         </div>
 
         <div className="document-composer-workspace flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/70 bg-background">

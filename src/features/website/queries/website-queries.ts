@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { headers } from "next/headers";
 
 import {
   buildBrandMap,
@@ -14,15 +15,21 @@ import type {
   WebsiteQuoteRequestListItem,
   WebsiteQuoteRequestStatus,
   WebsiteShellData,
+  WebsiteActivityItem,
+  WebsiteWorkspaceData,
 } from "@/features/website/types";
 import {
+  buildWebsiteRecentActivity,
   isUuidLike,
   resolveWebsiteProductDisplayDescription,
   resolveWebsiteProductRouteSegment,
+  resolveWebsitePublicUrl,
   sanitizeWebsiteBrandName,
   sanitizeWebsiteProductName,
 } from "@/features/website/utils";
 import { getAuthorizedSupabaseServerClient } from "@/lib/auth/session";
+import { getTenantBrandingById } from "@/lib/branding";
+import { isTenantOperable } from "@/lib/tenants/status";
 import {
   getRequestTenantBranding,
   resolveRequestTenantSlug,
@@ -410,93 +417,184 @@ export async function listWebsiteQuoteRequests({
   }));
 }
 
-export async function getWebsiteManagementOverview() {
-  const { supabase } = await getAuthorizedSupabaseServerClient("settings:read");
+export async function getWebsiteWorkspaceData(): Promise<WebsiteWorkspaceData> {
+  const { context, supabase } = await getAuthorizedSupabaseServerClient("settings:read");
+  const requestHost = (await headers()).get("host");
   const [
-    { count: publishedProducts, error: productsError },
-    { count: featuredProducts, error: featuredProductsError },
-    { count: activePosts, error: postsError },
-    { count: newRequests, error: requestsError },
+    branding,
+    { data: tenant, error: tenantError },
+    { count: publishedProducts, error: publishedProductsError },
+    { count: draftProducts, error: draftProductsError },
+    { count: publishedPosts, error: publishedPostsError },
+    { count: draftPosts, error: draftPostsError },
+    { count: pendingRequests, error: pendingRequestsError },
+    { data: recentProducts, error: recentProductsError },
     { data: recentPosts, error: recentPostsError },
     { data: recentRequests, error: recentRequestsError },
+    { data: latestPublishedProduct, error: latestPublishedProductError },
+    { data: latestPublishedPost, error: latestPublishedPostError },
   ] = await Promise.all([
-    supabase
-      .from("products")
-      .select("id", { count: "exact", head: true })
-      .eq("website_visible", true),
+    getTenantBrandingById(context.tenantId),
+    supabase.from("tenants").select("status, slug").eq("id", context.tenantId).maybeSingle(),
     supabase
       .from("products")
       .select("id", { count: "exact", head: true })
       .eq("website_visible", true)
-      .eq("website_featured", true),
+      .eq("status", "active"),
+    supabase
+      .from("products")
+      .select("id", { count: "exact", head: true })
+      .eq("website_visible", false)
+      .eq("status", "active"),
     supabase
       .from("website_posts")
       .select("id", { count: "exact", head: true })
       .eq("status", "active"),
     supabase
+      .from("website_posts")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "inactive"),
+    supabase
       .from("website_quote_requests")
       .select("id", { count: "exact", head: true })
       .eq("status", "new"),
     supabase
-      .from("website_posts")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(3),
+      .from("products")
+      .select("id, name, website_visible, updated_at, created_at")
+      .eq("status", "active")
+      .order("updated_at", { ascending: false })
+      .limit(5),
     supabase
-      .from("website_quote_requests")
-      .select("*")
+      .from("website_posts")
+      .select("id, title, status, created_at, published_at")
       .order("created_at", { ascending: false })
       .limit(5),
+    supabase
+      .from("website_quote_requests")
+      .select("id, first_name, last_name, service_needed, created_at")
+      .order("created_at", { ascending: false })
+      .limit(5),
+    supabase
+      .from("products")
+      .select("updated_at")
+      .eq("website_visible", true)
+      .eq("status", "active")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("website_posts")
+      .select("published_at, updated_at")
+      .eq("status", "active")
+      .order("published_at", { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   if (
-    productsError ||
-    featuredProductsError ||
-    postsError ||
-    requestsError ||
+    tenantError ||
+    publishedProductsError ||
+    draftProductsError ||
+    publishedPostsError ||
+    draftPostsError ||
+    pendingRequestsError ||
+    recentProductsError ||
     recentPostsError ||
-    recentRequestsError
+    recentRequestsError ||
+    latestPublishedProductError ||
+    latestPublishedPostError
   ) {
     throw new Error(
-      productsError?.message ??
-        featuredProductsError?.message ??
-        postsError?.message ??
-        requestsError?.message ??
+      tenantError?.message ??
+        publishedProductsError?.message ??
+        draftProductsError?.message ??
+        publishedPostsError?.message ??
+        draftPostsError?.message ??
+        pendingRequestsError?.message ??
+        recentProductsError?.message ??
         recentPostsError?.message ??
         recentRequestsError?.message ??
-        "Unable to load website management data.",
+        latestPublishedProductError?.message ??
+        latestPublishedPostError?.message ??
+        "Unable to load website workspace data.",
     );
   }
 
+  const productActivity: WebsiteActivityItem[] = ((recentProducts ?? []) as Array<
+    Pick<ProductRow, "id" | "name" | "website_visible" | "updated_at" | "created_at">
+  >)
+    .filter((product) => product.website_visible)
+    .map((product) => {
+      const isNewPublish =
+        Date.parse(product.updated_at) - Date.parse(product.created_at) < 5 * 60 * 1000;
+
+      return {
+        id: `product-${product.id}`,
+        type: isNewPublish ? "product_published" : "product_updated",
+        title: isNewPublish ? "Product published" : "Product updated",
+        detail: product.name,
+        occurredAt: product.updated_at,
+        href: `/products/${product.id}/edit`,
+      };
+    });
+
+  const postActivity: WebsiteActivityItem[] = ((recentPosts ?? []) as Array<
+    Pick<WebsitePostRow, "id" | "title" | "status" | "created_at" | "published_at">
+  >).map((post) => ({
+    id: `post-${post.id}`,
+    type: "journal_post_created",
+    title: "Journal post created",
+    detail: post.title,
+    occurredAt: post.published_at ?? post.created_at,
+    href: `/settings/website/journal/${post.id}/edit`,
+  }));
+
+  const requestActivity: WebsiteActivityItem[] = ((recentRequests ?? []) as Array<
+    Pick<
+      WebsiteQuoteRequestRow,
+      "id" | "first_name" | "last_name" | "service_needed" | "created_at"
+    >
+  >).map((request) => ({
+    id: `request-${request.id}`,
+    type: "quote_request_received",
+    title: "Quote request received",
+    detail: `${request.first_name} ${request.last_name} · ${request.service_needed}`,
+    occurredAt: request.created_at,
+    href: "/quotations/website-requests",
+  }));
+
+  const lastPublishedCandidates = [
+    latestPublishedProduct?.updated_at ?? null,
+    latestPublishedPost?.published_at ?? latestPublishedPost?.updated_at ?? null,
+  ].filter(Boolean) as string[];
+
   return {
-    publishedProducts: publishedProducts ?? 0,
-    featuredProducts: featuredProducts ?? 0,
-    activePosts: activePosts ?? 0,
-    newRequests: newRequests ?? 0,
-    recentPosts: ((recentPosts ?? []) as WebsitePostRow[]).map(mapWebsitePostRowToItem),
-    recentRequests: ((recentRequests ?? []) as WebsiteQuoteRequestRow[]).map((request) => ({
-      id: request.id,
-      requestedProductLabel: request.requested_product_label,
-      firstName: request.first_name,
-      lastName: request.last_name,
-      contactNumber: request.contact_number,
-      email: request.email,
-      province: request.province,
-      city: request.city,
-      barangay: request.barangay,
-      vehicleMake: request.vehicle_make,
-      vehicleModel: request.vehicle_model,
-      vehicleYear: request.vehicle_year,
-      transmission: request.transmission,
-      mileage: request.mileage,
-      engineSize: request.engine_size,
-      oilRequirementLiters: request.oil_requirement_liters,
-      serviceNeeded: request.service_needed,
-      customerConcern: request.customer_concern,
-      status: request.status as WebsiteQuoteRequestStatus,
-      createdAt: request.created_at,
-      contactedAt: request.contacted_at,
-    })),
+    products: {
+      published: publishedProducts ?? 0,
+      draft: draftProducts ?? 0,
+    },
+    journal: {
+      published: publishedPosts ?? 0,
+      draft: draftPosts ?? 0,
+    },
+    quoteRequests: {
+      pending: pendingRequests ?? 0,
+    },
+    status: {
+      isOnline: tenant ? isTenantOperable(tenant.status) : false,
+      publicUrl: resolveWebsitePublicUrl({
+        websiteUrl: branding.websiteUrl,
+        tenantSlug: tenant?.slug ?? null,
+        requestHost,
+      }),
+      lastPublishedAt:
+        lastPublishedCandidates.sort((left, right) => right.localeCompare(left))[0] ?? null,
+    },
+    recentActivity: buildWebsiteRecentActivity([
+      ...productActivity,
+      ...postActivity,
+      ...requestActivity,
+    ]),
   };
 }
 

@@ -2,11 +2,19 @@ import type { NextConfig } from "next";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
+const devPort = process.env.PORT?.trim() || "3000";
+
 const localOrigins = [
   "localhost:3000",
   "127.0.0.1:3000",
+  "localhost:3001",
+  "127.0.0.1:3001",
+  "localhost:3002",
+  "127.0.0.1:3002",
   "localhost:3005",
   "127.0.0.1:3005",
+  `localhost:${devPort}`,
+  `127.0.0.1:${devPort}`,
 ];
 
 function appendOriginsFromEnv(origins: string[]) {

@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { cache } from "react";
 
 import type { Database } from "@/types/database";
+import { getPublicSupabaseConfig } from "@/lib/supabase/env";
 
 type CookieStore = {
   getAll: () => {
@@ -17,17 +18,6 @@ type CookieStore = {
     }[],
   ) => void;
 };
-
-function getPublicSupabaseConfig() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !anonKey) {
-    throw new Error("Missing public Supabase environment variables.");
-  }
-
-  return { url, anonKey };
-}
 
 export function createSupabaseServerClient(cookieStore: CookieStore) {
   const { url, anonKey } = getPublicSupabaseConfig();

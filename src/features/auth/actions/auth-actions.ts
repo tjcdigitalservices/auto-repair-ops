@@ -26,11 +26,39 @@ export async function signInAction(
     return toFormActionState(parsed.error);
   }
 
-  const supabase = await getSupabaseServerClient();
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: parsed.data.email,
-    password: parsed.data.password,
-  });
+  let supabase;
+
+  try {
+    supabase = await getSupabaseServerClient();
+  } catch (error) {
+    return {
+      status: "error",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Unable to connect to the authentication service.",
+    };
+  }
+
+  let data;
+  let error;
+
+  try {
+    ({ data, error } = await supabase.auth.signInWithPassword({
+      email: parsed.data.email,
+      password: parsed.data.password,
+    }));
+  } catch (signInError) {
+    const message =
+      signInError instanceof Error ? signInError.message : "Sign in request failed.";
+
+    return {
+      status: "error",
+      message: message.toLowerCase().includes("fetch failed")
+        ? "Could not reach the authentication service. Check your internet connection and Supabase configuration, then try again."
+        : message,
+    };
+  }
 
   if (error) {
     return {

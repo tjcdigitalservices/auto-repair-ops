@@ -5,6 +5,7 @@ import type { NextRequest } from "next/server";
 import { hasCapability, type AppCapability } from "@/lib/auth/permissions";
 import { isTenantOperable } from "@/lib/tenants/status";
 import type { Database } from "@/types/database";
+import { getPublicSupabaseConfig } from "@/lib/supabase/env";
 
 export type PdfAuthSession = {
   access_token: string;
@@ -29,17 +30,6 @@ type PackedSessionPayload = {
   expires_in?: number;
   user?: unknown;
 };
-
-function getPublicSupabaseConfig() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !anonKey) {
-    throw new Error("Missing public Supabase environment variables.");
-  }
-
-  return { url, anonKey };
-}
 
 function getProjectRef(supabaseUrl: string) {
   return supabaseUrl.match(/https:\/\/([^.]+)/)?.[1] ?? "supabase";

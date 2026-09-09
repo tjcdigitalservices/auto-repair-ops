@@ -13,6 +13,11 @@ import {
   type PayrollHolidayRule,
 } from "@/features/payroll/calculations";
 import {
+  governmentContributionEntries,
+  isReservedGovernmentAdjustmentLabel,
+  resolveGovernmentContributions,
+} from "@/features/payroll/government-contributions";
+import {
   compensationProfileSchema,
   parseCompensationProfileFormData,
   parsePayrollAdjustmentFormData,
@@ -52,6 +57,10 @@ type StaffSavePayload = Pick<
   | "allowance_per_period"
   | "effective_start_date"
   | "exempt_from_attendance"
+  | "use_shop_default_contributions"
+  | "sss_amount"
+  | "philhealth_amount"
+  | "pagibig_amount"
   | "notes"
 >;
 
@@ -78,6 +87,22 @@ export async function upsertCompensationProfileAction(
     allowance_per_period: Number(values.allowancePerPeriod),
     effective_start_date: values.effectiveStartDate,
     exempt_from_attendance: values.exemptFromAttendance,
+    use_shop_default_contributions: values.useShopDefaultContributions,
+    sss_amount: values.useShopDefaultContributions
+      ? null
+      : values.sssAmount.trim()
+        ? Number(values.sssAmount)
+        : null,
+    philhealth_amount: values.useShopDefaultContributions
+      ? null
+      : values.philhealthAmount.trim()
+        ? Number(values.philhealthAmount)
+        : null,
+    pagibig_amount: values.useShopDefaultContributions
+      ? null
+      : values.pagibigAmount.trim()
+        ? Number(values.pagibigAmount)
+        : null,
     notes: normalizeNullable(values.notes),
   };
   const { error } = await supabase.from("staff_compensation_profiles").upsert(payload, {
@@ -123,6 +148,7 @@ export async function createPayrollPeriodAction(
     payout_date: values.payoutDate,
     status: "draft",
     notes: normalizeNullable(values.notes),
+    apply_government_deductions: values.applyGovernmentDeductions,
     created_by_staff_id: context.staffId,
   });
 
@@ -160,7 +186,9 @@ export async function generatePayrollCutAction(
   const { context, supabase } = await getBranchScopedServerClient("payroll:write");
   const { data: periodData, error: periodError } = await supabase
     .from("payroll_periods")
-    .select("id, branch_id, label, period_start_date, period_end_date, status")
+    .select(
+      "id, branch_id, label, period_start_date, period_end_date, status, apply_government_deductions",
+    )
     .eq("id", periodId)
     .maybeSingle();
 
@@ -189,7 +217,9 @@ export async function generatePayrollCutAction(
   ] = await Promise.all([
     supabase
       .from("business_settings")
-      .select("payroll_standard_daily_hours, payroll_holiday_premium_rate")
+      .select(
+        "payroll_standard_daily_hours, payroll_holiday_premium_rate, payroll_default_sss_amount, payroll_default_philhealth_amount, payroll_default_pagibig_amount",
+      )
       .eq("branch_id", periodData.branch_id)
       .single(),
     supabase
@@ -289,6 +319,10 @@ export async function generatePayrollCutAction(
         allowancePerPeriod: row.allowance_per_period,
         effectiveStartDate: row.effective_start_date,
         exemptFromAttendance: row.exempt_from_attendance,
+        useShopDefaultContributions: row.use_shop_default_contributions ?? true,
+        sssAmount: row.sss_amount,
+        philhealthAmount: row.philhealth_amount,
+        pagibigAmount: row.pagibig_amount,
         notes: row.notes,
       },
     ]),
@@ -405,6 +439,8 @@ export async function generatePayrollCutAction(
         label: adjustment.label,
         amount: adjustment.amount,
         notes: adjustment.notes,
+        source: "manual" as const,
+        systemKey: null,
         createdAt: adjustment.createdAt,
         updatedAt: adjustment.updatedAt,
       })),
@@ -483,6 +519,47 @@ export async function generatePayrollCutAction(
 
   if (upsertError) {
     return { status: "error", message: upsertError.message };
+  }
+
+  const { data: generatedItemsData, error: generatedItemsError } = await supabase
+    .from("payroll_period_items")
+    .select("id, staff_id")
+    .eq("payroll_period_id", periodData.id);
+
+  if (generatedItemsError) {
+    return { status: "error", message: generatedItemsError.message };
+  }
+
+  const generatedItems = generatedItemsData ?? [];
+  const shopDefaults = {
+    sssAmount: settingsData.payroll_default_sss_amount ?? 0,
+    philhealthAmount: settingsData.payroll_default_philhealth_amount ?? 0,
+    pagibigAmount: settingsData.payroll_default_pagibig_amount ?? 0,
+  };
+  const applyGovernmentDeductions = periodData.apply_government_deductions ?? true;
+
+  for (const generatedItem of generatedItems) {
+    const profile = compensationByStaffId.get(generatedItem.staff_id) ?? null;
+    const syncError = await syncGovernmentContributionAdjustments({
+      supabase,
+      payrollPeriodItemId: generatedItem.id,
+      applyGovernmentDeductions,
+      shopDefaults,
+      profile,
+    });
+
+    if (syncError) {
+      return { status: "error", message: syncError };
+    }
+
+    try {
+      await refreshPayrollItemTotals(supabase, generatedItem.id);
+    } catch (error) {
+      return {
+        status: "error",
+        message: error instanceof Error ? error.message : "Failed to refresh payroll totals.",
+      };
+    }
   }
 
   const removableItemIds = existingItems
@@ -578,12 +655,22 @@ export async function upsertPayrollAdjustmentAction(
     return { status: "error", message: "Finalized payroll periods are locked." };
   }
 
+  if (isReservedGovernmentAdjustmentLabel(values.label)) {
+    return {
+      status: "error",
+      message:
+        "SSS, PhilHealth, and Pag-IBIG are applied automatically. Use Generate payroll cut or compensation settings instead.",
+    };
+  }
+
   const { error } = await supabase.from("payroll_period_item_adjustments").insert({
     payroll_period_item_id: values.payrollPeriodItemId,
     adjustment_type: values.adjustmentType,
     label: values.label,
     amount: Number(values.amount),
     notes: normalizeNullable(values.notes),
+    source: "manual",
+    system_key: null,
   });
 
   if (error) {
@@ -627,7 +714,7 @@ export async function deletePayrollAdjustmentAction(formData: FormData) {
   const { context, supabase } = await getBranchScopedServerClient("payroll:write");
   const { data: adjustmentData, error: adjustmentError } = await supabase
     .from("payroll_period_item_adjustments")
-    .select("id, payroll_period_item_id")
+    .select("id, payroll_period_item_id, source")
     .eq("id", adjustmentId)
     .maybeSingle();
 
@@ -637,6 +724,12 @@ export async function deletePayrollAdjustmentAction(formData: FormData) {
 
   if (!adjustmentData) {
     throw new Error("Payroll adjustment not found.");
+  }
+
+  if (adjustmentData.source === "system_government") {
+    throw new Error(
+      "System government deductions cannot be deleted manually. Regenerate the payroll cut with Apply government deductions turned off.",
+    );
   }
 
   const { data: itemData, error: itemError } = await supabase
@@ -809,6 +902,8 @@ async function refreshPayrollItemTotals(
       label: row.label,
       amount: row.amount,
       notes: row.notes,
+      source: "manual" as const,
+      systemKey: null,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     })),
@@ -830,6 +925,116 @@ async function refreshPayrollItemTotals(
   if (updateError) {
     throw new Error(updateError.message);
   }
+}
+
+async function syncGovernmentContributionAdjustments(params: {
+  supabase: Awaited<ReturnType<typeof getBranchScopedServerClient>>["supabase"];
+  payrollPeriodItemId: string;
+  applyGovernmentDeductions: boolean;
+  shopDefaults: {
+    sssAmount: number;
+    philhealthAmount: number;
+    pagibigAmount: number;
+  };
+  profile: {
+    useShopDefaultContributions: boolean;
+    sssAmount: number | null;
+    philhealthAmount: number | null;
+    pagibigAmount: number | null;
+  } | null;
+}) {
+  const { supabase, payrollPeriodItemId, applyGovernmentDeductions, shopDefaults, profile } =
+    params;
+
+  const { data: existingSystemRows, error: existingError } = await supabase
+    .from("payroll_period_item_adjustments")
+    .select("id, system_key")
+    .eq("payroll_period_item_id", payrollPeriodItemId)
+    .eq("source", "system_government");
+
+  if (existingError) {
+    return existingError.message;
+  }
+
+  if (!applyGovernmentDeductions) {
+    if ((existingSystemRows ?? []).length > 0) {
+      const { error: deleteError } = await supabase
+        .from("payroll_period_item_adjustments")
+        .delete()
+        .eq("payroll_period_item_id", payrollPeriodItemId)
+        .eq("source", "system_government");
+
+      if (deleteError) {
+        return deleteError.message;
+      }
+    }
+
+    return null;
+  }
+
+  const resolved = resolveGovernmentContributions({ shopDefaults, profile });
+  const desiredEntries = governmentContributionEntries(resolved);
+  const desiredKeys = new Set(desiredEntries.map((entry) => entry.key));
+  const existingByKey = new Map(
+    (existingSystemRows ?? [])
+      .filter((row) => row.system_key)
+      .map((row) => [row.system_key as string, row.id]),
+  );
+
+  for (const existingRow of existingSystemRows ?? []) {
+    if (!existingRow.system_key || desiredKeys.has(existingRow.system_key as "sss" | "philhealth" | "pagibig")) {
+      continue;
+    }
+
+    const { error: deleteError } = await supabase
+      .from("payroll_period_item_adjustments")
+      .delete()
+      .eq("id", existingRow.id);
+
+    if (deleteError) {
+      return deleteError.message;
+    }
+  }
+
+  for (const entry of desiredEntries) {
+    const existingId = existingByKey.get(entry.key);
+
+    if (existingId) {
+      const { error: updateError } = await supabase
+        .from("payroll_period_item_adjustments")
+        .update({
+          adjustment_type: "deduction",
+          label: entry.label,
+          amount: entry.amount,
+          notes: "System government contribution",
+          source: "system_government",
+          system_key: entry.key,
+        })
+        .eq("id", existingId);
+
+      if (updateError) {
+        return updateError.message;
+      }
+
+      continue;
+    }
+
+    const { error: insertError } = await supabase.from("payroll_period_item_adjustments").insert({
+      payroll_period_item_id: payrollPeriodItemId,
+      adjustment_type: "deduction",
+      label: entry.label,
+      amount: entry.amount,
+      notes: "System government contribution",
+      source: "system_government",
+      system_key: entry.key,
+    });
+
+    if (insertError) {
+      return insertError.message;
+    }
+  }
+
+  return null;
 }
 
 function mapStaffScheduleRow(row: StaffScheduleRow) {

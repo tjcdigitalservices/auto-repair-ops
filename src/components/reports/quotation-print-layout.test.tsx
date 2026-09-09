@@ -107,6 +107,7 @@ describe("QuotationPrintLayout", () => {
     expect(screen.queryByText("Printed Name:")).not.toBeInTheDocument();
     expect(screen.queryByText("Adviser Signature:")).not.toBeInTheDocument();
     expect(screen.queryByText("Role:")).not.toBeInTheDocument();
+    expect(screen.queryByText("INSPECTION NOTES")).not.toBeInTheDocument();
 
     const preparedByBlock = screen.getByText("Prepared By:").parentElement;
 
@@ -116,6 +117,37 @@ describe("QuotationPrintLayout", () => {
 
     expect(preparedByContent.getByText("Nia Grace Ariete")).toBeInTheDocument();
     expect(preparedByContent.getByText("Admin")).toBeInTheDocument();
+  });
+
+  it("renders inspection notes after vehicle information when present", () => {
+    const withNotes: QuotationPrintDocument = {
+      ...documentFixture,
+      quotation: {
+        ...documentFixture.quotation,
+        inspectionNotes: "Front pads worn.\nRecommend rotor resurface.",
+      },
+    };
+
+    render(<QuotationPrintLayout document={withNotes} mode="full" />);
+
+    expect(screen.getByText("INSPECTION NOTES")).toBeInTheDocument();
+    expect(
+      screen.getByText((_, element) => element?.textContent === "Front pads worn.\nRecommend rotor resurface."),
+    ).toBeInTheDocument();
+  });
+
+  it("hides the inspection notes section when notes are empty", () => {
+    const withoutNotes: QuotationPrintDocument = {
+      ...documentFixture,
+      quotation: {
+        ...documentFixture.quotation,
+        inspectionNotes: "   ",
+      },
+    };
+
+    render(<QuotationPrintLayout document={withoutNotes} mode="full" />);
+
+    expect(screen.queryByText("INSPECTION NOTES")).not.toBeInTheDocument();
   });
 
   it("keeps the closing sections on page 1 for medium quotations when they still fit", () => {

@@ -524,6 +524,10 @@ function mapCompensationProfile(row: CompensationRow): CompensationProfileSummar
     allowancePerPeriod: row.allowance_per_period,
     effectiveStartDate: row.effective_start_date,
     exemptFromAttendance: row.exempt_from_attendance,
+    useShopDefaultContributions: row.use_shop_default_contributions ?? true,
+    sssAmount: row.sss_amount,
+    philhealthAmount: row.philhealth_amount,
+    pagibigAmount: row.pagibig_amount,
     notes: row.notes,
   };
 }
@@ -538,6 +542,7 @@ function mapPayrollPeriod(row: PayrollPeriodRow): PayrollPeriodSummary {
     payoutDate: row.payout_date,
     status: row.status,
     notes: row.notes,
+    applyGovernmentDeductions: row.apply_government_deductions ?? true,
     createdByStaffId: row.created_by_staff_id,
     generatedByStaffId: row.generated_by_staff_id,
     generatedAt: row.generated_at,
@@ -574,6 +579,8 @@ function mapPayrollAdjustment(row: PayrollPeriodItemAdjustmentRow): PayrollPerio
     label: row.label,
     amount: row.amount,
     notes: row.notes,
+    source: (row.source as PayrollPeriodItemAdjustmentSummary["source"]) ?? "manual",
+    systemKey: (row.system_key as PayrollPeriodItemAdjustmentSummary["systemKey"]) ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -649,6 +656,10 @@ function buildCompensationProfileFromPayrollItem(
     allowancePerPeriod: item.allowancePerPeriod,
     effectiveStartDate: "1970-01-01",
     exemptFromAttendance: false,
+    useShopDefaultContributions: true,
+    sssAmount: null,
+    philhealthAmount: null,
+    pagibigAmount: null,
     notes: null,
   };
 }

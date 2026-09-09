@@ -4,28 +4,39 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { PageTabs } from "@/components/shared/page-tabs";
 
-export type PayrollPageTab = "periods" | "compensation";
+export type PayrollPageTab = "periods" | "compensation" | "remittance";
 
 export function PayrollTabNav({
   periodCount,
   compensationCount,
+  remittanceEmployeeCount,
 }: {
   periodCount: number;
   compensationCount: number;
+  remittanceEmployeeCount?: number;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
   const activeTab: PayrollPageTab =
-    searchParams.get("tab") === "compensation" ? "compensation" : "periods";
+    tabParam === "compensation"
+      ? "compensation"
+      : tabParam === "remittance"
+        ? "remittance"
+        : "periods";
 
   function setTab(nextTab: PayrollPageTab) {
     const params = new URLSearchParams(searchParams.toString());
 
     if (nextTab === "periods") {
       params.delete("tab");
-    } else {
+      params.delete("month");
+    } else if (nextTab === "compensation") {
       params.set("tab", "compensation");
+      params.delete("month");
+    } else {
+      params.set("tab", "remittance");
     }
 
     const query = params.toString();
@@ -39,6 +50,11 @@ export function PayrollTabNav({
       tabs={[
         { id: "periods", label: "Payroll Periods", count: periodCount },
         { id: "compensation", label: "Compensation Setup", count: compensationCount },
+        {
+          id: "remittance",
+          label: "Remittance",
+          count: remittanceEmployeeCount,
+        },
       ]}
     />
   );

@@ -198,6 +198,7 @@ async function saveStaff(formData: FormData): Promise<StaffActionState> {
     sss_number: normalizeNullable(values.sssNumber),
     philhealth_number: normalizeNullable(values.philhealthNumber),
     tin_number: normalizeNullable(values.tinNumber),
+    pagibig_number: normalizeNullable(values.pagibigNumber),
     emergency_contact_name: normalizeNullable(values.emergencyContactName),
     emergency_contact_number: normalizeNullable(values.emergencyContactNumber),
     status: values.status,

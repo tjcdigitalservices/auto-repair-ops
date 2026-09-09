@@ -399,6 +399,9 @@ export async function updateOperationalRulesSettingsAction(
     enable_shelf_location: parsed.data.enableShelfLocation,
     payroll_standard_daily_hours: Number(parsed.data.payrollStandardDailyHours),
     payroll_holiday_premium_rate: Number(parsed.data.payrollHolidayPremiumRate) / 100,
+    payroll_default_sss_amount: Number(parsed.data.payrollDefaultSssAmount),
+    payroll_default_philhealth_amount: Number(parsed.data.payrollDefaultPhilhealthAmount),
+    payroll_default_pagibig_amount: Number(parsed.data.payrollDefaultPagibigAmount),
   };
 
   const { error } = await supabase

@@ -271,7 +271,7 @@ export function StaffForm({
             <FieldError errors={state.fieldErrors} name="address" id={fieldErrorId("address")} />
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
             <div className="space-y-2">
               <Label htmlFor="sssNumber" optional>SSS number</Label>
               <Input
@@ -324,6 +324,24 @@ export function StaffForm({
                 onChange={(event) => updateFormValue("tinNumber", event.target.value)}
               />
               <FieldError errors={state.fieldErrors} name="tinNumber" id={fieldErrorId("tinNumber")} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="pagibigNumber" optional>Pag-IBIG number</Label>
+              <Input
+                id="pagibigNumber"
+                name="pagibigNumber"
+                value={values.pagibigNumber}
+                className={fieldControlClassName(state.fieldErrors, "pagibigNumber")}
+                {...fieldAriaProps({
+                  errors: state.fieldErrors,
+                  name: "pagibigNumber",
+                  required: false,
+                  errorId: fieldErrorId("pagibigNumber"),
+                })}
+                onChange={(event) => updateFormValue("pagibigNumber", event.target.value)}
+              />
+              <FieldError errors={state.fieldErrors} name="pagibigNumber" id={fieldErrorId("pagibigNumber")} />
             </div>
           </div>
 

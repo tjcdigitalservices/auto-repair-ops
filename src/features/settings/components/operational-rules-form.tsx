@@ -44,6 +44,9 @@ export function OperationalRulesForm({
     enableShelfLocation: initialValues.enableShelfLocation,
     payrollStandardDailyHours: initialValues.payrollStandardDailyHours,
     payrollHolidayPremiumRate: initialValues.payrollHolidayPremiumRate,
+    payrollDefaultSssAmount: initialValues.payrollDefaultSssAmount,
+    payrollDefaultPhilhealthAmount: initialValues.payrollDefaultPhilhealthAmount,
+    payrollDefaultPagibigAmount: initialValues.payrollDefaultPagibigAmount,
   });
 
   return (
@@ -181,6 +184,94 @@ export function OperationalRulesForm({
               Extra percentage paid only when a staff member actually works on a holiday date.
             </p>
             <FieldError errors={state.fieldErrors} name="payrollHolidayPremiumRate" id={fieldErrorId("payrollHolidayPremiumRate")} />
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="payrollDefaultSssAmount" required>
+              Default SSS amount
+            </Label>
+            <Input
+              id="payrollDefaultSssAmount"
+              name="payrollDefaultSssAmount"
+              inputMode="decimal"
+              value={values.payrollDefaultSssAmount}
+              onChange={(event) => updateFormValue("payrollDefaultSssAmount", event.target.value)}
+              className={fieldControlClassName(state.fieldErrors, "payrollDefaultSssAmount")}
+              {...fieldAriaProps({
+                errors: state.fieldErrors,
+                name: "payrollDefaultSssAmount",
+                required: true,
+                errorId: fieldErrorId("payrollDefaultSssAmount"),
+              })}
+            />
+            <p className="text-sm text-muted-foreground">Shop-wide SSS deduction per payroll period.</p>
+            <FieldError
+              errors={state.fieldErrors}
+              name="payrollDefaultSssAmount"
+              id={fieldErrorId("payrollDefaultSssAmount")}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="payrollDefaultPhilhealthAmount" required>
+              Default PhilHealth amount
+            </Label>
+            <Input
+              id="payrollDefaultPhilhealthAmount"
+              name="payrollDefaultPhilhealthAmount"
+              inputMode="decimal"
+              value={values.payrollDefaultPhilhealthAmount}
+              onChange={(event) =>
+                updateFormValue("payrollDefaultPhilhealthAmount", event.target.value)
+              }
+              className={fieldControlClassName(state.fieldErrors, "payrollDefaultPhilhealthAmount")}
+              {...fieldAriaProps({
+                errors: state.fieldErrors,
+                name: "payrollDefaultPhilhealthAmount",
+                required: true,
+                errorId: fieldErrorId("payrollDefaultPhilhealthAmount"),
+              })}
+            />
+            <p className="text-sm text-muted-foreground">
+              Shop-wide PhilHealth deduction per payroll period.
+            </p>
+            <FieldError
+              errors={state.fieldErrors}
+              name="payrollDefaultPhilhealthAmount"
+              id={fieldErrorId("payrollDefaultPhilhealthAmount")}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="payrollDefaultPagibigAmount" required>
+              Default Pag-IBIG amount
+            </Label>
+            <Input
+              id="payrollDefaultPagibigAmount"
+              name="payrollDefaultPagibigAmount"
+              inputMode="decimal"
+              value={values.payrollDefaultPagibigAmount}
+              onChange={(event) =>
+                updateFormValue("payrollDefaultPagibigAmount", event.target.value)
+              }
+              className={fieldControlClassName(state.fieldErrors, "payrollDefaultPagibigAmount")}
+              {...fieldAriaProps({
+                errors: state.fieldErrors,
+                name: "payrollDefaultPagibigAmount",
+                required: true,
+                errorId: fieldErrorId("payrollDefaultPagibigAmount"),
+              })}
+            />
+            <p className="text-sm text-muted-foreground">
+              Shop-wide Pag-IBIG deduction per payroll period.
+            </p>
+            <FieldError
+              errors={state.fieldErrors}
+              name="payrollDefaultPagibigAmount"
+              id={fieldErrorId("payrollDefaultPagibigAmount")}
+            />
           </div>
         </div>
 

@@ -16,9 +16,11 @@ describe("staffFormSchema", () => {
       sssNumber: "",
       philhealthNumber: "",
       tinNumber: "",
+      pagibigNumber: "",
       emergencyContactName: "",
       emergencyContactNumber: "",
       status: "active",
+      linkPortalUsername: "",
     });
 
     expect(result.success).toBe(false);
@@ -37,9 +39,11 @@ describe("staffFormSchema", () => {
       sssNumber: "",
       philhealthNumber: "",
       tinNumber: "",
+      pagibigNumber: "",
       emergencyContactName: "",
       emergencyContactNumber: "",
       status: "active",
+      linkPortalUsername: "",
     });
 
     expect(result.success).toBe(true);
@@ -57,9 +61,11 @@ describe("staffFormSchema", () => {
       sssNumber: "",
       philhealthNumber: "",
       tinNumber: "",
+      pagibigNumber: "",
       emergencyContactName: "",
       emergencyContactNumber: "",
       status: "active",
+      linkPortalUsername: "",
     });
 
     expect(result.success).toBe(false);

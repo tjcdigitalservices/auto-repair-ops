@@ -385,6 +385,9 @@ export type Database = {
           enable_shelf_location: boolean;
           payroll_standard_daily_hours: number;
           payroll_holiday_premium_rate: number;
+          payroll_default_sss_amount: number;
+          payroll_default_philhealth_amount: number;
+          payroll_default_pagibig_amount: number;
           default_tax_rate: number;
           business_name: string;
           business_logo_path: string | null;
@@ -419,6 +422,9 @@ export type Database = {
           enable_shelf_location?: boolean;
           payroll_standard_daily_hours?: number;
           payroll_holiday_premium_rate?: number;
+          payroll_default_sss_amount?: number;
+          payroll_default_philhealth_amount?: number;
+          payroll_default_pagibig_amount?: number;
           default_tax_rate?: number;
           business_name: string;
           business_logo_path?: string | null;
@@ -1248,6 +1254,7 @@ export type Database = {
           generated_at: string | null;
           finalized_by_staff_id: string | null;
           finalized_at: string | null;
+          apply_government_deductions: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -1265,6 +1272,7 @@ export type Database = {
           generated_at?: string | null;
           finalized_by_staff_id?: string | null;
           finalized_at?: string | null;
+          apply_government_deductions?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -1308,6 +1316,8 @@ export type Database = {
           label: string;
           amount: number;
           notes: string | null;
+          source: string;
+          system_key: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -1318,6 +1328,8 @@ export type Database = {
           label: string;
           amount: number;
           notes?: string | null;
+          source?: string;
+          system_key?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1895,6 +1907,10 @@ export type Database = {
           allowance_per_period: number;
           effective_start_date: string;
           exempt_from_attendance: boolean;
+          use_shop_default_contributions: boolean;
+          sss_amount: number | null;
+          philhealth_amount: number | null;
+          pagibig_amount: number | null;
           notes: string | null;
           created_at: string;
           updated_at: string;
@@ -1908,6 +1924,10 @@ export type Database = {
           allowance_per_period?: number;
           effective_start_date: string;
           exempt_from_attendance?: boolean;
+          use_shop_default_contributions?: boolean;
+          sss_amount?: number | null;
+          philhealth_amount?: number | null;
+          pagibig_amount?: number | null;
           notes?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -1939,6 +1959,7 @@ export type Database = {
           sss_number: string | null;
           philhealth_number: string | null;
           tin_number: string | null;
+          pagibig_number: string | null;
           emergency_contact_name: string | null;
           emergency_contact_number: string | null;
           is_payroll_eligible: boolean;
@@ -1961,6 +1982,7 @@ export type Database = {
           sss_number?: string | null;
           philhealth_number?: string | null;
           tin_number?: string | null;
+          pagibig_number?: string | null;
           emergency_contact_name?: string | null;
           emergency_contact_number?: string | null;
           is_payroll_eligible?: boolean;

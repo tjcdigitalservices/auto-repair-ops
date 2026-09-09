@@ -18,6 +18,7 @@ export function PayrollPeriodDetail({ data }: { data: PayrollPeriodDetailData })
         actions={
           <PayrollPeriodDetailHeaderActions
             periodId={period.id}
+            periodEndDate={period.periodEndDate}
             status={period.status}
             hasGeneratedCut={hasGeneratedCut}
             items={items}

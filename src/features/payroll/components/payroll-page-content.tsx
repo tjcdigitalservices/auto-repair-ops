@@ -26,8 +26,9 @@ import {
   CompensationSetupSummaryStrip,
   PayrollPeriodsSummaryStrip,
 } from "@/features/payroll/components/payroll-summary-strip";
+import { RemittanceSummaryPanel } from "@/features/payroll/components/remittance-summary-panel";
 import { PayrollTabNav, type PayrollPageTab } from "@/features/payroll/components/payroll-tab-nav";
-import type { PayrollPageData } from "@/features/payroll/types";
+import type { PayrollPageData, RemittanceSummaryData } from "@/features/payroll/types";
 import {
   PAYROLL_PERIOD_STATUS_OPTIONS,
   PAYROLL_STAFF_SETUP_FILTER_OPTIONS,
@@ -48,12 +49,14 @@ function MissingValue() {
 
 export function PayrollPageContent({
   data,
+  remittanceData,
   activeTab,
   periodPage,
   staffPage,
   branchSelector,
 }: {
   data: PayrollPageData;
+  remittanceData?: RemittanceSummaryData;
   activeTab: PayrollPageTab;
   periodPage?: string;
   staffPage?: string;
@@ -74,7 +77,7 @@ export function PayrollPageContent({
     <div className="space-y-0">
       <PageHeader
         title="Payroll"
-        description="Compensation setup and payroll period processing."
+        description="Compensation setup, payroll period processing, and monthly remittance."
         actions={
           activeTab === "periods" ? (
             <PageHeaderActions primary={<PayrollPeriodDialog />} />
@@ -85,9 +88,12 @@ export function PayrollPageContent({
       <PayrollTabNav
         periodCount={summary.payrollPeriodCount}
         compensationCount={totalCompensationRosterCount}
+        remittanceEmployeeCount={remittanceData?.employeeCount}
       />
 
-      {activeTab === "periods" ? (
+      {activeTab === "remittance" && remittanceData ? (
+        <RemittanceSummaryPanel data={remittanceData} branchSelector={branchSelector} />
+      ) : activeTab === "periods" ? (
         <div className="space-y-3 pt-4">
           <PayrollPeriodsSummaryStrip summary={summary} />
 
@@ -201,7 +207,7 @@ export function PayrollPageContent({
             )}
           </DataTableCard>
         </div>
-      ) : (
+      ) : activeTab === "compensation" ? (
         <div className="space-y-3 pt-4">
           <CompensationSetupSummaryStrip summary={summary} />
 
@@ -376,7 +382,7 @@ export function PayrollPageContent({
             </DataTableCard>
           ) : null}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

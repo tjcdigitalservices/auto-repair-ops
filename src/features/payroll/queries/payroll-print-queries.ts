@@ -63,21 +63,29 @@ export const getPayslipPrintDocument = cache(
     }
 
     const { context, supabase } = await getBranchScopedServerClient("payroll:read");
-    const [{ data: settingsRow, error }, { data: tenantBranding, error: brandingError }] =
-      await Promise.all([
-        supabase
-          .from("business_settings")
-          .select(
-            "business_name, business_logo_path, business_vat_registration_no, business_contact, business_email, business_address, updated_at",
-          )
-          .eq("branch_id", detail.period.branchId)
-          .maybeSingle(),
-        supabase
-          .from("tenant_branding")
-          .select("website_url, facebook_label")
-          .eq("tenant_id", context.tenantId)
-          .maybeSingle(),
-      ]);
+    const [
+      { data: settingsRow, error },
+      { data: tenantBranding, error: brandingError },
+      { data: staffRow, error: staffError },
+    ] = await Promise.all([
+      supabase
+        .from("business_settings")
+        .select(
+          "business_name, business_logo_path, business_vat_registration_no, business_contact, business_email, business_address, updated_at",
+        )
+        .eq("branch_id", detail.period.branchId)
+        .maybeSingle(),
+      supabase
+        .from("tenant_branding")
+        .select("website_url, facebook_label")
+        .eq("tenant_id", context.tenantId)
+        .maybeSingle(),
+      supabase
+        .from("staff")
+        .select("sss_number, philhealth_number, tin_number, pagibig_number")
+        .eq("id", item.staffId)
+        .maybeSingle(),
+    ]);
 
     if (error) {
       throw new Error(error.message);
@@ -87,10 +95,20 @@ export const getPayslipPrintDocument = cache(
       throw new Error(brandingError.message);
     }
 
+    if (staffError) {
+      throw new Error(staffError.message);
+    }
+
     return {
       period: detail.period,
       settings: detail.settings,
-      item,
+      item: {
+        ...item,
+        sssNumber: staffRow?.sss_number ?? null,
+        philhealthNumber: staffRow?.philhealth_number ?? null,
+        tinNumber: staffRow?.tin_number ?? null,
+        pagibigNumber: staffRow?.pagibig_number ?? null,
+      },
       businessProfile: buildPrintBusinessProfile(settingsRow, tenantBranding),
       generatedAt:
         detail.period.generatedAt ??

@@ -36,6 +36,10 @@ const dailyProfile: CompensationProfileSummary = {
   allowancePerPeriod: 0,
   effectiveStartDate: "2026-01-01",
   exemptFromAttendance: false,
+  useShopDefaultContributions: true,
+  sssAmount: null,
+  philhealthAmount: null,
+  pagibigAmount: null,
   notes: null,
 };
 
@@ -49,6 +53,8 @@ describe("summarizeAdjustmentTotals", () => {
         label: "Bonus",
         amount: 250,
         notes: null,
+        source: "manual",
+        systemKey: null,
         createdAt: "2026-05-01T00:00:00.000Z",
         updatedAt: "2026-05-01T00:00:00.000Z",
       },
@@ -59,6 +65,8 @@ describe("summarizeAdjustmentTotals", () => {
         label: "SSS",
         amount: 100,
         notes: null,
+        source: "manual",
+        systemKey: null,
         createdAt: "2026-05-01T00:00:00.000Z",
         updatedAt: "2026-05-01T00:00:00.000Z",
       },

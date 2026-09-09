@@ -39,6 +39,18 @@ export function PayslipPrintLayout({
                   value={item.payBasis ? formatPayBasisLabel(item.payBasis) : "Not configured"}
                 />
                 <MetadataRow label="Generated" value={formatDateTime(generatedAt)} />
+                {item.sssNumber?.trim() ? (
+                  <MetadataRow label="SSS No." value={item.sssNumber.trim()} />
+                ) : null}
+                {item.philhealthNumber?.trim() ? (
+                  <MetadataRow label="PhilHealth No." value={item.philhealthNumber.trim()} />
+                ) : null}
+                {item.tinNumber?.trim() ? (
+                  <MetadataRow label="TIN" value={item.tinNumber.trim()} />
+                ) : null}
+                {item.pagibigNumber?.trim() ? (
+                  <MetadataRow label="Pag-IBIG No." value={item.pagibigNumber.trim()} />
+                ) : null}
               </div>
             </div>
 
@@ -122,17 +134,33 @@ function PayslipSummary({
     item.manualAdditionsTotal > 0
       ? [{ label: "Manual additions", value: item.manualAdditionsTotal }]
       : [];
+  const governmentLines = item.adjustments
+    .filter(
+      (adjustment) =>
+        adjustment.adjustmentType === "deduction" &&
+        (adjustment.source === "system_government" ||
+          ["sss", "philhealth", "pagibig"].includes(
+            adjustment.label.trim().toLowerCase().replace(/[^a-z0-9]+/g, ""),
+          )),
+    )
+    .map((adjustment) => ({
+      label: adjustment.label,
+      value: adjustment.amount,
+    }));
+  const governmentTotal = governmentLines.reduce((sum, line) => sum + line.value, 0);
+  const remainingManualDeductions = Math.max(0, item.manualDeductionsTotal - governmentTotal);
+  const deductionLines = [
+    { label: "Late deductions", value: item.lateDeductionAmount },
+    ...governmentLines,
+    ...(remainingManualDeductions > 0
+      ? [{ label: "Manual deductions", value: remainingManualDeductions }]
+      : []),
+  ];
 
   return (
     <div className="w-full max-w-[250px] text-[12px]">
       <PayslipSummaryGroup title="Earnings" lines={[...earnings, ...additions]} />
-      <PayslipSummaryGroup
-        title="Deductions"
-        lines={[
-          { label: "Late deductions", value: item.lateDeductionAmount },
-          { label: "Manual deductions", value: item.manualDeductionsTotal },
-        ]}
-      />
+      <PayslipSummaryGroup title="Deductions" lines={deductionLines} />
       <div className="mt-1 border-t border-brand-border pt-1">
         <PayslipSummaryLine label="Net pay" value={item.netPay} emphasized />
       </div>

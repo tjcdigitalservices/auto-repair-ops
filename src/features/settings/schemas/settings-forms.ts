@@ -88,7 +88,20 @@ export const operationalRulesSettingsSchema = z.object({
       (value) => Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 1000,
       "Holiday premium rate must be between 0 and 1000 percent.",
     ),
+  payrollDefaultSssAmount: moneyAmountField("SSS"),
+  payrollDefaultPhilhealthAmount: moneyAmountField("PhilHealth"),
+  payrollDefaultPagibigAmount: moneyAmountField("Pag-IBIG"),
 });
+
+function moneyAmountField(label: string) {
+  return z
+    .string()
+    .trim()
+    .refine(
+      (value) => Number.isFinite(Number(value)) && Number(value) >= 0,
+      `${label} amount must be zero or greater.`,
+    );
+}
 
 export const documentSequenceSettingsSchema = z.object({
   key: z.enum(["quotation", "job_order", "invoice", "sale"]),
@@ -159,6 +172,9 @@ export function parseOperationalRulesSettingsFormData(formData: FormData) {
     enableShelfLocation: readCheckbox(formData, "enableShelfLocation"),
     payrollStandardDailyHours: readString(formData, "payrollStandardDailyHours"),
     payrollHolidayPremiumRate: readString(formData, "payrollHolidayPremiumRate"),
+    payrollDefaultSssAmount: readString(formData, "payrollDefaultSssAmount"),
+    payrollDefaultPhilhealthAmount: readString(formData, "payrollDefaultPhilhealthAmount"),
+    payrollDefaultPagibigAmount: readString(formData, "payrollDefaultPagibigAmount"),
   };
 }
 

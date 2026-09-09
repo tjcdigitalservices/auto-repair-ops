@@ -407,6 +407,11 @@ export function buildCompensationProfileFormValues(
     allowancePerPeriod: profile ? formatMoneyInputValue(profile.allowancePerPeriod) : formatMoneyInputValue(0),
     effectiveStartDate: profile?.effectiveStartDate ?? getBusinessNow().toFormat("yyyy-LL-dd"),
     exemptFromAttendance: profile?.exemptFromAttendance ?? false,
+    useShopDefaultContributions: profile?.useShopDefaultContributions ?? true,
+    sssAmount: profile?.sssAmount != null ? formatMoneyInputValue(profile.sssAmount) : "",
+    philhealthAmount:
+      profile?.philhealthAmount != null ? formatMoneyInputValue(profile.philhealthAmount) : "",
+    pagibigAmount: profile?.pagibigAmount != null ? formatMoneyInputValue(profile.pagibigAmount) : "",
     notes: profile?.notes ?? "",
   };
 }
@@ -423,6 +428,7 @@ export function buildDefaultPayrollPeriodFormValues(): PayrollPeriodFormValues {
     periodEndDate: endOfMonth,
     payoutDate: endOfMonth,
     notes: "",
+    applyGovernmentDeductions: true,
   };
 }
 

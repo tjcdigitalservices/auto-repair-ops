@@ -26,18 +26,38 @@ const optionalMoneyField = z
     message: "Enter a valid amount with up to 4 decimal places.",
   });
 
-export const compensationProfileSchema = z.object({
-  staffId: z.string().uuid("Select a staff member."),
-  payBasis: z.enum(["monthly", "daily", "hourly"]),
-  baseRate: moneyField,
-  overtimeRate: optionalMoneyField,
-  allowancePerPeriod: moneyField,
-  effectiveStartDate: z.string().trim().refine(isValidDate, {
-    message: "Enter a valid effective date.",
-  }),
-  exemptFromAttendance: z.boolean(),
-  notes: z.string().trim().max(500, "Notes must be 500 characters or fewer."),
-});
+export const compensationProfileSchema = z
+  .object({
+    staffId: z.string().uuid("Select a staff member."),
+    payBasis: z.enum(["monthly", "daily", "hourly"]),
+    baseRate: moneyField,
+    overtimeRate: optionalMoneyField,
+    allowancePerPeriod: moneyField,
+    effectiveStartDate: z.string().trim().refine(isValidDate, {
+      message: "Enter a valid effective date.",
+    }),
+    exemptFromAttendance: z.boolean(),
+    useShopDefaultContributions: z.boolean(),
+    sssAmount: optionalMoneyField,
+    philhealthAmount: optionalMoneyField,
+    pagibigAmount: optionalMoneyField,
+    notes: z.string().trim().max(500, "Notes must be 500 characters or fewer."),
+  })
+  .superRefine((values, context) => {
+    if (values.useShopDefaultContributions) {
+      return;
+    }
+
+    (["sssAmount", "philhealthAmount", "pagibigAmount"] as const).forEach((field) => {
+      if (!values[field].trim()) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [field],
+          message: "Enter a contribution amount, or use shop defaults.",
+        });
+      }
+    });
+  });
 
 export const payrollPeriodSchema = z
   .object({
@@ -52,6 +72,7 @@ export const payrollPeriodSchema = z
       message: "Enter a valid payout date.",
     }),
     notes: z.string().trim().max(500, "Notes must be 500 characters or fewer."),
+    applyGovernmentDeductions: z.boolean(),
   })
   .superRefine((values, context) => {
     const startDate = parseDate(values.periodStartDate);
@@ -98,6 +119,10 @@ export function parseCompensationProfileFormData(formData: FormData): Compensati
     allowancePerPeriod: readString(formData, "allowancePerPeriod"),
     effectiveStartDate: readString(formData, "effectiveStartDate"),
     exemptFromAttendance: formData.get("exemptFromAttendance") === "true",
+    useShopDefaultContributions: formData.get("useShopDefaultContributions") === "true",
+    sssAmount: readString(formData, "sssAmount"),
+    philhealthAmount: readString(formData, "philhealthAmount"),
+    pagibigAmount: readString(formData, "pagibigAmount"),
     notes: readString(formData, "notes"),
   };
 }
@@ -109,6 +134,7 @@ export function parsePayrollPeriodFormData(formData: FormData): PayrollPeriodFor
     periodEndDate: readString(formData, "periodEndDate"),
     payoutDate: readString(formData, "payoutDate"),
     notes: readString(formData, "notes"),
+    applyGovernmentDeductions: formData.get("applyGovernmentDeductions") !== "false",
   };
 }
 

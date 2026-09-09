@@ -89,6 +89,9 @@ describe("settings form schemas", () => {
       enableShelfLocation: false,
       payrollStandardDailyHours: "8",
       payrollHolidayPremiumRate: "30",
+      payrollDefaultSssAmount: "450",
+      payrollDefaultPhilhealthAmount: "400",
+      payrollDefaultPagibigAmount: "100",
     });
 
     expect(parsed.success).toBe(true);
@@ -108,6 +111,9 @@ describe("settings form schemas", () => {
       enableShelfLocation: false,
       payrollStandardDailyHours: "0",
       payrollHolidayPremiumRate: "-5",
+      payrollDefaultSssAmount: "-1",
+      payrollDefaultPhilhealthAmount: "400",
+      payrollDefaultPagibigAmount: "100",
     });
 
     expect(parsed.success).toBe(false);

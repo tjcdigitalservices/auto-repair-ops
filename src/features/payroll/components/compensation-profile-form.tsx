@@ -204,6 +204,115 @@ export function CompensationProfileForm({
         </label>
       </div>
 
+      <div className="space-y-4 rounded-2xl border border-border/70 bg-muted/20 px-4 py-4">
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            name="useShopDefaultContributions"
+            value="true"
+            checked={values.useShopDefaultContributions}
+            onChange={(event) =>
+              updateFormValue("useShopDefaultContributions", event.target.checked)
+            }
+            className="mt-1 size-4 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+          <span className="space-y-1">
+            <span className="block text-sm font-medium text-foreground">
+              Use shop default contribution amounts
+            </span>
+            <span className="block text-sm text-muted-foreground">
+              Keep this on for most staff. Uncheck only when this person needs different SSS,
+              PhilHealth, or Pag-IBIG amounts per period.
+            </span>
+          </span>
+        </label>
+
+        {!values.useShopDefaultContributions ? (
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="compensationSssAmount" required>
+                SSS amount
+              </Label>
+              <Input
+                id="compensationSssAmount"
+                name="sssAmount"
+                inputMode="decimal"
+                type="number"
+                step={MONEY_INPUT_STEP}
+                value={values.sssAmount}
+                onChange={(event) => updateFormValue("sssAmount", event.target.value)}
+                className={fieldControlClassName(state.fieldErrors, "sssAmount")}
+                {...fieldAriaProps({
+                  errors: state.fieldErrors,
+                  name: "sssAmount",
+                  required: true,
+                  errorId: fieldErrorId("sssAmount"),
+                })}
+              />
+              <FieldError errors={state.fieldErrors} name="sssAmount" id={fieldErrorId("sssAmount")} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="compensationPhilhealthAmount" required>
+                PhilHealth amount
+              </Label>
+              <Input
+                id="compensationPhilhealthAmount"
+                name="philhealthAmount"
+                inputMode="decimal"
+                type="number"
+                step={MONEY_INPUT_STEP}
+                value={values.philhealthAmount}
+                onChange={(event) => updateFormValue("philhealthAmount", event.target.value)}
+                className={fieldControlClassName(state.fieldErrors, "philhealthAmount")}
+                {...fieldAriaProps({
+                  errors: state.fieldErrors,
+                  name: "philhealthAmount",
+                  required: true,
+                  errorId: fieldErrorId("philhealthAmount"),
+                })}
+              />
+              <FieldError
+                errors={state.fieldErrors}
+                name="philhealthAmount"
+                id={fieldErrorId("philhealthAmount")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="compensationPagibigAmount" required>
+                Pag-IBIG amount
+              </Label>
+              <Input
+                id="compensationPagibigAmount"
+                name="pagibigAmount"
+                inputMode="decimal"
+                type="number"
+                step={MONEY_INPUT_STEP}
+                value={values.pagibigAmount}
+                onChange={(event) => updateFormValue("pagibigAmount", event.target.value)}
+                className={fieldControlClassName(state.fieldErrors, "pagibigAmount")}
+                {...fieldAriaProps({
+                  errors: state.fieldErrors,
+                  name: "pagibigAmount",
+                  required: true,
+                  errorId: fieldErrorId("pagibigAmount"),
+                })}
+              />
+              <FieldError
+                errors={state.fieldErrors}
+                name="pagibigAmount"
+                id={fieldErrorId("pagibigAmount")}
+              />
+            </div>
+          </div>
+        ) : (
+          <>
+            <input type="hidden" name="sssAmount" value={values.sssAmount} />
+            <input type="hidden" name="philhealthAmount" value={values.philhealthAmount} />
+            <input type="hidden" name="pagibigAmount" value={values.pagibigAmount} />
+          </>
+        )}
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="compensationNotes" optional>Notes</Label>
         <Textarea

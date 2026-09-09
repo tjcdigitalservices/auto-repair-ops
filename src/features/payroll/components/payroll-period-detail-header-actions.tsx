@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Download, Printer, RotateCcw } from "lucide-react";
+import { Download, FileSpreadsheet, Printer, RotateCcw } from "lucide-react";
 
 import { PageHeaderActions } from "@/components/shared/page-header-actions";
 import {
@@ -31,12 +31,14 @@ import type {
 
 export function PayrollPeriodDetailHeaderActions({
   periodId,
+  periodEndDate,
   status,
   hasGeneratedCut,
   items,
   summary,
 }: {
   periodId: string;
+  periodEndDate: string;
   status: PayrollPeriodStatus;
   hasGeneratedCut: boolean;
   items: PayrollPeriodItemSummary[];
@@ -52,10 +54,11 @@ export function PayrollPeriodDetailHeaderActions({
   );
 
   const isFinalized = status === "finalized";
+  const remittanceMonth = periodEndDate.slice(0, 7);
   const generateFormId = `payroll-generate-cut-${periodId}`;
   const returnDraftFormId = `payroll-return-draft-${periodId}`;
   const lockFormId = `payroll-lock-${periodId}`;
-  const showOverflow = hasGeneratedCut || status === "processing";
+  const showOverflow = hasGeneratedCut || status === "processing" || isFinalized;
 
   function scrollToEmployees() {
     document.getElementById("payroll-items")?.scrollIntoView({ behavior: "smooth" });
@@ -120,6 +123,13 @@ export function PayrollPeriodDetailHeaderActions({
                     icon={Download}
                   />
                 </>
+              ) : null}
+              {isFinalized ? (
+                <TableRowActionsMenuLink
+                  href={`/payroll?tab=remittance&month=${encodeURIComponent(remittanceMonth)}`}
+                  label="Remittance summary"
+                  icon={FileSpreadsheet}
+                />
               ) : null}
               {status === "processing" ? (
                 <TableRowActionsMenuButton

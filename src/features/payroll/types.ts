@@ -34,6 +34,10 @@ export type CompensationProfileSummary = {
   allowancePerPeriod: number;
   effectiveStartDate: string;
   exemptFromAttendance: boolean;
+  useShopDefaultContributions: boolean;
+  sssAmount: number | null;
+  philhealthAmount: number | null;
+  pagibigAmount: number | null;
   notes: string | null;
 };
 
@@ -76,6 +80,7 @@ export type PayrollPeriodSummary = {
   payoutDate: string;
   status: PayrollPeriodStatus;
   notes: string | null;
+  applyGovernmentDeductions: boolean;
   createdByStaffId: string | null;
   generatedByStaffId: string | null;
   generatedAt: string | null;
@@ -103,6 +108,10 @@ export type CompensationProfileFormValues = {
   allowancePerPeriod: string;
   effectiveStartDate: string;
   exemptFromAttendance: boolean;
+  useShopDefaultContributions: boolean;
+  sssAmount: string;
+  philhealthAmount: string;
+  pagibigAmount: string;
   notes: string;
 };
 
@@ -112,6 +121,7 @@ export type PayrollPeriodFormValues = {
   periodEndDate: string;
   payoutDate: string;
   notes: string;
+  applyGovernmentDeductions: boolean;
 };
 
 export type PayrollPeriodStatusFormValues = {
@@ -309,6 +319,8 @@ export type PayrollPeriodItemAdjustmentSummary = {
   label: string;
   amount: number;
   notes: string | null;
+  source: "manual" | "system_government";
+  systemKey: "sss" | "philhealth" | "pagibig" | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -433,7 +445,60 @@ export type PayrollPrintDocument = PayrollPeriodDetailData & {
 export type PayslipPrintDocument = {
   period: PayrollPeriodSummary;
   settings: PayrollSettingsSummary;
-  item: PayrollPeriodItemSummary;
+  item: PayrollPeriodItemSummary & {
+    sssNumber: string | null;
+    philhealthNumber: string | null;
+    tinNumber: string | null;
+    pagibigNumber: string | null;
+  };
+  businessProfile: PrintDocumentBusinessProfile;
+  generatedAt: string;
+};
+
+export type RemittanceIncludedPeriod = {
+  id: string;
+  label: string;
+  periodStartDate: string;
+  periodEndDate: string;
+  payoutDate: string;
+  finalizedAt: string | null;
+};
+
+export type RemittanceEmployeeRow = {
+  staffId: string;
+  fullName: string;
+  role: StaffRole;
+  sssNumber: string | null;
+  philhealthNumber: string | null;
+  pagibigNumber: string | null;
+  tinNumber: string | null;
+  sssAmount: number;
+  philhealthAmount: number;
+  pagibigAmount: number;
+  totalAmount: number;
+  missingIdCount: number;
+};
+
+export type RemittanceContributionTotals = {
+  sssAmount: number;
+  philhealthAmount: number;
+  pagibigAmount: number;
+  totalAmount: number;
+};
+
+export type RemittanceSummaryData = {
+  month: string;
+  monthLabel: string;
+  monthStartDate: string;
+  monthEndDate: string;
+  includedPeriods: RemittanceIncludedPeriod[];
+  employees: RemittanceEmployeeRow[];
+  totals: RemittanceContributionTotals;
+  employeeCount: number;
+  employeesMissingIdsCount: number;
+};
+
+export type RemittancePrintDocument = RemittanceSummaryData & {
   businessProfile: PrintDocumentBusinessProfile;
   generatedAt: string;
 };

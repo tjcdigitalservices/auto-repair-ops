@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
 
 import {
   FieldError,
@@ -22,6 +21,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
 import { useFormValues } from "@/lib/use-form-values";
 import { createServiceAction, updateServiceAction } from "@/features/services/actions/service-actions";
+import { saveSandboxServiceAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import type { ServiceFormValues } from "@/features/services/types";
 import { MONEY_INPUT_STEP } from "@/lib/currency";
 
@@ -40,8 +41,9 @@ export function ServiceForm({
     };
   };
 }) {
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     mode === "create" ? createServiceAction : updateServiceAction,
+    saveSandboxServiceAction,
     INITIAL_FORM_ACTION_STATE,
   );
   const { values, updateFormValue } = useFormValues(initialValues);

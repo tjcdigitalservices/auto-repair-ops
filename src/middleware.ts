@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { isSandboxAppPath, SANDBOX_COOKIE, sandboxAppPath } from "@/features/sandbox/constants";
 import {
   copyResponseCookies,
   updateSupabaseSession,
@@ -36,8 +37,28 @@ function extractTenantSlug(request: NextRequest): string {
   );
 }
 
+function isSandboxMutation(request: NextRequest) {
+  return (
+    request.method !== "GET" &&
+    (request.headers.has("next-action") ||
+      request.headers.get("content-type")?.includes("multipart/form-data"))
+  );
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const sandboxActive = request.cookies.get(SANDBOX_COOKIE)?.value === "1";
+
+  if (
+    sandboxActive &&
+    isSandboxAppPath(pathname) &&
+    isSandboxMutation(request)
+  ) {
+    return NextResponse.json(
+      { error: "Sandbox records stay in this browser and are not sent to the shop database." },
+      { status: 403 },
+    );
+  }
 
   if (
     pathname.startsWith("/_next") ||
@@ -47,11 +68,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (
-    request.method !== "GET" &&
-    (request.headers.has("next-action") ||
-      request.headers.get("content-type")?.includes("multipart/form-data"))
-  ) {
+  if (isSandboxMutation(request)) {
     return NextResponse.next();
   }
 
@@ -65,7 +82,7 @@ export async function middleware(request: NextRequest) {
   if (rewriteMatch) {
     const rest = rewriteMatch[2] || "/";
     const url = request.nextUrl.clone();
-    url.pathname = rest;
+    url.pathname = sandboxActive && isSandboxAppPath(rest) ? `/sandbox${rest === "/" ? "" : rest}` : rest;
     const rewriteResponse = NextResponse.rewrite(url, {
       request: { headers: requestHeaders },
     });
@@ -90,6 +107,17 @@ export async function middleware(request: NextRequest) {
       path: "/",
       sameSite: "lax",
     });
+  }
+
+  if (sandboxActive && isSandboxAppPath(pathname)) {
+    const url = request.nextUrl.clone();
+    const appPath = sandboxAppPath(pathname);
+    url.pathname = `/sandbox${appPath === "/" ? "" : appPath}`;
+    const rewriteResponse = NextResponse.rewrite(url, {
+      request: { headers: requestHeaders },
+    });
+    copyResponseCookies(sessionResponse, rewriteResponse);
+    return rewriteResponse;
   }
 
   return sessionResponse;

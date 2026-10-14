@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 
 import { AddEntryButton } from '@/components/shared/add-entry-button';
@@ -69,6 +69,12 @@ import type {
   VehicleFormValues,
 } from '@/features/vehicles/types';
 import { INITIAL_FORM_ACTION_STATE } from '@/lib/forms';
+import {
+  quickCreateSandboxCustomerForQuotationAction,
+  quickCreateSandboxVehicleForQuotationAction,
+  saveSandboxQuotationAction,
+} from '@/features/sandbox/form-actions';
+import { useBoundAction } from '@/features/sandbox/use-bound-action';
 import { useFormValues } from '@/lib/use-form-values';
 import { cn } from '@/lib/utils';
 
@@ -100,8 +106,9 @@ export function QuotationCreateFlow({
   initialValues: QuotationFormValues;
   prefillLastName?: string;
 }) {
-  const [quotationState, quotationFormAction] = useActionState(
+  const [quotationState, quotationFormAction] = useBoundAction(
     createQuotationAction,
+    saveSandboxQuotationAction,
     INITIAL_FORM_ACTION_STATE,
   );
   const [customerOptions, setCustomerOptions] = useState(() =>
@@ -1209,11 +1216,12 @@ function QuickCustomerCreateForm({
   onBack: () => void;
   onCreated: (customer: CustomerOption) => void;
 }) {
-  const [state, formAction] = useActionState<
+  const [state, formAction] = useBoundAction<
     QuotationQuickCustomerActionState,
     FormData
   >(
     quickCreateCustomerForQuotationAction,
+    quickCreateSandboxCustomerForQuotationAction,
     INITIAL_QUOTATION_CREATE_FLOW_ACTION_STATE,
   );
   const { values, setValues, updateFormValue } =
@@ -1409,11 +1417,12 @@ function QuickVehicleCreateForm({
   lookupData: VehicleFormLookupData;
   onCreated: (vehicle: QuotationVehicleOption) => void;
 }) {
-  const [state, formAction] = useActionState<
+  const [state, formAction] = useBoundAction<
     QuotationQuickVehicleActionState,
     FormData
   >(
     quickCreateVehicleForQuotationAction,
+    quickCreateSandboxVehicleForQuotationAction,
     INITIAL_QUOTATION_CREATE_FLOW_ACTION_STATE,
   );
   const initialVehicleValues = useMemo<VehicleFormValues>(

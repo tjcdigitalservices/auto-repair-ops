@@ -4,6 +4,8 @@ import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog";
 import { PagePrimaryAction } from "@/components/shared/page-header-actions";
 import { Button } from "@/components/ui/button";
 import { approveQuotationAction } from "@/features/quotations/actions/quotation-actions";
+import { approveSandboxQuotationAction } from "@/features/sandbox/form-actions";
+import { useBoundFormAction } from "@/features/sandbox/use-bound-action";
 
 export function QuotationDetailPrimaryAction({
   quotationId,
@@ -16,6 +18,8 @@ export function QuotationDetailPrimaryAction({
   canApprove: boolean;
   isApproved: boolean;
 }) {
+  const approveAction = useBoundFormAction(approveQuotationAction, approveSandboxQuotationAction);
+
   if (isApproved) {
     return (
       <PagePrimaryAction href={`/quotations/${quotationId}/revise`}>
@@ -34,7 +38,7 @@ export function QuotationDetailPrimaryAction({
         )}
         title={`Approve ${quotationNumber}?`}
         description="This will approve the quotation and create a linked job order."
-        action={approveQuotationAction}
+        action={approveAction}
         fields={[{ name: "quotationId", value: quotationId }]}
         confirmLabel="Approve Quote"
         cancelLabel="Cancel"

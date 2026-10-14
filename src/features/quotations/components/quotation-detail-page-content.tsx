@@ -24,6 +24,9 @@ import {
   deleteQuotationAction,
   rejectQuotationAction,
 } from "@/features/quotations/actions/quotation-actions";
+import { deleteSandboxQuotationAction, rejectSandboxQuotationAction } from "@/features/sandbox/form-actions";
+import { stripSandboxBasePath } from "@/features/sandbox/constants";
+import { useBoundFormAction } from "@/features/sandbox/use-bound-action";
 import { QuotationDetailPrimaryAction } from "@/features/quotations/components/quotation-detail-primary-action";
 import { QuotationDetailSidebar } from "@/features/quotations/components/quotation-detail-sidebar";
 import { QuotationLineItemsTab } from "@/features/quotations/components/quotation-line-items-tab";
@@ -65,7 +68,9 @@ export function QuotationDetailPageContent({
   canApprove: boolean;
   canDelete: boolean;
 }) {
-  const pathname = usePathname();
+  const pathname = stripSandboxBasePath(usePathname());
+  const rejectAction = useBoundFormAction(rejectQuotationAction, rejectSandboxQuotationAction);
+  const deleteAction = useBoundFormAction(deleteQuotationAction, deleteSandboxQuotationAction);
   const router = useRouter();
   const searchParams = useSearchParams();
   const showRevisionHistory = quotation.status === "approved";
@@ -158,7 +163,7 @@ export function QuotationDetailPageContent({
                       confirmLabel="Reject quotation"
                       cancelLabel="Keep quotation"
                       icon={X}
-                      action={rejectQuotationAction}
+                      action={rejectAction}
                       fields={[{ name: "quotationId", value: quotation.id }]}
                     />
                   ) : null}
@@ -170,7 +175,7 @@ export function QuotationDetailPageContent({
                       confirmLabel="Delete quotation"
                       cancelLabel="Keep quotation"
                       icon={Trash2}
-                      action={deleteQuotationAction}
+                      action={deleteAction}
                       fields={[{ name: "quotationId", value: quotation.id }]}
                     />
                   ) : null}

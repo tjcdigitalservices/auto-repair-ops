@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { FormStickyActions } from "@/components/shared/form-sticky-actions";
 import {
@@ -22,6 +22,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
 import { useFormValues } from "@/lib/use-form-values";
 import { createProductAction, updateProductAction } from "@/features/products/actions/product-actions";
+import { saveSandboxProductAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import { ProductImage } from "@/features/products/components/product-image";
 import type { ProductFormValues, ReferenceOption } from "@/features/products/types";
 import { MONEY_INPUT_STEP } from "@/lib/currency";
@@ -50,8 +52,9 @@ export function ProductForm({
   };
   initialImagePreviewUrl?: string | null;
 }) {
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     mode === "create" ? createProductAction : updateProductAction,
+    saveSandboxProductAction,
     INITIAL_FORM_ACTION_STATE,
   );
   const { values, updateFormValue } = useFormValues(initialValues);

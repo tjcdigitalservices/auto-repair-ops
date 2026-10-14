@@ -49,7 +49,11 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["sharp"],
   ...(isDev
     ? {
-        allowedDevOrigins: appendOriginsFromEnv([...privateLanHostPatterns]),
+        allowedDevOrigins: appendOriginsFromEnv([
+          "localhost",
+          "127.0.0.1",
+          ...privateLanHostPatterns,
+        ]),
       }
     : {}),
   images: supabaseUrl

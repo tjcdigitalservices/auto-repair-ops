@@ -1,0 +1,150 @@
+import Link from "next/link";
+
+import { DataTableCard } from "@/components/shared/data-table-card";
+import { DataTableFilters } from "@/components/shared/data-table-filters";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
+import { EmptyState } from "@/components/shared/empty-state";
+import { FormStatusMessage } from "@/components/shared/form-status";
+import { PageHeader } from "@/components/shared/page-header";
+import { PageHeaderActions, PagePrimaryAction } from "@/components/shared/page-header-actions";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { TableCellLink } from "@/components/shared/table-cell-link";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { CustomerRowActions } from "@/features/customers/components/customer-row-actions";
+import type { CustomerListItem } from "@/features/customers/types";
+import { formatDate } from "@/lib/dates";
+import { paginateItems } from "@/lib/pagination";
+
+export function CustomersPageView({
+  customers,
+  search,
+  page,
+  error,
+  canManageCustomers,
+}: {
+  customers: CustomerListItem[];
+  search: string;
+  page?: string;
+  error?: string;
+  canManageCustomers: boolean;
+}) {
+  const pagination = paginateItems(customers, page);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Customers"
+        description="Customer records used across quotations, job orders, and service history."
+        actions={
+          canManageCustomers ? (
+            <PageHeaderActions
+              primary={<PagePrimaryAction href="/customers/new">New Customer</PagePrimaryAction>}
+            />
+          ) : null
+        }
+      />
+
+      <FormStatusMessage message={error} />
+
+      <DataTableCard
+        toolbar={
+          <DataTableFilters
+            key={search}
+            className="md:grid md:grid-cols-[minmax(0,1fr)]"
+            search={{
+              value: search,
+              placeholder: "Search customer, mobile number, or email",
+            }}
+          />
+        }
+        footer={
+          <DataTablePagination
+            page={pagination.page}
+            pageSize={pagination.pageSize}
+            totalItems={pagination.totalItems}
+            totalPages={pagination.totalPages}
+            startItem={pagination.startItem}
+            endItem={pagination.endItem}
+          />
+        }
+      >
+        {pagination.totalItems === 0 ? (
+          <EmptyState
+            title="No customers found"
+            description="Add the first customer now so vehicles and workshop documents can link cleanly later."
+            action={canManageCustomers ? (
+              <Button asChild>
+                <Link href="/customers/new">Create customer</Link>
+              </Button>
+            ) : null}
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created</TableHead>
+                  {canManageCustomers ? <TableHead className="text-right">Actions</TableHead> : null}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pagination.items.map((customer) => (
+                  <TableRow key={customer.id}>
+                    <TableCell>
+                      <TableCellLink href={`/customers/${customer.id}`}>
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-medium text-foreground transition-colors group-hover:text-primary">
+                            {customer.displayName}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{customer.email ?? "No email"}</p>
+                        </div>
+                      </TableCellLink>
+                    </TableCell>
+                    <TableCell>
+                      <TableCellLink
+                        href={`/customers/${customer.id}`}
+                        className="capitalize text-foreground"
+                      >
+                        {customer.customerType.replace("_", " ")}
+                      </TableCellLink>
+                    </TableCell>
+                    <TableCell>
+                      <TableCellLink href={`/customers/${customer.id}`} className="text-foreground">
+                        {customer.contactNumber ?? "No contact number"}
+                      </TableCellLink>
+                    </TableCell>
+                    <TableCell>
+                      <TableCellLink href={`/customers/${customer.id}`}>
+                        <StatusBadge tone={customer.status === "active" ? "success" : "neutral"} variant="table">
+                          {customer.status}
+                        </StatusBadge>
+                      </TableCellLink>
+                    </TableCell>
+                    <TableCell>
+                      <TableCellLink href={`/customers/${customer.id}`} className="text-foreground">
+                        {formatDate(customer.createdAt)}
+                      </TableCellLink>
+                    </TableCell>
+                    {canManageCustomers ? (
+                      <TableCell className="w-14 text-right">
+                        <CustomerRowActions
+                          customerId={customer.id}
+                          customerLabel={customer.displayName}
+                        />
+                      </TableCell>
+                    ) : null}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </DataTableCard>
+    </div>
+  );
+}

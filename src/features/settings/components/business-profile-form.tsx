@@ -1,7 +1,7 @@
 "use client";
 
 import { AppLink } from "@/components/shared/app-link";
-import { useActionState, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { DEFAULT_BRAND_LOGO_SRC } from "@/components/shared/brand-assets";
 import { BrandLogo } from "@/components/shared/brand-logo";
@@ -19,6 +19,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { updateBusinessProfileSettingsAction } from "@/features/settings/actions/settings-actions";
+import { saveSandboxBusinessProfileAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import { BUSINESS_LOGO_MAX_FILE_SIZE_MB } from "@/features/settings/constants";
 import type { BusinessSettingsValues } from "@/features/settings/types";
 import { DEFAULT_BRAND_PACK } from "@/lib/branding/types";
@@ -36,8 +38,9 @@ export function BusinessProfileForm({
 }: {
   initialValues: BusinessSettingsValues;
 }) {
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     updateBusinessProfileSettingsAction,
+    saveSandboxBusinessProfileAction,
     INITIAL_FORM_ACTION_STATE,
   );
   const { values, updateFormValue } = useFormValues({

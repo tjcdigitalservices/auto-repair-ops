@@ -14,6 +14,7 @@ import {
   parseSignInFormData,
   signInSchema,
 } from "@/features/auth/schemas/sign-in-schema";
+import { SANDBOX_COOKIE } from "@/features/sandbox/constants";
 import { isTenantOperable } from "@/lib/tenants/status";
 
 export async function signInAction(
@@ -67,6 +68,14 @@ export async function signInAction(
     };
   }
 
+  const cookieStore = await cookies();
+  cookieStore.set(SANDBOX_COOKIE, "", {
+    httpOnly: true,
+    path: "/",
+    sameSite: "lax",
+    maxAge: 0,
+  });
+
   const signedInUserId = data.user?.id;
 
   if (!signedInUserId) {
@@ -119,7 +128,6 @@ export async function signInAction(
   }
 
   if (tenant.slug) {
-    const cookieStore = await cookies();
     cookieStore.set(TENANT_SLUG_COOKIE, tenant.slug, {
       path: "/",
       sameSite: "lax",

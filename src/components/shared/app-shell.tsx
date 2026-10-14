@@ -12,6 +12,7 @@ import {
   type NavigationGroup,
   type NavigationIconName,
 } from "@/lib/navigation";
+import { stripSandboxBasePath } from "@/features/sandbox/constants";
 
 const SIDEBAR_COLLAPSE_STORAGE_KEY = "say-admin-sidebar-collapsed";
 const TABLET_SIDEBAR_MEDIA_QUERY = "(min-width: 768px) and (max-width: 1023px)";
@@ -49,7 +50,7 @@ export function AppShell({
   businessMarkUrl?: string | null;
   showSidebarBusinessName?: boolean;
 }>) {
-  const pathname = usePathname();
+  const pathname = stripSandboxBasePath(usePathname());
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [hasHydrated, setHasHydrated] = useState(false);
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(false);

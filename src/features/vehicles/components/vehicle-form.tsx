@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   FieldError,
@@ -27,6 +27,8 @@ import {
   createVehicleAction,
   updateVehicleAction,
 } from "@/features/vehicles/actions/vehicle-actions";
+import { saveSandboxVehicleAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import type { VehicleFormLookupData, VehicleFormValues } from "@/features/vehicles/types";
 import { dedupeOptionsById } from "@/features/quotations/utils";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
@@ -42,8 +44,9 @@ export function VehicleForm({
   customerOptions: CustomerOption[];
   lookupData: VehicleFormLookupData;
 }) {
-  const [actionState, formAction] = useActionState(
+  const [actionState, formAction] = useBoundAction(
     mode === "create" ? createVehicleAction : updateVehicleAction,
+    saveSandboxVehicleAction,
     INITIAL_FORM_ACTION_STATE,
   );
   const [values, setValues] = useState(initialValues);

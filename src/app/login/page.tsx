@@ -115,6 +115,23 @@ export default async function LoginPage({
 
         <div className="mt-8">
           <LoginForm />
+          <div className="mt-5 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+            <span className="h-px flex-1 bg-slate-200" />
+            or
+            <span className="h-px flex-1 bg-slate-200" />
+          </div>
+          <form action="/api/sandbox/enter" method="post" className="mt-5">
+            <Button
+              type="submit"
+              variant="outline"
+              className="h-12 w-full rounded-xl text-sm font-semibold uppercase tracking-[0.18em]"
+            >
+              Try the sample shop
+            </Button>
+          </form>
+          <p className="mt-3 text-center text-xs leading-5 text-slate-500">
+            Browse the workshop without an account. Records stay in this browser.
+          </p>
         </div>
       </div>
     </LoginShell>

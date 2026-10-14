@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import {
   FieldError,
@@ -46,6 +46,11 @@ import {
   MONEY_INPUT_STEP,
 } from "@/lib/currency";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
+import {
+  reviseSandboxQuotationAction,
+  saveSandboxQuotationAction,
+} from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 
 export function QuotationForm({
   mode,
@@ -56,13 +61,23 @@ export function QuotationForm({
   initialValues: QuotationFormValues;
   options: QuotationFormOptions;
 }) {
-  const formAction =
-    mode === "create"
-      ? createQuotationAction
-      : mode === "revise"
-        ? reviseQuotationAction
-        : updateQuotationAction;
-  const [state, formActionState] = useActionState(formAction, INITIAL_FORM_ACTION_STATE);
+  const [createState, createAction] = useBoundAction(
+    createQuotationAction,
+    saveSandboxQuotationAction,
+    INITIAL_FORM_ACTION_STATE,
+  );
+  const [updateState, updateAction] = useBoundAction(
+    updateQuotationAction,
+    saveSandboxQuotationAction,
+    INITIAL_FORM_ACTION_STATE,
+  );
+  const [reviseState, reviseAction] = useBoundAction(
+    reviseQuotationAction,
+    reviseSandboxQuotationAction,
+    INITIAL_FORM_ACTION_STATE,
+  );
+  const state = mode === "create" ? createState : mode === "revise" ? reviseState : updateState;
+  const formActionState = mode === "create" ? createAction : mode === "revise" ? reviseAction : updateAction;
   const isJobOrderRevise = mode === "revise";
   const lockCustomerVehicle = isJobOrderRevise;
   const [customerId, setCustomerId] = useState(initialValues.customerId);

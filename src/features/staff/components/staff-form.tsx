@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import {
   FieldError,
@@ -22,6 +22,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { INITIAL_STAFF_ACTION_STATE } from "@/features/staff/types";
 import { useFormValues } from "@/lib/use-form-values";
 import { createStaffAction, updateStaffAction } from "@/features/staff/actions/staff-actions";
+import { saveSandboxStaffAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import { StaffPortalLoginSuccess } from "@/features/staff/components/staff-portal-login-success";
 import { StaffPortalLoginDomainFix } from "@/features/staff/components/staff-portal-login-domain-fix";
 import { isMechanicPortalUsername } from "@/features/staff/mechanic-login";
@@ -36,8 +38,9 @@ export function StaffForm({
   initialValues: StaffFormValues;
   portalEmailDomain: string;
 }) {
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     mode === "create" ? createStaffAction : updateStaffAction,
+    saveSandboxStaffAction,
     INITIAL_STAFF_ACTION_STATE,
   );
   const { values, updateFormValue } = useFormValues(initialValues);

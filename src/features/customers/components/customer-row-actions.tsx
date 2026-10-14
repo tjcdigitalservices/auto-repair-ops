@@ -6,6 +6,8 @@ import { Pencil, Trash2 } from "lucide-react";
 import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog";
 import { TableRowActionsMenu, TableRowActionsMenuButton, TableRowActionsMenuLink } from "@/components/shared/table-row-actions-menu";
 import { deleteCustomerAction } from "@/features/customers/actions/customer-actions";
+import { deleteSandboxCustomerAction } from "@/features/sandbox/form-actions";
+import { useBoundFormAction } from "@/features/sandbox/use-bound-action";
 
 export function CustomerRowActions({
   customerId,
@@ -14,6 +16,7 @@ export function CustomerRowActions({
   customerId: string;
   customerLabel: string;
 }) {
+  const deleteAction = useBoundFormAction(deleteCustomerAction, deleteSandboxCustomerAction);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   return (
@@ -32,7 +35,7 @@ export function CustomerRowActions({
         description="This customer will be removed permanently if there are no linked vehicles or operational records."
         confirmLabel="Delete customer"
         cancelLabel="Keep customer"
-        action={deleteCustomerAction}
+        action={deleteAction}
         fields={[{ name: "customerId", value: customerId }]}
         open={isDeleteOpen}
         onOpenChange={setIsDeleteOpen}

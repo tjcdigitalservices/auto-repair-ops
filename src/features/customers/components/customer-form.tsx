@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
 
 import { FieldError, FormRequiredFieldsNote, FormStatusMessage, fieldAriaProps, fieldControlClassName, fieldErrorId, formSelectClassName } from "@/components/shared/form-status";
 import { FormStickyActions } from "@/components/shared/form-sticky-actions";
@@ -11,13 +10,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
+import { useFormValues } from "@/lib/use-form-values";
 import {
   createCustomerAction,
   updateCustomerAction,
 } from "@/features/customers/actions/customer-actions";
+import { saveSandboxCustomerAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import type { CustomerFormValues } from "@/features/customers/types";
-import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
-import { useFormValues } from "@/lib/use-form-values";
 
 export function CustomerForm({
   mode,
@@ -26,8 +27,9 @@ export function CustomerForm({
   mode: "create" | "edit";
   initialValues: CustomerFormValues;
 }) {
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     mode === "create" ? createCustomerAction : updateCustomerAction,
+    saveSandboxCustomerAction,
     INITIAL_FORM_ACTION_STATE,
   );
   const { values, updateFormValue } = useFormValues(initialValues);

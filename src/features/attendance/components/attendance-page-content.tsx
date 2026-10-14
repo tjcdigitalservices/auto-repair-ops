@@ -51,13 +51,14 @@ import {
   getAttendanceStatusTone,
   getDefaultAttendanceDate,
 } from "@/features/attendance/utils";
+import { stripSandboxBasePath } from "@/features/sandbox/constants";
 import { formatDate } from "@/lib/dates";
 import { paginateItems } from "@/lib/pagination";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 export function AttendancePageContent({ data }: { data: AttendancePageData }) {
-  const pathname = usePathname();
+  const pathname = stripSandboxBasePath(usePathname());
   const router = useRouter();
   const searchParams = useSearchParams();
   const { leaveManagement, rosterData, attendanceData, attendanceCalendar, amendmentsReview } = data;

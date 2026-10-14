@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { upsertStaffScheduleAction } from "@/features/attendance/actions/attendance-actions";
+import { saveSandboxStaffScheduleAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import type { StaffScheduleFormValues } from "@/features/attendance/types";
 import { INITIAL_ATTENDANCE_ENTRY_ACTION_STATE } from "@/features/attendance/utils";
 import { useFormValues } from "@/lib/use-form-values";
@@ -53,8 +55,9 @@ export function StaffScheduleForm({
   closeDialog: () => void;
 }) {
   const router = useRouter();
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     upsertStaffScheduleAction,
+    saveSandboxStaffScheduleAction,
     INITIAL_ATTENDANCE_ENTRY_ACTION_STATE,
   );
   const { values, updateFormValue } = useFormValues(initialValues);

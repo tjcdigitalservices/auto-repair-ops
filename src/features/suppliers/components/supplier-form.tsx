@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
 
 import {
   FieldError,
@@ -22,6 +21,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
 import { useFormValues } from "@/lib/use-form-values";
 import { createSupplierAction, updateSupplierAction } from "@/features/suppliers/actions/supplier-actions";
+import { saveSandboxSupplierAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import type { SupplierFormValues } from "@/features/suppliers/types";
 
 export function SupplierForm({
@@ -31,8 +32,9 @@ export function SupplierForm({
   mode: "create" | "edit";
   initialValues: SupplierFormValues;
 }) {
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     mode === "create" ? createSupplierAction : updateSupplierAction,
+    saveSandboxSupplierAction,
     INITIAL_FORM_ACTION_STATE,
   );
   const { values, updateFormValue } = useFormValues(initialValues);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -17,6 +17,8 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { upsertAttendanceRecordAction } from "@/features/attendance/actions/attendance-actions";
+import { saveSandboxAttendanceAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import type { AttendanceFormValues } from "@/features/attendance/types";
 import { ATTENDANCE_STATUS_OPTIONS, INITIAL_ATTENDANCE_ENTRY_ACTION_STATE, isNonTimedAttendanceStatus } from "@/features/attendance/utils";
 import { formatDate } from "@/lib/dates";
@@ -32,8 +34,9 @@ export function AttendanceForm({
   closeDialog: () => void;
 }) {
   const router = useRouter();
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     upsertAttendanceRecordAction,
+    saveSandboxAttendanceAction,
     INITIAL_ATTENDANCE_ENTRY_ACTION_STATE,
   );
   const { values, updateFormValue } = useFormValues(initialValues);

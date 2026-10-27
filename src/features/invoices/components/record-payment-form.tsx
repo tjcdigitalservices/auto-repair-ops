@@ -1,7 +1,5 @@
 "use client";
 
-import { useActionState } from "react";
-
 import {
   FieldError,
   FormRequiredFieldsNote,
@@ -16,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { recordInvoicePaymentAction } from "@/features/invoices/actions/invoice-actions";
 import { PAYMENT_METHOD_OPTIONS } from "@/features/invoices/types";
+import { recordSandboxInvoicePaymentAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import { formatNumberForInput, MONEY_INPUT_STEP } from "@/lib/currency";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
 import { useFormValues } from "@/lib/use-form-values";
@@ -31,7 +31,11 @@ export function RecordPaymentForm({
   balance: number;
   allowPartialPayments: boolean;
 }) {
-  const [state, formAction] = useActionState(recordInvoicePaymentAction, INITIAL_FORM_ACTION_STATE);
+  const [state, formAction] = useBoundAction(
+    recordInvoicePaymentAction,
+    recordSandboxInvoicePaymentAction,
+    INITIAL_FORM_ACTION_STATE,
+  );
   const { values, updateFormValue } = useFormValues({
     amount: formatNumberForInput(balance, { maxDecimals: 2 }),
     paymentMethod: "cash",

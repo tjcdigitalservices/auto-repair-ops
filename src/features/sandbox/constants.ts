@@ -16,6 +16,7 @@ export const SANDBOX_PATH_PREFIXES = [
   "/pos",
   "/staff",
   "/attendance",
+  "/portal",
   "/payroll",
   "/reports",
   "/documents",

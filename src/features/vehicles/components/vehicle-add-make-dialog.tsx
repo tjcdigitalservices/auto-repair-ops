@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { Plus } from "lucide-react";
 
 import {
@@ -15,12 +15,18 @@ import { SubmitButton } from "@/components/shared/submit-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { createSandboxVehicleMakeAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import { createVehicleMakeAction } from "@/features/vehicles/actions/vehicle-lookup-actions";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
 import { useFormValues } from "@/lib/use-form-values";
 
 function AddMakeForm({ closeDialog }: { closeDialog: () => void }) {
-  const [state, formAction] = useActionState(createVehicleMakeAction, INITIAL_FORM_ACTION_STATE);
+  const [state, formAction] = useBoundAction(
+    createVehicleMakeAction,
+    createSandboxVehicleMakeAction,
+    INITIAL_FORM_ACTION_STATE,
+  );
   const form = useFormValues({
     name: "",
     sortOrder: "",

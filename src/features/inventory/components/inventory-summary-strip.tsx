@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PageMetric, PageMetrics } from "@/components/shared/page-metrics";
 import type { InventoryMetricStockState } from "@/features/inventory/constants";
 import type { InventoryStockFilterState, InventorySummary } from "@/features/inventory/types";
+import { stripSandboxBasePath } from "@/features/sandbox/constants";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +33,7 @@ export function InventorySummaryStrip({
   className?: string;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = stripSandboxBasePath(usePathname());
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
 

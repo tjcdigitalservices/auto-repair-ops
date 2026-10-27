@@ -35,6 +35,8 @@ import { InvoiceStatusBadge } from "@/features/invoices/components/invoice-statu
 import {
   removeMechanicAction,
 } from "@/features/job-orders/actions/job-order-actions";
+import { removeSandboxMechanicAction } from "@/features/sandbox/form-actions";
+import { useBoundFormAction } from "@/features/sandbox/use-bound-action";
 import { AssignMechanicForm } from "@/features/job-orders/components/assign-mechanic-form";
 import { JobOrderAdditionalItemDialog } from "@/features/job-orders/components/job-order-additional-item-dialog";
 import { JobOrderChecklistPanel } from "@/features/job-orders/components/job-order-checklist-panel";
@@ -459,6 +461,7 @@ function MechanicsTab({
   activeTab: JobOrderDetailTab;
 }) {
   const [search, setSearch] = useState("");
+  const removeAction = useBoundFormAction(removeMechanicAction, removeSandboxMechanicAction);
 
   const filteredMechanics = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -518,7 +521,7 @@ function MechanicsTab({
                     </EntityDataTableCell>
                     <EntityDataTableCell className="text-right">
                       {jobOrder.canAssignMechanics ? (
-                        <form action={removeMechanicAction}>
+                        <form action={removeAction}>
                           <input type="hidden" name="jobOrderId" value={jobOrder.id} />
                           <input type="hidden" name="assignmentId" value={mechanic.id} />
                           <input type="hidden" name="redirectTab" value={activeTab} />

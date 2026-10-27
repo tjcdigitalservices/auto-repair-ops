@@ -1,12 +1,18 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog";
 import { FormStatusMessage } from "@/components/shared/form-status";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Button } from "@/components/ui/button";
 import { updateJobOrderStatusAction } from "@/features/job-orders/actions/job-order-actions";
+import {
+  createSandboxInvoiceFromJobOrderAction,
+  releaseSandboxJobOrderVehicleAction,
+  updateSandboxJobOrderStatusAction,
+} from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import type { JobOrderDetail, JobOrderDetailTab } from "@/features/job-orders/types";
 import {
   getJobOrderPrimaryActionConfig,
@@ -64,8 +70,9 @@ function JobOrderStatusPrimaryActionForm({
   redirectTab: JobOrderDetailTab;
   actionConfig: NonNullable<ReturnType<typeof getJobOrderPrimaryActionConfig>>;
 }) {
-  const [, formAction] = useActionState(
+  const [, formAction] = useBoundAction(
     updateJobOrderStatusAction,
+    updateSandboxJobOrderStatusAction,
     INITIAL_FORM_ACTION_STATE,
   );
 
@@ -83,8 +90,9 @@ function JobOrderStatusPrimaryActionForm({
 }
 
 function CreateInvoicePrimaryAction({ jobOrderId }: { jobOrderId: string }) {
-  const [, formAction] = useActionState(
+  const [, formAction] = useBoundAction(
     createInvoiceFromJobOrderAction,
+    createSandboxInvoiceFromJobOrderAction,
     INITIAL_FORM_ACTION_STATE,
   );
 
@@ -136,8 +144,9 @@ function ReleaseJobOrderVehicleDialogForm({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     releaseJobOrderVehicleAction,
+    releaseSandboxJobOrderVehicleAction,
     INITIAL_FORM_ACTION_STATE,
   );
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   FieldError,
@@ -10,6 +10,8 @@ import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cancelInvoiceAction } from "@/features/invoices/actions/invoice-actions";
+import { cancelSandboxInvoiceAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
 
 export function CancelInvoiceDialog({
@@ -50,8 +52,9 @@ function CancelInvoiceDialogForm({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     cancelInvoiceAction,
+    cancelSandboxInvoiceAction,
     INITIAL_FORM_ACTION_STATE,
   );
   const [cancellationReason, setCancellationReason] = useState("");

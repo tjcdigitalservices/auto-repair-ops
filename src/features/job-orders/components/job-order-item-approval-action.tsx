@@ -6,6 +6,8 @@ import {
   TableRowActionsMenuButton,
 } from "@/components/shared/table-row-actions-menu";
 import { setJobOrderItemApprovalAction } from "@/features/job-orders/actions/job-order-actions";
+import { setSandboxJobOrderItemApprovalAction } from "@/features/sandbox/form-actions";
+import { useBoundFormAction } from "@/features/sandbox/use-bound-action";
 import type { JobOrderDetailTab } from "@/features/job-orders/types";
 
 export function JobOrderItemApprovalAction({
@@ -24,9 +26,13 @@ export function JobOrderItemApprovalAction({
   tone?: "default" | "destructive";
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const approvalAction = useBoundFormAction(
+    setJobOrderItemApprovalAction,
+    setSandboxJobOrderItemApprovalAction,
+  );
 
   return (
-    <form action={setJobOrderItemApprovalAction} ref={formRef}>
+    <form action={approvalAction} ref={formRef}>
       <input type="hidden" name="jobOrderId" value={jobOrderId} />
       <input type="hidden" name="jobOrderItemId" value={jobOrderItemId} />
       <input type="hidden" name="approvalStatus" value={approvalStatus} />

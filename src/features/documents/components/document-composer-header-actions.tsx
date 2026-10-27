@@ -21,6 +21,13 @@ import {
   duplicateDocumentAction,
   reviseDocumentFormAction,
 } from "@/features/documents/actions/document-actions";
+import {
+  archiveSandboxDocumentAction,
+  deleteSandboxDocumentAction,
+  duplicateSandboxDocumentAction,
+  reviseSandboxDocumentFormAction,
+} from "@/features/sandbox/form-actions";
+import { useBoundFormAction, useSandboxOptional } from "@/features/sandbox/use-bound-action";
 import { Button } from "@/components/ui/button";
 
 export function DocumentComposerHeaderActions({
@@ -37,6 +44,8 @@ export function DocumentComposerHeaderActions({
   onRename: () => void;
 }) {
   const router = useRouter();
+  const sandbox = useSandboxOptional();
+  const reviseAction = useBoundFormAction(reviseDocumentFormAction, reviseSandboxDocumentFormAction);
   const [isPending, startTransition] = useTransition();
   const isDraft = status === "draft";
   const canRevise = canReviseApprovedDocument(status);
@@ -52,7 +61,7 @@ export function DocumentComposerHeaderActions({
           <ReviseApprovedDocumentDialog
             title="Revise Published Document"
             description="Creating a revision will preserve the current published document and create a new editable draft linked to it."
-            action={reviseDocumentFormAction}
+            action={reviseAction}
             fields={[{ name: "documentId", value: documentId }]}
             triggerLabel="Revise"
             confirmLabel="Create Revision"
@@ -71,7 +80,9 @@ export function DocumentComposerHeaderActions({
               disabled={isPending}
               onSelect={() =>
                 startTransition(async () => {
-                  const result = await duplicateDocumentAction(documentId);
+                  const result = sandbox
+                    ? await duplicateSandboxDocumentAction(documentId)
+                    : await duplicateDocumentAction(documentId);
 
                   if (result.ok) {
                     router.push(`/documents/${result.document.id}`);
@@ -92,7 +103,9 @@ export function DocumentComposerHeaderActions({
                 disabled={isPending}
                 onSelect={() =>
                   startTransition(async () => {
-                    const result = await archiveDocumentAction(documentId);
+                    const result = sandbox
+                      ? await archiveSandboxDocumentAction(documentId)
+                      : await archiveDocumentAction(documentId);
 
                     if (result.ok) {
                       router.push("/documents");
@@ -110,7 +123,7 @@ export function DocumentComposerHeaderActions({
                 disabled={isPending}
                 onSelect={() =>
                   startTransition(() => {
-                    void deleteDocumentAction(documentId);
+                    void (sandbox ? deleteSandboxDocumentAction(documentId) : deleteDocumentAction(documentId));
                   })
                 }
               />

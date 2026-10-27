@@ -14,6 +14,12 @@ import {
   deleteDocumentAction,
   duplicateDocumentAction,
 } from "@/features/documents/actions/document-actions";
+import {
+  archiveSandboxDocumentAction,
+  deleteSandboxDocumentAction,
+  duplicateSandboxDocumentAction,
+} from "@/features/sandbox/form-actions";
+import { useSandboxOptional } from "@/features/sandbox/use-bound-action";
 
 export function DocumentRowActions({
   documentId,
@@ -23,6 +29,7 @@ export function DocumentRowActions({
   documentTitle: string;
 }) {
   const router = useRouter();
+  const sandbox = useSandboxOptional();
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -38,7 +45,9 @@ export function DocumentRowActions({
         disabled={isPending}
         onSelect={() =>
           startTransition(async () => {
-            const result = await duplicateDocumentAction(documentId);
+            const result = sandbox
+              ? await duplicateSandboxDocumentAction(documentId)
+              : await duplicateDocumentAction(documentId);
 
             if (result.ok) {
               router.push(`/documents/${result.document.id}`);
@@ -53,7 +62,9 @@ export function DocumentRowActions({
         disabled={isPending}
         onSelect={() =>
           startTransition(async () => {
-            const result = await archiveDocumentAction(documentId);
+            const result = sandbox
+              ? await archiveSandboxDocumentAction(documentId)
+              : await archiveDocumentAction(documentId);
 
             if (result.ok) {
               router.refresh();
@@ -66,7 +77,7 @@ export function DocumentRowActions({
         icon={Trash2}
         disabled={isPending}
         onSelect={() => startTransition(() => {
-          void deleteDocumentAction(documentId);
+          void (sandbox ? deleteSandboxDocumentAction(documentId) : deleteDocumentAction(documentId));
         })}
       />
     </TableRowActionsMenu>

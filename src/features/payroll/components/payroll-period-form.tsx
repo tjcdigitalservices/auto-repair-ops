@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createPayrollPeriodAction } from "@/features/payroll/actions/payroll-actions";
+import { createSandboxPayrollPeriodAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import type { PayrollPeriodFormValues } from "@/features/payroll/types";
 import { INITIAL_PAYROLL_FORM_ACTION_STATE } from "@/features/payroll/utils";
 import { useFormValues } from "@/lib/use-form-values";
@@ -29,8 +31,9 @@ export function PayrollPeriodForm({
   closeDialog: () => void;
 }) {
   const router = useRouter();
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     createPayrollPeriodAction,
+    createSandboxPayrollPeriodAction,
     INITIAL_PAYROLL_FORM_ACTION_STATE,
   );
   const { values, updateFormValue } = useFormValues(initialValues);

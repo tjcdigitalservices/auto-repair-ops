@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   CalendarDays,
@@ -21,6 +21,8 @@ import { ModalDialog } from "@/components/shared/modal-dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { recordMechanicAttendanceLogAction } from "@/features/attendance/actions/mechanic-portal-actions";
+import { recordSandboxMechanicAttendanceAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import { DtrAmendmentForm } from "@/features/attendance/components/dtr-amendment-form";
 import { MechanicPortalClock } from "@/features/attendance/components/mechanic-portal-clock";
 import { MechanicPortalSlideAction } from "@/features/attendance/components/mechanic-portal-slide-action";
@@ -51,8 +53,9 @@ export function MechanicPortalAttendancePage({
   data: MechanicPortalAttendancePageData;
 }) {
   const router = useRouter();
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     recordMechanicAttendanceLogAction,
+    recordSandboxMechanicAttendanceAction,
     INITIAL_ATTENDANCE_ENTRY_ACTION_STATE,
   );
   const nextLogType = getMechanicPortalPrimaryLogType(data.attendance);

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { buildPosCategoryFilters, matchesPosCategoryFilter } from "@/features/pos/constants";
 import { PosProductTile } from "@/features/pos/components/pos-product-tile";
 import type { PosCartItem, PosProductOption, PosTerminalConfig } from "@/features/pos/types";
+import type { ProductFormOptionsData } from "@/features/products/types";
 import {
   addProductToCart,
   findPosProductByScanValue,
@@ -19,6 +20,7 @@ export function PosProductCatalog({
   products,
   items,
   canCreateProducts,
+  productFormOptions = null,
   onProductsChange,
   onAddProduct,
 }: {
@@ -26,6 +28,7 @@ export function PosProductCatalog({
   products: PosProductOption[];
   items: PosCartItem[];
   canCreateProducts: boolean;
+  productFormOptions?: ProductFormOptionsData | null;
   onProductsChange: (products: PosProductOption[]) => void;
   onAddProduct: (product: PosProductOption) => void;
 }) {
@@ -107,6 +110,7 @@ export function PosProductCatalog({
           <div className="flex flex-wrap items-center justify-end gap-2">
             <QuickCreateProductDialog
               triggerLabel="New product"
+              initialOptions={productFormOptions}
               onCreated={(product) => {
                 onProductsChange(
                   (() => {

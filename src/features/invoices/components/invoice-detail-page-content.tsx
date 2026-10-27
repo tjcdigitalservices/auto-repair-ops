@@ -25,6 +25,8 @@ import { InvoiceLineItemsTab } from "@/features/invoices/components/invoice-line
 import { InvoicePaymentsTab } from "@/features/invoices/components/invoice-payments-tab";
 import type { InvoiceDetail } from "@/features/invoices/types";
 import { formatInvoiceStatus } from "@/features/invoices/utils";
+import { stripSandboxBasePath } from "@/features/sandbox/constants";
+import { useSandboxOptional } from "@/features/sandbox/use-bound-action";
 import { formatCurrency } from "@/lib/currency";
 import { formatDate } from "@/lib/dates";
 
@@ -42,9 +44,10 @@ export function InvoiceDetailPageContent({
   invoice: InvoiceDetail;
   canCancel: boolean;
 }) {
-  const pathname = usePathname();
+  const pathname = stripSandboxBasePath(usePathname());
   const router = useRouter();
   const searchParams = useSearchParams();
+  const sandbox = useSandboxOptional();
   const initialTab = resolveInvoiceDetailTab(searchParams.get("tab"));
   const [activeTab, setActiveTab] = useState<InvoiceDetailTabId>(initialTab);
 
@@ -118,11 +121,13 @@ export function InvoiceDetailPageContent({
                       }
                     />
                   ) : null}
-                  <TableRowActionsMenuLink
-                    href={`/api/invoices/${invoice.id}/pdf`}
-                    label="Download PDF"
-                    icon={Download}
-                  />
+                  {!sandbox ? (
+                    <TableRowActionsMenuLink
+                      href={`/api/invoices/${invoice.id}/pdf`}
+                      label="Download PDF"
+                      icon={Download}
+                    />
+                  ) : null}
                   {invoice.jobOrderId ? (
                     <>
                       <TableRowActionsMenuSeparator />

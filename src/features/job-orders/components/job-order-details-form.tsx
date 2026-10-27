@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { saveJobOrderDetailsAction } from "@/features/job-orders/actions/job-order-actions";
+import { saveSandboxJobOrderDetailsAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 
 import {
   FieldError,
@@ -15,7 +17,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { saveJobOrderDetailsAction } from "@/features/job-orders/actions/job-order-actions";
 import type { JobOrderDetail, JobOrderDetailTab } from "@/features/job-orders/types";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
 import { useFormValues } from "@/lib/use-form-values";
@@ -31,7 +32,11 @@ export function JobOrderDetailsForm({
   detail: JobOrderDetail;
   redirectTab: JobOrderDetailTab;
 }) {
-  const [state, formAction] = useActionState(saveJobOrderDetailsAction, INITIAL_FORM_ACTION_STATE);
+  const [state, formAction] = useBoundAction(
+    saveJobOrderDetailsAction,
+    saveSandboxJobOrderDetailsAction,
+    INITIAL_FORM_ACTION_STATE,
+  );
   const { values, updateFormValue } = useFormValues({
     mileageIn: formatMileageFieldValue(detail.mileageIn),
     mileageOut: formatMileageFieldValue(detail.mileageOut),

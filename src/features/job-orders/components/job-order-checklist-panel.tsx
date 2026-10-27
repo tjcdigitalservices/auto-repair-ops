@@ -1,9 +1,13 @@
+"use client";
+
 import { Check, ClipboardList } from "lucide-react";
 
 import { EmptyState } from "@/components/shared/empty-state";
 import { SectionCard } from "@/components/shared/section-card";
 import { Badge } from "@/components/ui/badge";
 import { setJobOrderItemChecklistStateAction } from "@/features/job-orders/actions/job-order-actions";
+import { setSandboxJobOrderChecklistAction } from "@/features/sandbox/form-actions";
+import { useBoundFormAction } from "@/features/sandbox/use-bound-action";
 import type {
   JobOrderDetailTab,
   JobOrderItemDetail,
@@ -202,9 +206,13 @@ function ChecklistToggle({
   disabledReason: string | null;
 }) {
   const nextChecklistCompleted = item.checklistCompleted ? "false" : "true";
+  const checklistAction = useBoundFormAction(
+    setJobOrderItemChecklistStateAction,
+    setSandboxJobOrderChecklistAction,
+  );
 
   return (
-    <form action={setJobOrderItemChecklistStateAction} className="shrink-0">
+    <form action={checklistAction} className="shrink-0">
       <input type="hidden" name="jobOrderId" value={jobOrderId} />
       <input type="hidden" name="jobOrderItemId" value={item.id} />
       <input

@@ -1,10 +1,12 @@
 import type { StaffScheduleSummary } from "@/features/attendance/types";
 import type { CustomerType } from "@/features/customers/types";
 import type { InvoiceStatus, PaymentMethod } from "@/features/invoices/types";
+import type { InventoryMovementType } from "@/features/inventory/types";
 import type { JobOrderStatus } from "@/features/job-orders/types";
 import type { PayBasis } from "@/features/payroll/types";
 import type { PayrollAttendanceSourceRecord } from "@/features/payroll/types";
 import type { ProductType } from "@/features/products/types";
+import type { DocumentRecord } from "@/components/document-engine/persistence/types";
 import type { QuotationItemType, QuotationStatus } from "@/features/quotations/types";
 import type { StaffRole } from "@/features/staff/types";
 
@@ -42,6 +44,9 @@ export type SandboxBusiness = {
   enableShelfLocation: boolean;
   payrollStandardDailyHours: string;
   payrollHolidayPremiumRate: string;
+  payrollDefaultSssAmount: string;
+  payrollDefaultPhilhealthAmount: string;
+  payrollDefaultPagibigAmount: string;
 };
 
 export type SandboxSequences = {
@@ -130,6 +135,18 @@ export type SandboxProduct = {
   updatedAt: string;
 };
 
+export type SandboxStockMovement = {
+  id: string;
+  productId: string;
+  movementType: InventoryMovementType;
+  quantity: number;
+  previousQuantity: number;
+  newQuantity: number;
+  referenceType: string;
+  notes: string | null;
+  createdAt: string;
+};
+
 export type SandboxService = {
   id: string;
   name: string;
@@ -152,6 +169,8 @@ export type SandboxLine = {
   quantity: number;
   unitPrice: number;
   total: number;
+  isAdditional?: boolean;
+  approvalStatus?: "not_required" | "pending" | "approved" | "rejected";
 };
 
 export type SandboxQuotation = {
@@ -171,6 +190,14 @@ export type SandboxQuotation = {
   approvedAt: string | null;
 };
 
+export type SandboxMechanicAssignment = {
+  id: string;
+  staffId: string;
+  taskDescription: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+};
+
 export type SandboxJobOrder = {
   id: string;
   jobOrderNumber: string;
@@ -185,6 +212,10 @@ export type SandboxJobOrder = {
   mileageIn: number | null;
   mileageOut: number | null;
   assignedStaffId: string | null;
+  mechanicAssignments?: SandboxMechanicAssignment[];
+  completedChecklistItemIds?: string[];
+  isHistorical?: boolean;
+  serviceDate?: string | null;
   createdAt: string;
   startedAt: string | null;
   completedAt: string | null;
@@ -194,8 +225,11 @@ export type SandboxJobOrder = {
 export type SandboxPartUsage = {
   id: string;
   jobOrderId: string;
+  jobOrderItemId?: string;
   productId: string;
   quantity: number;
+  usageType?: "use" | "return";
+  notes?: string | null;
   createdAt: string;
 };
 
@@ -215,6 +249,7 @@ export type SandboxInvoice = {
   status: InvoiceStatus;
   invoiceDate: string;
   createdAt: string;
+  cancelledAt?: string | null;
   cancellationReason: string | null;
 };
 
@@ -265,6 +300,11 @@ export type SandboxStaff = {
     allowancePerPeriod: number;
     effectiveStartDate: string;
     exemptFromAttendance: boolean;
+    useShopDefaultContributions: boolean;
+    sssAmount: number | null;
+    philhealthAmount: number | null;
+    pagibigAmount: number | null;
+    notes: string | null;
   } | null;
 };
 
@@ -292,6 +332,20 @@ export type SandboxPayrollItem = {
   warningCodes: string[];
 };
 
+export type SandboxPayrollAdjustment = {
+  id: string;
+  periodId: string;
+  staffId: string;
+  adjustmentType: "addition" | "deduction";
+  label: string;
+  amount: number;
+  notes: string | null;
+  source: "manual" | "system_government";
+  systemKey: "sss" | "philhealth" | "pagibig" | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type SandboxPayrollPeriod = {
   id: string;
   label: string;
@@ -301,16 +355,13 @@ export type SandboxPayrollPeriod = {
   notes: string | null;
   status: "draft" | "processing" | "finalized";
   applyGovernmentDeductions: boolean;
+  generatedAt: string | null;
+  finalizedAt: string | null;
   createdAt: string;
-};
-
-export type SandboxDocument = {
-  id: string;
-  title: string;
-  body: string;
-  status: "draft" | "saved";
   updatedAt: string;
 };
+
+export type SandboxDocument = DocumentRecord;
 
 export type SandboxWebsitePost = {
   id: string;
@@ -358,12 +409,67 @@ export type SandboxHoliday = {
   id: string;
   holidayDate: string;
   label: string;
-  holidayKind: "public_holiday" | "branch_closure";
-  payTreatment: "paid_regular_day" | "unpaid";
+  holidayKind: "branch_closure" | "public_holiday" | "company_holiday" | "special_non_working_day";
+  payTreatment: "unpaid" | "paid_regular_day" | "custom";
+  notes?: string | null;
+};
+
+export type SandboxAttendanceAccess = {
+  requireShopIpForMechanicAttendance: boolean;
+  requireShopLocationForMechanicAttendance: boolean;
+  allowDtrAmendments: boolean;
+  allowAttendanceAdminOverride: boolean;
+  geofenceLatitude: string;
+  geofenceLongitude: string;
+  geofenceRadiusMeters: string;
+};
+
+export type SandboxAllowedIp = {
+  id: string;
+  ipAddress: string;
+  label: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SandboxDtrAmendment = {
+  id: string;
+  staffId: string;
+  attendanceDate: string;
+  targetLogType: "time_in" | "time_out";
+  amendmentType: "missed_time_in" | "missed_time_out" | "wrong_time" | "shop_network_issue" | "other";
+  requestedTimestamp: string;
+  reason: string;
+  status: "pending" | "approved" | "rejected";
+  requestedIp: string | null;
+  approvedTimestamp: string | null;
+  approvedByStaffId: string | null;
+  rejectedAt: string | null;
+  rejectedByStaffId: string | null;
+  finalTimestamp: string | null;
+  adminNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SandboxStaffDevice = {
+  id: string;
+  staffId: string;
+  deviceName: string | null;
+  userAgent: string | null;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  lastIp: string | null;
+  status: "pending" | "approved" | "revoked";
+  approvedAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type SandboxSnapshot = {
   version: 1;
+  seedRevision: number;
   branch: SandboxBranch;
   business: SandboxBusiness;
   sequences: SandboxSequences;
@@ -385,6 +491,7 @@ export type SandboxSnapshot = {
   attendance: SandboxAttendance[];
   payrollPeriods: SandboxPayrollPeriod[];
   payrollItems: SandboxPayrollItem[];
+  payrollAdjustments: SandboxPayrollAdjustment[];
   documents: SandboxDocument[];
   websitePosts: SandboxWebsitePost[];
   quoteRequests: SandboxQuoteRequest[];
@@ -392,4 +499,9 @@ export type SandboxSnapshot = {
   vehicleModels: SandboxVehicleModel[];
   lookupOptions: SandboxLookupOption[];
   holidays: SandboxHoliday[];
+  attendanceAccess?: SandboxAttendanceAccess;
+  allowedIps?: SandboxAllowedIp[];
+  staffDevices?: SandboxStaffDevice[];
+  dtrAmendments?: SandboxDtrAmendment[];
+  stockMovements?: SandboxStockMovement[];
 };

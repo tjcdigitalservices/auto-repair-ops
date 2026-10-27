@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { Plus } from "lucide-react";
 
 import {
@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import { createSandboxVehicleModelAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import { createVehicleModelAction } from "@/features/vehicles/actions/vehicle-lookup-actions";
 import type { VehicleMakeItem } from "@/features/vehicles/types";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
@@ -30,7 +32,11 @@ function AddModelForm({
   makes: VehicleMakeItem[];
   defaultMakeId?: string;
 }) {
-  const [state, formAction] = useActionState(createVehicleModelAction, INITIAL_FORM_ACTION_STATE);
+  const [state, formAction] = useBoundAction(
+    createVehicleModelAction,
+    createSandboxVehicleModelAction,
+    INITIAL_FORM_ACTION_STATE,
+  );
   const form = useFormValues({
     makeId: defaultMakeId,
     name: "",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { reviewDtrAmendmentAction } from "@/features/attendance/actions/mechanic-portal-actions";
+import { reviewSandboxDtrAmendmentAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import type { DtrAmendmentReviewFormValues, DtrAmendmentSummary } from "@/features/attendance/types";
 import { INITIAL_TIMEKEEPING_ACTION_STATE } from "@/features/attendance/utils";
 import { formatDateTime } from "@/lib/dates";
@@ -29,8 +31,9 @@ export function DtrAmendmentReviewForm({
   closeDialog: () => void;
 }) {
   const router = useRouter();
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     reviewDtrAmendmentAction,
+    reviewSandboxDtrAmendmentAction,
     INITIAL_TIMEKEEPING_ACTION_STATE,
   );
   const { values, updateFormValue } = useFormValues<DtrAmendmentReviewFormValues>({

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -18,6 +18,8 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { submitDtrAmendmentAction } from "@/features/attendance/actions/mechanic-portal-actions";
+import { submitSandboxDtrAmendmentAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import type { DtrAmendmentFormValues } from "@/features/attendance/types";
 import {
   ATTENDANCE_LOG_TYPE_OPTIONS,
@@ -34,8 +36,9 @@ export function DtrAmendmentForm({
   closeDialog: () => void;
 }) {
   const router = useRouter();
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     submitDtrAmendmentAction,
+    submitSandboxDtrAmendmentAction,
     INITIAL_TIMEKEEPING_ACTION_STATE,
   );
   const { values, updateFormValue } = useFormValues(initialValues);

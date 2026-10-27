@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -17,6 +17,11 @@ import {
   deletePayrollAdjustmentAction,
   upsertPayrollAdjustmentAction,
 } from "@/features/payroll/actions/payroll-actions";
+import {
+  deleteSandboxPayrollAdjustmentAction,
+  saveSandboxPayrollAdjustmentAction,
+} from "@/features/sandbox/form-actions";
+import { useBoundAction, useBoundFormAction } from "@/features/sandbox/use-bound-action";
 import type { PayrollPeriodItemSummary } from "@/features/payroll/types";
 import { INITIAL_PAYROLL_FORM_ACTION_STATE } from "@/features/payroll/utils";
 import { formatCurrency } from "@/lib/currency";
@@ -31,9 +36,14 @@ export function PayrollPeriodItemAdjustmentsDialog({
 }) {
   const router = useRouter();
   const [dialogInstance, setDialogInstance] = useState(0);
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     upsertPayrollAdjustmentAction,
+    saveSandboxPayrollAdjustmentAction,
     INITIAL_PAYROLL_FORM_ACTION_STATE,
+  );
+  const deleteAdjustmentAction = useBoundFormAction(
+    deletePayrollAdjustmentAction,
+    deleteSandboxPayrollAdjustmentAction,
   );
   const { values, updateFormValue } = useFormValues<{
     payrollPeriodId: string;
@@ -148,7 +158,7 @@ export function PayrollPeriodItemAdjustmentsDialog({
                       <ConfirmActionDialog
                         title="Delete payroll adjustment"
                         description={`Remove ${adjustment.label} from ${item.fullName}'s payroll row?`}
-                        action={deletePayrollAdjustmentAction}
+                        action={deleteAdjustmentAction}
                         fields={[
                           { name: "adjustmentId", value: adjustment.id },
                           { name: "payrollPeriodId", value: item.payrollPeriodId },

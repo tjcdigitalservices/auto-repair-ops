@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import {
   FieldError,
@@ -14,12 +14,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { updateInventoryStockSettingsAction } from "@/features/inventory/actions/inventory-actions";
+import { updateSandboxInventoryStockSettingsAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import type { InventoryProductOption } from "@/features/inventory/types";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
 
 export function InventorySettingsForm({ products }: { products: InventoryProductOption[] }) {
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     updateInventoryStockSettingsAction,
+    updateSandboxInventoryStockSettingsAction,
     INITIAL_FORM_ACTION_STATE,
   );
   const [productId, setProductId] = useState("");

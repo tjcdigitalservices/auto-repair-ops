@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import { stripSandboxBasePath } from "@/features/sandbox/constants";
+
 import { FilterBar } from "@/components/shared/filter-bar";
 import { SearchInput } from "@/components/shared/search-input";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -48,7 +50,7 @@ export function DataTableFilters({
   debounceMs?: number;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = stripSandboxBasePath(usePathname());
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
   const [searchValue, setSearchValue] = useState(search.value);

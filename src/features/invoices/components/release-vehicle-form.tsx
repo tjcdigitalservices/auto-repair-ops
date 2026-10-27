@@ -1,10 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { FormStatusMessage } from "@/components/shared/form-status";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { releaseJobOrderVehicleAction } from "@/features/invoices/actions/invoice-actions";
+import { releaseSandboxJobOrderVehicleAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
 
 export function ReleaseVehicleForm({
@@ -18,8 +18,9 @@ export function ReleaseVehicleForm({
   allowReleaseWithBalance: boolean;
   requireFullPaymentBeforeRelease: boolean;
 }) {
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     releaseJobOrderVehicleAction,
+    releaseSandboxJobOrderVehicleAction,
     INITIAL_FORM_ACTION_STATE,
   );
   const blockedByPolicy =

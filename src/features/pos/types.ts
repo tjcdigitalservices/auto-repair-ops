@@ -1,4 +1,5 @@
 import type { InvoiceStatus, PaymentMethod } from "@/features/invoices/types";
+import type { ProductFormOptionsData } from "@/features/products/types";
 
 export type PosCustomerOption = {
   id: string;
@@ -41,6 +42,7 @@ export type PosTerminalData = {
   permissions: {
     canCreateProducts: boolean;
   };
+  productFormOptions?: ProductFormOptionsData | null;
 };
 
 export type PosCartItem = {

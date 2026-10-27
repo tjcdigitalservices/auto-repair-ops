@@ -4,6 +4,7 @@ import { SANDBOX_IDS } from "@/features/sandbox/ids";
 import { deleteCustomerRecord, recordPaymentRecord, saveCustomerRecord, upsertAttendanceRecord } from "@/features/sandbox/records";
 import { createSandboxSeed } from "@/features/sandbox/seed";
 import { createMemoryDriver, createSandboxController } from "@/features/sandbox/store";
+import { toSandboxPayrollPeriodDetail, toSandboxPayslipPrintDocument, toSandboxRemittanceSummary } from "@/features/sandbox/payroll";
 import { toAttendancePageData } from "@/features/sandbox/view-models";
 
 describe("sandbox shop", () => {
@@ -87,5 +88,19 @@ describe("sandbox shop", () => {
     });
     const next = toAttendancePageData(updated, new URLSearchParams({ date: "2026-10-14" }));
     expect(next.attendanceData.roster.find((item) => item.fullName === "Liza Navarro")?.attendance?.status).toBe("late");
+  });
+
+  it("builds a printable payroll cut with remittance for the current month", () => {
+    const snapshot = createSandboxSeed(new Date("2026-10-14T02:00:00.000Z"));
+    const detail = toSandboxPayrollPeriodDetail(snapshot, SANDBOX_IDS.payroll);
+    const payslip = toSandboxPayslipPrintDocument(snapshot, SANDBOX_IDS.payroll, SANDBOX_IDS.payrollItem);
+    const remittance = toSandboxRemittanceSummary(snapshot, "2026-10");
+
+    expect(detail?.items.map((item) => item.fullName)).toEqual(["Carlo Dela Cruz", "Liza Navarro"]);
+    expect(payslip?.item.netPay).toBeGreaterThan(0);
+    expect(payslip?.item.sssNumber).toBe("34-1234567-8");
+    expect(payslip?.item.adjustments.some((adjustment) => adjustment.label === "Shop performance bonus")).toBe(true);
+    expect(remittance.employees).toHaveLength(2);
+    expect(remittance.totals.sssAmount).toBeGreaterThan(0);
   });
 });

@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { GeneratePayrollCutButton } from "@/features/payroll/components/generate-payroll-cut-button";
+import { useSandboxOptional } from "@/features/sandbox/use-bound-action";
 import { PayrollPeriodInfoCollapsible } from "@/features/payroll/components/payroll-period-info-collapsible";
 import { PayrollPeriodItemBreakdownDrawer } from "@/features/payroll/components/payroll-period-item-breakdown-drawer";
 import { PayrollReviewKpiSummary } from "@/features/payroll/components/payroll-review-kpi-summary";
@@ -279,6 +280,7 @@ function PayrollReviewEmployeeRow({
   primaryIssue: PayrollEmployeeActionItem | null;
   onOpenBreakdown: () => void;
 }) {
+  const sandbox = useSandboxOptional();
   const isLocked = periodStatus === "processing" || periodStatus === "finalized";
   const statusLabel = isLocked ? "Locked" : primaryIssue?.issueLabel ?? "Ready";
   const statusTone = isLocked
@@ -364,9 +366,11 @@ function PayrollReviewEmployeeRow({
                     Print payslip
                   </AppLink>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <AppLink href={`/api/payroll/${periodId}/payslip/${item.id}/pdf`}>Download PDF</AppLink>
-                </DropdownMenuItem>
+                {sandbox ? null : (
+                  <DropdownMenuItem asChild>
+                    <AppLink href={`/api/payroll/${periodId}/payslip/${item.id}/pdf`}>Download PDF</AppLink>
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

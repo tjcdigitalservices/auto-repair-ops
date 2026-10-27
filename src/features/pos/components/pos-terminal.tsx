@@ -1,8 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import { completePosSaleAction } from "@/features/pos/actions/pos-actions";
+import { completeSandboxPosSaleAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import { PosCartPanel } from "@/features/pos/components/pos-cart-panel";
 import { PosProductCatalog } from "@/features/pos/components/pos-product-catalog";
 import type { PosCartItem, PosTerminalData } from "@/features/pos/types";
@@ -19,7 +21,11 @@ import { formatMoneyInputValue } from "@/lib/currency";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
 
 export function PosTerminal({ terminal }: { terminal: PosTerminalData }) {
-  const [state, formAction] = useActionState(completePosSaleAction, INITIAL_FORM_ACTION_STATE);
+  const [state, formAction] = useBoundAction(
+    completePosSaleAction,
+    completeSandboxPosSaleAction,
+    INITIAL_FORM_ACTION_STATE,
+  );
   const [productCatalog, setProductCatalog] = useState(terminal.products);
   const [customerId, setCustomerId] = useState("");
   const [discount, setDiscount] = useState(formatMoneyInputValue(0));
@@ -57,6 +63,7 @@ export function PosTerminal({ terminal }: { terminal: PosTerminalData }) {
             products={productCatalog}
             items={items}
             canCreateProducts={terminal.permissions.canCreateProducts}
+            productFormOptions={terminal.productFormOptions}
             onProductsChange={setProductCatalog}
             onAddProduct={(product) => handleAddProduct(product.id)}
           />

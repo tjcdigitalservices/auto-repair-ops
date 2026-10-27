@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import { FieldError, FormStatusMessage } from "@/components/shared/form-status";
 import { SubmitButton } from "@/components/shared/submit-button";
@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { JobOrderStatusBadge } from "@/features/job-orders/components/job-order-status-badge";
 import { updateJobOrderStatusAction } from "@/features/job-orders/actions/job-order-actions";
+import { updateSandboxJobOrderStatusAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import type { JobOrderDetailTab, JobOrderStatus } from "@/features/job-orders/types";
 import { formatJobOrderStatus } from "@/features/job-orders/utils";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
@@ -26,7 +28,11 @@ export function JobOrderStatusForm({
   closeDialog: () => void;
   redirectTab: JobOrderDetailTab;
 }) {
-  const [state, formAction] = useActionState(updateJobOrderStatusAction, INITIAL_FORM_ACTION_STATE);
+  const [state, formAction] = useBoundAction(
+    updateJobOrderStatusAction,
+    updateSandboxJobOrderStatusAction,
+    INITIAL_FORM_ACTION_STATE,
+  );
   const [nextStatus, setNextStatus] = useState<JobOrderStatus | "">(availableNextStatuses[0] ?? "");
 
   return (

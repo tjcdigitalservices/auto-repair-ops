@@ -10,7 +10,10 @@ function redirectOnRequestHost(request: Request, pathname: string) {
 }
 
 export async function POST(request: Request) {
-  const response = redirectOnRequestHost(request, "/dashboard");
+  const formData = await request.formData().catch(() => null);
+  const next = formData?.get("next");
+  const pathname = next === "/portal/attendance" ? "/portal/attendance" : "/dashboard";
+  const response = redirectOnRequestHost(request, pathname);
   response.cookies.set(SANDBOX_COOKIE, "1", {
     httpOnly: true,
     sameSite: "lax",

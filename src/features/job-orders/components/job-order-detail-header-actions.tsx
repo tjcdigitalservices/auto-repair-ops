@@ -14,6 +14,8 @@ import {
 import { JobOrderCancelJobDialog } from "@/features/job-orders/components/job-order-cancel-job-dialog";
 import { JobOrderDetailPrimaryAction } from "@/features/job-orders/components/job-order-detail-primary-action";
 import { deleteJobOrderAction } from "@/features/job-orders/actions/job-order-actions";
+import { deleteSandboxJobOrderAction } from "@/features/sandbox/form-actions";
+import { useBoundFormAction, useSandboxOptional } from "@/features/sandbox/use-bound-action";
 import type { JobOrderDetail, JobOrderDetailTab } from "@/features/job-orders/types";
 import { getSimplifiedJobOrderStatus } from "@/features/job-orders/utils";
 
@@ -41,6 +43,8 @@ export function JobOrderDetailHeaderActions({
   canDeleteJobOrder?: boolean;
 }) {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const sandbox = useSandboxOptional();
+  const deleteAction = useBoundFormAction(deleteJobOrderAction, deleteSandboxJobOrderAction);
   const simplifiedStatus = getSimplifiedJobOrderStatus(jobOrder.status);
   const showCancelJob =
     simplifiedStatus === "in_progress" && jobOrder.canUpdateStatus;
@@ -65,11 +69,13 @@ export function JobOrderDetailHeaderActions({
               icon={Printer}
               onSelect={() => openJobOrderPrint(jobOrder.id, { showPrices: true })}
             />
-            <TableRowActionsMenuLink
-              href={`/api/job-orders/${jobOrder.id}/pdf?showPrices=1`}
-              label="Download PDF"
-              icon={Download}
-            />
+            {sandbox ? null : (
+              <TableRowActionsMenuLink
+                href={`/api/job-orders/${jobOrder.id}/pdf?showPrices=1`}
+                label="Download PDF"
+                icon={Download}
+              />
+            )}
             {showSecondaryActions ? <TableRowActionsMenuSeparator /> : null}
             {jobOrder.quotationId ? (
               <TableRowActionsMenuLink
@@ -94,7 +100,7 @@ export function JobOrderDetailHeaderActions({
                 confirmLabel="Delete job order"
                 cancelLabel="Keep job order"
                 icon={Trash2}
-                action={deleteJobOrderAction}
+                action={deleteAction}
                 fields={[{ name: "jobOrderId", value: jobOrder.id }]}
               />
             ) : null}

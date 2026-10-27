@@ -13,6 +13,7 @@ import {
 } from "@/components/shared/table-row-actions-menu";
 import { Button } from "@/components/ui/button";
 import { GeneratePayrollCutButton } from "@/features/payroll/components/generate-payroll-cut-button";
+import { useSandboxOptional } from "@/features/sandbox/use-bound-action";
 import { PayrollLockValidationDialog } from "@/features/payroll/components/payroll-lock-validation-dialog";
 import {
   PayrollPeriodHiddenStatusForm,
@@ -44,6 +45,7 @@ export function PayrollPeriodDetailHeaderActions({
   items: PayrollPeriodItemSummary[];
   summary: PayrollPeriodDetailSummary;
 }) {
+  const sandbox = useSandboxOptional();
   const router = useRouter();
   const pathname = usePathname();
   const [lockDialogOpen, setLockDialogOpen] = useState(false);
@@ -117,11 +119,13 @@ export function PayrollPeriodDetailHeaderActions({
                       window.open(`/payroll/${periodId}/print`, "_blank", "noopener,noreferrer")
                     }
                   />
-                  <TableRowActionsMenuLink
-                    href={`/api/payroll/${periodId}/pdf`}
-                    label="Download PDF"
-                    icon={Download}
-                  />
+                  {sandbox ? null : (
+                    <TableRowActionsMenuLink
+                      href={`/api/payroll/${periodId}/pdf`}
+                      label="Download PDF"
+                      icon={Download}
+                    />
+                  )}
                 </>
               ) : null}
               {isFinalized ? (

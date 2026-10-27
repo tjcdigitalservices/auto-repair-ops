@@ -4,6 +4,8 @@ import { AppLink } from "@/components/shared/app-link";
 import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import { stripSandboxBasePath } from "@/features/sandbox/constants";
+
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import {
@@ -35,7 +37,7 @@ export function DataTablePagination({
   pageSizeOptions?: readonly TablePageSize[];
   className?: string;
 }) {
-  const pathname = usePathname();
+  const pathname = stripSandboxBasePath(usePathname());
   const router = useRouter();
   const searchParams = useSearchParams();
 

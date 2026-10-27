@@ -9,6 +9,8 @@ import type {
   DocumentStatus,
 } from "@/components/document-engine/persistence/types";
 import { saveDocumentAction } from "@/features/documents/actions/document-actions";
+import { saveSandboxDocumentAction } from "@/features/sandbox/form-actions";
+import { useSandboxOptional } from "@/features/sandbox/use-bound-action";
 import type { DocumentTemplateName } from "@/components/document-engine/templates/types";
 
 const AUTOSAVE_DEBOUNCE_MS = 1500;
@@ -54,6 +56,7 @@ export function useDocumentPersistence({
   defaultTitle,
   onDocumentSaved,
 }: UseDocumentPersistenceOptions) {
+  const sandbox = useSandboxOptional();
   const [saveStatus, setSaveStatus] = useState<DocumentSaveStatus>(() =>
     documentId
       ? { state: "saved", savedAt: initialUpdatedAt ?? new Date().toISOString() }
@@ -104,7 +107,8 @@ export function useDocumentPersistence({
       saveInFlight.current = true;
       setSaveStatus({ state: "saving" });
 
-      const result = await saveDocumentAction({
+      const saveDocument = sandbox ? saveSandboxDocumentAction : saveDocumentAction;
+      const result = await saveDocument({
         id: nextDocumentId,
         title: nextTitle.trim() || defaultTitle,
         template,
@@ -137,7 +141,7 @@ export function useDocumentPersistence({
 
       return result;
     },
-    [defaultTitle, onDocumentSaved, template],
+    [defaultTitle, onDocumentSaved, sandbox, template],
   );
 
   useEffect(() => {

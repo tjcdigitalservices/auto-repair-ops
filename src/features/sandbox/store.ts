@@ -1,4 +1,4 @@
-import { createSandboxSeed } from "@/features/sandbox/seed";
+import { createSandboxSeed, SANDBOX_SEED_REVISION } from "@/features/sandbox/seed";
 import type { SandboxSnapshot } from "@/features/sandbox/types";
 
 const DB_NAME = "ars-sandbox";
@@ -92,8 +92,9 @@ export function createSandboxController(driver: SandboxDriver): SandboxControlle
         loadPromise = driver
           .read()
           .then(async (stored) => {
-            snapshot = stored ?? createSandboxSeed();
-            if (!stored) {
+            snapshot =
+              stored?.seedRevision === SANDBOX_SEED_REVISION ? stored : createSandboxSeed();
+            if (!stored || stored.seedRevision !== SANDBOX_SEED_REVISION) {
               await driver.write(snapshot);
             }
             emit();

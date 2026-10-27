@@ -1,11 +1,13 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { FormStatusMessage } from "@/components/shared/form-status";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { generatePayrollCutAction } from "@/features/payroll/actions/payroll-actions";
+import { generateSandboxPayrollCutAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import { INITIAL_PAYROLL_FORM_ACTION_STATE } from "@/features/payroll/utils";
 
 export function GeneratePayrollCutButton({
@@ -22,8 +24,9 @@ export function GeneratePayrollCutButton({
   formId?: string;
 }) {
   const router = useRouter();
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     generatePayrollCutAction,
+    generateSandboxPayrollCutAction,
     INITIAL_PAYROLL_FORM_ACTION_STATE,
   );
 

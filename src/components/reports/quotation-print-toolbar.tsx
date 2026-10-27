@@ -18,9 +18,11 @@ const MODE_OPTIONS: ReadonlyArray<{
 export function QuotationPrintToolbar({
   quotationId,
   mode,
+  showDownload = true,
 }: {
   quotationId: string;
   mode: QuotationPrintMode;
+  showDownload?: boolean;
 }) {
   const downloadHref = buildQuotationPdfHref(quotationId, mode);
 
@@ -48,12 +50,14 @@ export function QuotationPrintToolbar({
           </Link>
         </Button>
       ))}
-      <Button asChild type="button" variant="bluePrimary" size="sm">
-        <a href={downloadHref}>
-          <Download className="size-4" />
-          Download PDF
-        </a>
-      </Button>
+      {showDownload ? (
+        <Button asChild type="button" variant="bluePrimary" size="sm">
+          <a href={downloadHref}>
+            <Download className="size-4" />
+            Download PDF
+          </a>
+        </Button>
+      ) : null}
     </div>
   );
 }

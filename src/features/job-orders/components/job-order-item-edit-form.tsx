@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo } from "react";
+import { useMemo } from "react";
 
 import {
   FieldError,
@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateJobOrderItemAction } from "@/features/job-orders/actions/job-order-actions";
+import { updateSandboxJobOrderItemAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import type { JobOrderDetailTab, JobOrderItemDetail } from "@/features/job-orders/types";
 import { formatMoneyInputValue, MONEY_INPUT_STEP } from "@/lib/currency";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
@@ -31,7 +33,11 @@ export function JobOrderItemEditForm({
   redirectTab: JobOrderDetailTab;
   closeDialog: () => void;
 }) {
-  const [state, formAction] = useActionState(updateJobOrderItemAction, INITIAL_FORM_ACTION_STATE);
+  const [state, formAction] = useBoundAction(
+    updateJobOrderItemAction,
+    updateSandboxJobOrderItemAction,
+    INITIAL_FORM_ACTION_STATE,
+  );
   const { values, updateFormValue } = useFormValues({
     description: item.description,
     quantity: String(item.quantity),

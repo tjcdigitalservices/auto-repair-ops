@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
 
 import { signOutAction } from '@/features/auth/actions/auth-actions';
+import { stripSandboxBasePath } from '@/features/sandbox/constants';
+import { useBoundFormAction } from '@/features/sandbox/use-bound-action';
 import { cn } from '@/lib/utils';
 
 const PORTAL_NAV_ITEMS = [
@@ -15,7 +17,10 @@ const PORTAL_NAV_ITEMS = [
 ] as const;
 
 export function MechanicPortalMenu() {
-  const pathname = usePathname();
+  const pathname = stripSandboxBasePath(usePathname());
+  const signOut = useBoundFormAction(signOutAction, async () => {
+    window.location.assign('/dashboard');
+  });
 
   return (
     <details className="group relative">
@@ -41,7 +46,7 @@ export function MechanicPortalMenu() {
               {item.label}
             </Link>
           ))}
-          <form action={signOutAction}>
+          <form action={signOut}>
             <button
               type="submit"
               className="flex w-full rounded-xl px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100"

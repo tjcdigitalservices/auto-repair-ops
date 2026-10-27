@@ -35,6 +35,7 @@ import {
   formatLeaveDateRange,
   formatStaffLeaveTypeLabel,
 } from "@/features/attendance/utils";
+import { stripSandboxBasePath } from "@/features/sandbox/constants";
 import { formatDate, formatDateTime, fromUtcIso } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
@@ -46,7 +47,7 @@ export function MechanicPortalHistoryPage({
   data: MechanicPortalHistoryPageData;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = stripSandboxBasePath(usePathname());
   const searchParams = useSearchParams();
   const [selectedDate, setSelectedDate] = useState(() => data.initialSelectedDate);
   const activeMonth = DateTime.fromISO(data.monthStartDate);

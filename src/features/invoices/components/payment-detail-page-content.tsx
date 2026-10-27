@@ -20,10 +20,13 @@ import {
 import { PaymentDetailSidebar } from "@/features/invoices/components/payment-detail-sidebar";
 import type { PaymentDetail } from "@/features/invoices/types";
 import { formatInvoiceStatus, formatPaymentMethod } from "@/features/invoices/utils";
+import { useSandboxOptional } from "@/features/sandbox/use-bound-action";
 import { formatCurrency } from "@/lib/currency";
 import { formatDateTime } from "@/lib/dates";
 
 export function PaymentDetailPageContent({ payment }: { payment: PaymentDetail }) {
+  const sandbox = useSandboxOptional();
+
   return (
     <EntityDetailLayout
       header={
@@ -51,11 +54,13 @@ export function PaymentDetailPageContent({ payment }: { payment: PaymentDetail }
                     window.open(`/payments/${payment.id}/print`, "_blank", "noopener,noreferrer")
                   }
                 />
-                <TableRowActionsMenuLink
-                  href={`/api/payments/${payment.id}/pdf`}
-                  label="Download PDF"
-                  icon={Download}
-                />
+                {!sandbox ? (
+                  <TableRowActionsMenuLink
+                    href={`/api/payments/${payment.id}/pdf`}
+                    label="Download PDF"
+                    icon={Download}
+                  />
+                ) : null}
                 <TableRowActionsMenuSeparator />
                 <TableRowActionsMenuLink
                   href={`/invoices/${payment.invoiceId}`}

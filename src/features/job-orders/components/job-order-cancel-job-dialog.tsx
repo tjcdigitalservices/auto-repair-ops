@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import { ConfirmActionDialog } from "@/components/shared/confirm-action-dialog";
 import {
@@ -9,6 +9,8 @@ import {
 } from "@/components/shared/form-status";
 import { Textarea } from "@/components/ui/textarea";
 import { updateJobOrderStatusAction } from "@/features/job-orders/actions/job-order-actions";
+import { updateSandboxJobOrderStatusAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import type { JobOrderDetailTab } from "@/features/job-orders/types";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
 
@@ -58,8 +60,9 @@ function JobOrderCancelJobDialogForm({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     updateJobOrderStatusAction,
+    updateSandboxJobOrderStatusAction,
     INITIAL_FORM_ACTION_STATE,
   );
   const [cancellationReason, setCancellationReason] = useState("");

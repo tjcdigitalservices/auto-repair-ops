@@ -3,6 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { PageTabs } from "@/components/shared/page-tabs";
+import { stripSandboxBasePath } from "@/features/sandbox/constants";
 
 export function InventoryTabNav({
   stockCount,
@@ -11,7 +12,7 @@ export function InventoryTabNav({
   stockCount: number;
   movementCount: number;
 }) {
-  const pathname = usePathname();
+  const pathname = stripSandboxBasePath(usePathname());
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") === "movements" ? "movements" : "inventory";

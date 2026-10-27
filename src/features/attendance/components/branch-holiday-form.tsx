@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -18,6 +18,8 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { upsertBranchHolidayAction } from "@/features/attendance/actions/timekeeping-actions";
+import { saveSandboxBranchHolidayAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import type { BranchHolidayFormValues } from "@/features/attendance/types";
 import {
   BRANCH_HOLIDAY_KIND_OPTIONS,
@@ -35,8 +37,9 @@ export function BranchHolidayForm({
   closeDialog: () => void;
 }) {
   const router = useRouter();
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     upsertBranchHolidayAction,
+    saveSandboxBranchHolidayAction,
     INITIAL_TIMEKEEPING_ACTION_STATE,
   );
   const { setValues, values, updateFormValue } = useFormValues(initialValues);

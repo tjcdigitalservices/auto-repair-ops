@@ -11,6 +11,12 @@ import {
   deleteStaffDeviceAction,
   revokeStaffDeviceAction,
 } from "@/features/attendance/actions/attendance-device-actions";
+import {
+  approveSandboxStaffDeviceAction,
+  deleteSandboxStaffDeviceAction,
+  revokeSandboxStaffDeviceAction,
+} from "@/features/sandbox/form-actions";
+import { useBoundFormAction } from "@/features/sandbox/use-bound-action";
 import type { AttendanceStaffDeviceManagementItem } from "@/features/attendance/types";
 
 export function AttendanceDeviceRowActions({
@@ -19,6 +25,9 @@ export function AttendanceDeviceRowActions({
   device: AttendanceStaffDeviceManagementItem;
 }) {
   const displayName = device.deviceName?.trim() || device.userAgent?.trim() || "this device";
+  const approveAction = useBoundFormAction(approveStaffDeviceAction, approveSandboxStaffDeviceAction);
+  const revokeAction = useBoundFormAction(revokeStaffDeviceAction, revokeSandboxStaffDeviceAction);
+  const deleteAction = useBoundFormAction(deleteStaffDeviceAction, deleteSandboxStaffDeviceAction);
   const [isApproveOpen, setIsApproveOpen] = useState(false);
   const [isRevokeOpen, setIsRevokeOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -34,7 +43,7 @@ export function AttendanceDeviceRowActions({
             description="This will immediately block the mechanic from using this phone or browser for time-in/time-out."
             confirmLabel="Reset device access"
             cancelLabel="Cancel"
-            action={revokeStaffDeviceAction}
+            action={revokeAction}
             fields={[{ name: "deviceId", value: device.id }]}
             tone="destructive"
           />
@@ -75,7 +84,7 @@ export function AttendanceDeviceRowActions({
           description="Approving this device will automatically revoke any other approved attendance device for this mechanic."
           confirmLabel="Approve device"
           cancelLabel="Cancel"
-          action={approveStaffDeviceAction}
+          action={approveAction}
           fields={[{ name: "deviceId", value: device.id }]}
           confirmVariant="default"
           open={isApproveOpen}
@@ -89,7 +98,7 @@ export function AttendanceDeviceRowActions({
           description="This keeps the device blocked for attendance until it is approved again."
           confirmLabel="Revoke device"
           cancelLabel="Cancel"
-          action={revokeStaffDeviceAction}
+          action={revokeAction}
           fields={[{ name: "deviceId", value: device.id }]}
           open={isRevokeOpen}
           onOpenChange={setIsRevokeOpen}
@@ -101,7 +110,7 @@ export function AttendanceDeviceRowActions({
         description="This permanently removes the device record from review history. The mechanic will need to register the device again on their next portal visit."
         confirmLabel="Delete device record"
         cancelLabel="Cancel"
-        action={deleteStaffDeviceAction}
+        action={deleteAction}
         fields={[{ name: "deviceId", value: device.id }]}
         confirmVariant="destructive"
         open={isDeleteOpen}

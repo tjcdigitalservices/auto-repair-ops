@@ -1,7 +1,10 @@
+"use client";
+
 import { UserRound } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { signOutAction } from "@/features/auth/actions/auth-actions";
+import { useBoundFormAction } from "@/features/sandbox/use-bound-action";
 import { MechanicPortalSectionIntro } from "@/features/attendance/components/mechanic-portal-section-intro";
 import { formatStaffRoleLabel } from "@/features/attendance/utils";
 import type { StaffRole } from "@/lib/auth/permissions";
@@ -13,6 +16,10 @@ export function MechanicPortalProfilePage({
   displayName: string;
   role: StaffRole;
 }) {
+  const signOut = useBoundFormAction(signOutAction, async () => {
+    window.location.assign("/dashboard");
+  });
+
   return (
     <div className="space-y-4">
       <MechanicPortalSectionIntro
@@ -41,7 +48,7 @@ export function MechanicPortalProfilePage({
           </p>
         </div>
 
-        <form action={signOutAction} className="mt-5">
+        <form action={signOut} className="mt-5">
           <Button
             type="submit"
             variant="outline"

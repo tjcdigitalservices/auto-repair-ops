@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -18,6 +18,8 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { upsertCompensationProfileAction } from "@/features/payroll/actions/payroll-actions";
+import { saveSandboxCompensationProfileAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import type { CompensationProfileFormValues } from "@/features/payroll/types";
 import { INITIAL_PAYROLL_FORM_ACTION_STATE, PAY_BASIS_OPTIONS } from "@/features/payroll/utils";
 import { MONEY_INPUT_STEP } from "@/lib/currency";
@@ -33,8 +35,9 @@ export function CompensationProfileForm({
   closeDialog: () => void;
 }) {
   const router = useRouter();
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     upsertCompensationProfileAction,
+    saveSandboxCompensationProfileAction,
     INITIAL_PAYROLL_FORM_ACTION_STATE,
   );
   const { values, updateFormValue } = useFormValues(initialValues);

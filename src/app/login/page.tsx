@@ -120,7 +120,7 @@ export default async function LoginPage({
             or
             <span className="h-px flex-1 bg-slate-200" />
           </div>
-          <form action="/api/sandbox/enter" method="post" className="mt-5">
+          <form action="/api/sandbox/enter" method="post" className="mt-5 space-y-3">
             <Button
               type="submit"
               variant="outline"
@@ -128,9 +128,18 @@ export default async function LoginPage({
             >
               Try the sample shop
             </Button>
+            <Button
+              type="submit"
+              name="next"
+              value="/portal/attendance"
+              variant="outline"
+              className="h-12 w-full rounded-xl text-sm font-semibold uppercase tracking-[0.18em]"
+            >
+              Try the mechanic portal
+            </Button>
           </form>
           <p className="mt-3 text-center text-xs leading-5 text-slate-500">
-            Browse the workshop without an account. Records stay in this browser.
+            Browse the workshop or the mechanic phone without an account. Records stay in this browser.
           </p>
         </div>
       </div>

@@ -23,6 +23,7 @@ import type { CustomerDocumentHistoryItem } from "@/features/customers/types";
 import type { ServiceHistoryEntry } from "@/features/service-history/types";
 import { VehicleDetailSidebar } from "@/features/vehicles/components/vehicle-detail-sidebar";
 import type { VehicleDetail } from "@/features/vehicles/types";
+import { stripSandboxBasePath } from "@/features/sandbox/constants";
 import { formatDate } from "@/lib/dates";
 import { buildQuotationNewHref } from "@/features/quotations/utils";
 
@@ -52,7 +53,7 @@ export function VehicleDetailPageContent({
   canRecordPastService: boolean;
   historicalSaved?: boolean;
 }) {
-  const pathname = usePathname();
+  const pathname = stripSandboxBasePath(usePathname());
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialTab = resolveVehicleDetailTab(searchParams.get("tab"));

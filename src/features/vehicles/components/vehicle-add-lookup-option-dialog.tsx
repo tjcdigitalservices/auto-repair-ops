@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { Plus } from "lucide-react";
 
 import {
@@ -15,6 +15,8 @@ import { SubmitButton } from "@/components/shared/submit-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { createSandboxVehicleLookupOptionAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import { createVehicleLookupOptionAction } from "@/features/vehicles/actions/vehicle-lookup-actions";
 import type { VehicleLookupType } from "@/features/vehicles/types";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
@@ -27,7 +29,11 @@ function AddLookupOptionForm({
   closeDialog: () => void;
   lookupType: VehicleLookupType;
 }) {
-  const [state, formAction] = useActionState(createVehicleLookupOptionAction, INITIAL_FORM_ACTION_STATE);
+  const [state, formAction] = useBoundAction(
+    createVehicleLookupOptionAction,
+    createSandboxVehicleLookupOptionAction,
+    INITIAL_FORM_ACTION_STATE,
+  );
   const form = useFormValues({
     label: "",
     sortOrder: "",

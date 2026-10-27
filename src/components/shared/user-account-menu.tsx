@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { signOutAction } from '@/features/auth/actions/auth-actions';
+import { useBoundFormAction } from '@/features/sandbox/use-bound-action';
 import { cn } from '@/lib/utils';
 
 export function UserAccountMenu({
@@ -23,6 +24,7 @@ export function UserAccountMenu({
   compact?: boolean;
 }) {
   const signOutFormId = useId();
+  const signOut = useBoundFormAction(signOutAction, exitSandboxShop);
   const initials = buildInitials(userDisplayName);
 
   return (
@@ -64,7 +66,7 @@ export function UserAccountMenu({
           <p className="text-xs text-muted-foreground">{userRoleLabel}</p>
         </div>
         <DropdownMenuSeparator />
-        <form id={signOutFormId} action={signOutAction}>
+        <form id={signOutFormId} action={signOut}>
           <DropdownMenuItem
             onSelect={(event) => {
               event.preventDefault();
@@ -81,6 +83,14 @@ export function UserAccountMenu({
       </DropdownMenuContent>
     </DropdownMenu>
   );
+}
+
+async function exitSandboxShop() {
+  const form = document.createElement('form');
+  form.method = 'post';
+  form.action = '/api/sandbox/exit';
+  document.body.appendChild(form);
+  form.submit();
 }
 
 function buildInitials(value: string) {

@@ -1,9 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
+import { isDocumentTemplateName } from "@/components/document-engine/templates/registry";
+import { JobOrderPrintLayout } from "@/components/reports/job-order-print-layout";
+import { PayrollPrintLayout } from "@/components/reports/payroll-print-layout";
+import { PayslipPrintLayout } from "@/components/reports/payslip-print-layout";
+import { QuotationPrintLayout } from "@/components/reports/quotation-print-layout";
+import { RemittancePrintLayout } from "@/components/reports/remittance-print-layout";
+import { QuotationPrintToolbar } from "@/components/reports/quotation-print-toolbar";
+import { ReportAutoPrint } from "@/components/reports/report-auto-print";
+import { ReportPage } from "@/components/reports/report-page";
+import { ReportToolbar } from "@/components/reports/report-toolbar";
 import { PageHeader } from "@/components/shared/page-header";
 import { PageHeaderActions, PagePrimaryAction } from "@/components/shared/page-header-actions";
 import { SectionCard } from "@/components/shared/section-card";
@@ -22,12 +32,37 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AttendancePageContent } from "@/features/attendance/components/attendance-page-content";
+import { MechanicPortalAmendmentsPage } from "@/features/attendance/components/mechanic-portal-amendments-page";
+import { MechanicPortalAttendancePage } from "@/features/attendance/components/mechanic-portal-attendance-page";
+import { MechanicPortalHistoryPage } from "@/features/attendance/components/mechanic-portal-history-page";
+import { MechanicPortalProfilePage } from "@/features/attendance/components/mechanic-portal-profile-page";
+import { InventoryPageView } from "@/features/inventory/components/inventory-page-view";
+import { PosPageView } from "@/features/pos/components/pos-page-view";
+import { TimekeepingCalendarPageContent } from "@/features/attendance/components/timekeeping-calendar-page-content";
 import { CustomerDetailPageContent } from "@/features/customers/components/customer-detail-page-content";
 import { CustomerForm } from "@/features/customers/components/customer-form";
 import { CustomersPageView } from "@/features/customers/components/customers-page-view";
 import { DashboardHome } from "@/features/dashboard/components/dashboard-home";
-import { PAYMENT_METHOD_OPTIONS } from "@/features/invoices/types";
+import { DocumentEditorWorkspace } from "@/features/documents/components/document-editor-workspace";
+import { DocumentsPageView } from "@/features/documents/components/documents-page-view";
+import { NewDocumentTemplatePicker } from "@/features/documents/components/new-document-template-picker";
+import { InvoiceDetailPageContent } from "@/features/invoices/components/invoice-detail-page-content";
+import { InvoicesPageView } from "@/features/invoices/components/invoices-page-view";
+import { PaymentDetailPageContent } from "@/features/invoices/components/payment-detail-page-content";
+import { PaymentsPageView } from "@/features/invoices/components/payments-page-view";
+import type { InvoiceStatus, PaymentMethod } from "@/features/invoices/types";
+import { ReportsPageView } from "@/features/reports/components/reports-page-view";
+import { ReportsPrintLayout } from "@/components/reports/reports-print-layout";
+import { StaffPageView } from "@/features/staff/components/staff-page-view";
+import type { StaffRole } from "@/features/staff/types";
+import { VehicleLookupsPageContent } from "@/features/vehicles/components/vehicle-lookups-page-content";
+import { PayrollPageContent } from "@/features/payroll/components/payroll-page-content";
+import { PayrollPeriodDetail } from "@/features/payroll/components/payroll-period-detail";
+import type { PayrollPageTab } from "@/features/payroll/components/payroll-tab-nav";
 import { ProductForm } from "@/features/products/components/product-form";
+import { ProductsPageView } from "@/features/products/components/products-page-view";
+import { ServicesPageView } from "@/features/services/components/services-page-view";
+import { SuppliersPageView } from "@/features/suppliers/components/suppliers-page-view";
 import { QuotationCreateFlow } from "@/features/quotations/components/quotation-create-flow";
 import { QuotationDetailPageContent } from "@/features/quotations/components/quotation-detail-page-content";
 import { QuotationForm } from "@/features/quotations/components/quotation-form";
@@ -36,21 +71,29 @@ import { BusinessProfileForm } from "@/features/settings/components/business-pro
 import { ServiceForm } from "@/features/services/components/service-form";
 import { StaffForm } from "@/features/staff/components/staff-form";
 import { SupplierForm } from "@/features/suppliers/components/supplier-form";
+import { VehicleDetailPageContent } from "@/features/vehicles/components/vehicle-detail-page-content";
 import { VehicleForm } from "@/features/vehicles/components/vehicle-form";
+import { VehiclesPageView } from "@/features/vehicles/components/vehicles-page-view";
+import { JobOrderDetailPage } from "@/features/job-orders/components/job-order-detail-page";
+import { JobOrdersPageView } from "@/features/job-orders/components/job-orders-page-view";
+import { resolveJobOrderPrintHidePrices } from "@/features/job-orders/print-utils";
+import type { JobOrderStatus } from "@/features/job-orders/types";
+import { getSimplifiedJobOrderStatus, resolveJobOrderDetailTab } from "@/features/job-orders/utils";
+import { resolveQuotationPrintMode } from "@/features/quotations/report-utils";
 import { stripSandboxBasePath } from "@/features/sandbox/constants";
 import {
-  completePosSaleRecord,
-  createInvoiceFromJobOrderRecord,
-  createPayrollPeriodRecord,
   customerName,
-  generatePayrollCutRecord,
-  receiveStockRecord,
-  recordPartUsageRecord,
-  recordPaymentRecord,
-  saveJobOrderDetailsRecord,
-  updateJobOrderStatusRecord,
+  normalizeSandboxDocument,
   vehicleLabel,
 } from "@/features/sandbox/records";
+import {
+  toSandboxPayrollPageData,
+  toSandboxPayrollPeriodDetail,
+  toSandboxPayrollPrintDocument,
+  toSandboxPayslipPrintDocument,
+  toSandboxRemittancePrintDocument,
+  toSandboxRemittanceSummary,
+} from "@/features/sandbox/payroll";
 import { updateSandboxShop } from "@/features/sandbox/store";
 import type { SandboxSnapshot } from "@/features/sandbox/types";
 import {
@@ -60,10 +103,40 @@ import {
   toCustomerDetail,
   toCustomerListItem,
   toDashboardData,
+  listSandboxDocuments,
+  listSandboxJobOrders,
+  toJobOrderDetail,
+  toJobOrderPrintDocument,
+  toSandboxDocumentEditorData,
   toQuotationCreateFlowOptions,
   toQuotationDetail,
   toQuotationFormOptions,
+  toQuotationPrintDocument,
   toQuotationReviseState,
+  sandboxBranchSelector,
+  sandboxProductFormOptions,
+  toInventoryDashboardData,
+  toPosTerminalData,
+  toTimekeepingCalendarPageData,
+  toMechanicPortalAmendmentsData,
+  toMechanicPortalAttendanceData,
+  toMechanicPortalHistoryData,
+  listSandboxCustomerServiceHistory,
+  listSandboxInvoices,
+  listSandboxPayments,
+  listSandboxProducts,
+  listSandboxServices,
+  listSandboxStaff,
+  listSandboxSuppliers,
+  listSandboxVehicleDocuments,
+  listSandboxVehicles,
+  listSandboxVehicleServiceHistory,
+  toInvoiceDetail,
+  toPaymentDetail,
+  toSandboxReportsPageData,
+  toSandboxReportsPrintDocument,
+  toVehicleDetail,
+  toVehicleLookupPageData,
 } from "@/features/sandbox/view-models";
 import { createQuotationItem, resolveQuotationCreateFlowSelection } from "@/features/quotations/utils";
 import { mapQuotationDetailToFormValues } from "@/features/quotations/mappers";
@@ -78,7 +151,7 @@ export function SandboxRouter({ snapshot }: { snapshot: SandboxSnapshot }) {
   const [section, id, action, extra] = segments;
 
   if (path.endsWith("/print")) {
-    return <PrintScreen snapshot={snapshot} path={path} />;
+    return <PrintScreen snapshot={snapshot} path={path} searchParams={searchParams} />;
   }
 
   if (section === "dashboard" || segments.length === 0) {
@@ -95,43 +168,46 @@ export function SandboxRouter({ snapshot }: { snapshot: SandboxSnapshot }) {
     return <QuotationsScreen snapshot={snapshot} id={id} action={action} searchParams={searchParams} />;
   }
   if (section === "job-orders") {
-    return <JobOrdersScreen snapshot={snapshot} id={id} />;
+    return <JobOrdersScreen snapshot={snapshot} id={id} searchParams={searchParams} />;
   }
   if (section === "products") {
-    return <ProductsScreen snapshot={snapshot} id={id} action={action} />;
+    return <ProductsScreen snapshot={snapshot} id={id} action={action} searchParams={searchParams} />;
   }
   if (section === "services") {
-    return <ServicesScreen snapshot={snapshot} id={id} action={action} />;
+    return <ServicesScreen snapshot={snapshot} id={id} action={action} searchParams={searchParams} />;
   }
   if (section === "suppliers") {
-    return <SuppliersScreen snapshot={snapshot} id={id} action={action} />;
+    return <SuppliersScreen snapshot={snapshot} id={id} action={action} searchParams={searchParams} />;
   }
   if (section === "inventory") {
-    return <InventoryScreen snapshot={snapshot} />;
+    return <InventoryScreen snapshot={snapshot} searchParams={searchParams} />;
   }
   if (section === "invoices") {
-    return <InvoicesScreen snapshot={snapshot} id={id} />;
+    return <InvoicesScreen snapshot={snapshot} id={id} searchParams={searchParams} />;
   }
   if (section === "payments") {
-    return <PaymentsScreen snapshot={snapshot} id={id} />;
+    return <PaymentsScreen snapshot={snapshot} id={id} searchParams={searchParams} />;
   }
   if (section === "pos") {
     return <PosScreen snapshot={snapshot} />;
   }
   if (section === "staff") {
-    return <StaffScreen snapshot={snapshot} id={id} action={action} />;
+    return <StaffScreen snapshot={snapshot} id={id} action={action} searchParams={searchParams} />;
   }
   if (section === "attendance") {
     return <AttendanceScreen snapshot={snapshot} id={id} searchParams={searchParams} />;
   }
+  if (section === "portal") {
+    return <MechanicPortalScreen snapshot={snapshot} page={id} searchParams={searchParams} />;
+  }
   if (section === "payroll") {
-    return <PayrollScreen snapshot={snapshot} id={id} />;
+    return <PayrollScreen snapshot={snapshot} id={id} searchParams={searchParams} />;
   }
   if (section === "reports") {
-    return <ReportsScreen snapshot={snapshot} />;
+    return <ReportsScreen snapshot={snapshot} searchParams={searchParams} />;
   }
   if (section === "documents") {
-    return <DocumentsScreen snapshot={snapshot} id={id} />;
+    return <DocumentsScreen snapshot={snapshot} id={id} searchParams={searchParams} />;
   }
   if (section === "settings") {
     return <SettingsScreen snapshot={snapshot} id={id} action={action} extra={extra} />;
@@ -199,7 +275,7 @@ function CustomersScreen({
     return (
       <CustomerDetailPageContent
         customer={customer}
-        serviceHistory={[]}
+        serviceHistory={listSandboxCustomerServiceHistory(snapshot, id)}
         canViewServiceHistory
         canCreateQuotations
       />
@@ -241,7 +317,7 @@ function VehiclesScreen({
   const lookupData = lookupDataFrom(snapshot);
   const customerOptions = snapshot.customers.map((item) => ({ id: item.id, label: item.displayName }));
 
-  if (id === "new" || (action === "edit" && id) || extra === "new") {
+  if (id === "new" || (action === "edit" && id)) {
     const vehicle = snapshot.vehicles.find((item) => item.id === id);
     return (
       <div className="space-y-6">
@@ -294,43 +370,46 @@ function VehiclesScreen({
     );
   }
 
-  if (id) {
-    const vehicle = snapshot.vehicles.find((item) => item.id === id);
-    if (!vehicle) return <Missing title="Vehicle" />;
+  if (id && action === "past-service") {
     return (
-      <RecordDetail
-        title={`${vehicle.year ?? ""} ${vehicle.make} ${vehicle.model}`.trim()}
-        subtitle={customerName(snapshot, vehicle.customerId)}
-        backHref="/vehicles"
-        editHref={`/vehicles/${vehicle.id}/edit`}
-        rows={[
-          ["Plate", vehicle.plateNumber],
-          ["VIN", vehicle.vin],
-          ["Mileage", vehicle.mileage ? String(vehicle.mileage) : null],
-          ["Transmission", vehicle.transmission],
-          ["Fuel", vehicle.fuelType],
-          ["Color", vehicle.color],
-        ]}
+      <PageHeader
+        title="Past service"
+        description="Recording past service stays available in the live shop. Use job orders or the mechanic portal for this sample shop demo."
+        backHref={`/vehicles/${id}`}
+        backLabel="Back to vehicle"
       />
     );
   }
 
+  if (id) {
+    const vehicle = toVehicleDetail(snapshot, id);
+    if (!vehicle) return <Missing title="Vehicle" />;
+    return (
+      <VehicleDetailPageContent
+        vehicle={vehicle}
+        serviceHistory={listSandboxVehicleServiceHistory(snapshot, id)}
+        documents={listSandboxVehicleDocuments(snapshot, id)}
+        canViewServiceHistory
+        canManageVehicles
+        canCreateQuotations
+        canRecordPastService={false}
+        historicalSaved={searchParams.get("historicalSaved") === "1"}
+      />
+    );
+  }
+
+  const search = searchParams.get("search") ?? "";
+  const customerId = searchParams.get("customerId") ?? undefined;
+
   return (
-    <ListScreen
-      title="Vehicles"
-      description="Vehicle records linked to customers."
-      actionHref="/vehicles/new"
-      actionLabel="New Vehicle"
-      columns={["Vehicle", "Customer", "Plate", "Status"]}
-      rows={snapshot.vehicles.map((vehicle) => ({
-        href: `/vehicles/${vehicle.id}`,
-        cells: [
-          `${vehicle.year ?? ""} ${vehicle.make} ${vehicle.model}`.trim(),
-          customerName(snapshot, vehicle.customerId),
-          vehicle.plateNumber ?? "—",
-          vehicle.status,
-        ],
-      }))}
+    <VehiclesPageView
+      vehicles={listSandboxVehicles(snapshot, { search, customerId })}
+      search={search}
+      customerId={customerId}
+      customerOptions={customerOptions}
+      page={searchParams.get("page") ?? undefined}
+      error={searchParams.get("error") ?? undefined}
+      canManageVehicles
     />
   );
 }
@@ -517,71 +596,63 @@ function QuotationsScreen({
   );
 }
 
-function JobOrdersScreen({ snapshot, id }: { snapshot: SandboxSnapshot; id?: string }) {
+function JobOrdersScreen({
+  snapshot,
+  id,
+  searchParams,
+}: {
+  snapshot: SandboxSnapshot;
+  id?: string;
+  searchParams: URLSearchParams;
+}) {
   if (!id) {
+    const rawStatus = searchParams.get("status") ?? "";
+    const status = rawStatus === "active" || rawStatus === ""
+      ? rawStatus
+      : getSimplifiedJobOrderStatus(rawStatus as JobOrderStatus);
+
     return (
-      <ListScreen
-        title="Job Orders"
-        description="Live workshop execution."
-        columns={["Job order", "Customer", "Vehicle", "Status"]}
-        rows={snapshot.jobOrders.map((item) => ({
-          href: `/job-orders/${item.id}`,
-          cells: [item.jobOrderNumber, customerName(snapshot, item.customerId), vehicleLabel(snapshot, item.vehicleId), item.status.replaceAll("_", " ")],
-        }))}
+      <JobOrdersPageView
+        jobOrders={listSandboxJobOrders(snapshot, searchParams.get("search") ?? "", status)}
+        search={searchParams.get("search") ?? ""}
+        status={status}
+        page={searchParams.get("page") ?? undefined}
+        error={searchParams.get("error") ?? undefined}
+        canDeleteJobOrders
+        branchSelector={sandboxBranchSelector(snapshot)}
       />
     );
   }
 
-  const jobOrder = snapshot.jobOrders.find((item) => item.id === id);
+  const jobOrder = toJobOrderDetail(snapshot, id);
   if (!jobOrder) return <Missing title="Job order" />;
-  const lines = snapshot.jobOrderLines.filter((item) => item.parentId === jobOrder.id);
-  const invoice = snapshot.invoices.find((item) => item.jobOrderId === jobOrder.id && item.status !== "cancelled");
+
+  const assignedMechanicIds = new Set(jobOrder.mechanics.map((mechanic) => mechanic.staffId));
+  const availableMechanics = snapshot.staff
+    .filter((staff) => staff.status === "active" && staff.role === "mechanic" && !assignedMechanicIds.has(staff.id))
+    .map((staff) => ({ id: staff.id, label: `${staff.firstName} ${staff.lastName}` }));
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={jobOrder.jobOrderNumber}
-        description={`${customerName(snapshot, jobOrder.customerId)} · ${vehicleLabel(snapshot, jobOrder.vehicleId)}`}
-        backHref="/job-orders"
-        backLabel="Back to job orders"
-      />
-      <SectionCard title="Status" description="Moves the job through the workshop.">
-        <NativeSelect
-          value={jobOrder.status}
-          onChange={(event) =>
-            void updateSandboxShop((current) =>
-              updateJobOrderStatusRecord(current, jobOrder.id, event.target.value as SandboxSnapshot["jobOrders"][number]["status"]),
-            )
-          }
-        >
-          {["pending", "in_progress", "waiting_for_parts", "completed", "ready_for_billing", "paid", "released", "cancelled"].map((status) => (
-            <option key={status} value={status}>{status.replaceAll("_", " ")}</option>
-          ))}
-        </NativeSelect>
-      </SectionCard>
-      <SectionCard title="Work" description="Concern, diagnosis, and mileage.">
-        <JobDetailsForm snapshot={snapshot} jobOrder={jobOrder} />
-      </SectionCard>
-      <SectionCard title="Lines" description="Quoted work copied onto the job.">
-        <LineTable lines={lines} />
-      </SectionCard>
-      <SectionCard title="Parts used" description="Using a part reduces on-hand stock.">
-        <PartUsageForm snapshot={snapshot} jobOrderId={jobOrder.id} />
-      </SectionCard>
-      <SectionCard title="Billing" description={invoice ? invoice.invoiceNumber : "No invoice yet."}>
-        {invoice ? (
-          <Link className="text-sm font-medium text-primary" href={`/invoices/${invoice.id}`}>{invoice.invoiceNumber}</Link>
-        ) : (
-          <Button type="button" onClick={() => void updateSandboxShop((current) => createInvoiceFromJobOrderRecord(current, jobOrder.id).snapshot)}>
-            Create invoice
-          </Button>
-        )}
-      </SectionCard>
-    </div>
+    <JobOrderDetailPage
+      jobOrder={jobOrder}
+      availableMechanics={availableMechanics}
+      activeTab={resolveJobOrderDetailTab(searchParams.get("tab") ?? undefined)}
+      canDeleteJobOrder={jobOrder.canDelete}
+    />
   );
 }
 
-function ProductsScreen({ snapshot, id, action }: { snapshot: SandboxSnapshot; id?: string; action?: string }) {
+function ProductsScreen({
+  snapshot,
+  id,
+  action,
+  searchParams,
+}: {
+  snapshot: SandboxSnapshot;
+  id?: string;
+  action?: string;
+  searchParams: URLSearchParams;
+}) {
   if (id === "new" || action === "edit") {
     const product = snapshot.products.find((item) => item.id === id);
     return (
@@ -603,21 +674,26 @@ function ProductsScreen({ snapshot, id, action }: { snapshot: SandboxSnapshot; i
   }
 
   return (
-    <ListScreen
-      title="Products"
-      description="Product master data."
-      actionHref="/products/new"
-      actionLabel="New Product"
-      columns={["Product", "SKU", "Price", "On hand"]}
-      rows={snapshot.products.map((item) => ({
-        href: `/products/${item.id}/edit`,
-        cells: [item.name, item.sku ?? "—", formatCurrency(item.sellingPrice), String(item.availableQuantity)],
-      }))}
+    <ProductsPageView
+      products={listSandboxProducts(snapshot, searchParams.get("search") ?? "")}
+      search={searchParams.get("search") ?? ""}
+      page={searchParams.get("page") ?? undefined}
+      pageSize={searchParams.get("pageSize") ?? undefined}
     />
   );
 }
 
-function ServicesScreen({ snapshot, id, action }: { snapshot: SandboxSnapshot; id?: string; action?: string }) {
+function ServicesScreen({
+  snapshot,
+  id,
+  action,
+  searchParams,
+}: {
+  snapshot: SandboxSnapshot;
+  id?: string;
+  action?: string;
+  searchParams: URLSearchParams;
+}) {
   if (id === "new" || action === "edit") {
     const service = snapshot.services.find((item) => item.id === id);
     return (
@@ -646,21 +722,25 @@ function ServicesScreen({ snapshot, id, action }: { snapshot: SandboxSnapshot; i
   }
 
   return (
-    <ListScreen
-      title="Services"
-      description="Labor and service catalog."
-      actionHref="/services/new"
-      actionLabel="New Service"
-      columns={["Service", "Category", "Labor"]}
-      rows={snapshot.services.map((item) => ({
-        href: `/services/${item.id}/edit`,
-        cells: [item.name, item.category ?? "—", formatCurrency(item.laborPrice)],
-      }))}
+    <ServicesPageView
+      services={listSandboxServices(snapshot, searchParams.get("search") ?? "")}
+      search={searchParams.get("search") ?? ""}
+      page={searchParams.get("page") ?? undefined}
     />
   );
 }
 
-function SuppliersScreen({ snapshot, id, action }: { snapshot: SandboxSnapshot; id?: string; action?: string }) {
+function SuppliersScreen({
+  snapshot,
+  id,
+  action,
+  searchParams,
+}: {
+  snapshot: SandboxSnapshot;
+  id?: string;
+  action?: string;
+  searchParams: URLSearchParams;
+}) {
   if (id === "new" || action === "edit") {
     const supplier = snapshot.suppliers.find((item) => item.id === id);
     return (
@@ -685,128 +765,150 @@ function SuppliersScreen({ snapshot, id, action }: { snapshot: SandboxSnapshot; 
   }
 
   return (
-    <ListScreen
-      title="Suppliers"
-      description="Supplier directory."
-      actionHref="/suppliers/new"
-      actionLabel="New Supplier"
-      columns={["Supplier", "Contact", "Status"]}
-      rows={snapshot.suppliers.map((item) => ({
-        href: `/suppliers/${item.id}/edit`,
-        cells: [item.supplierName, item.contactNumber ?? "—", item.status],
-      }))}
+    <SuppliersPageView
+      suppliers={listSandboxSuppliers(snapshot, searchParams.get("search") ?? "")}
+      search={searchParams.get("search") ?? ""}
+      page={searchParams.get("page") ?? undefined}
     />
   );
 }
 
-function InventoryScreen({ snapshot }: { snapshot: SandboxSnapshot }) {
+function InventoryScreen({
+  snapshot,
+  searchParams,
+}: {
+  snapshot: SandboxSnapshot;
+  searchParams: URLSearchParams;
+}) {
+  const search = searchParams.get("search") ?? "";
+  const stockState = readInventoryStockState(searchParams.get("stockState"));
+  const movementType = searchParams.get("movementType") ?? "";
+  const activeTab = searchParams.get("tab") === "movements" ? "movements" : "inventory";
+
   return (
-    <div className="space-y-6">
-      <PageHeader title="Inventory" description="Stock balances for the sample shop." />
-      <SectionCard title="Receive stock" description="Adds quantity to a product in this browser.">
-        <ReceiveStockForm snapshot={snapshot} />
-      </SectionCard>
-      <SimpleTable
-        columns={["Product", "SKU", "On hand", "Reorder"]}
-        rows={snapshot.products.map((item) => [item.name, item.sku ?? "—", String(item.availableQuantity), String(item.reorderLevel)])}
-      />
-    </div>
+    <InventoryPageView
+      inventory={toInventoryDashboardData(snapshot, {
+        search,
+        stockState: activeTab === "inventory" ? stockState : "all",
+        movementType: activeTab === "movements" ? (movementType as "stock_in" | "adjustment" | "damaged" | "service_usage" | "pos_sale" | "return" | "") : "",
+      })}
+      search={search}
+      stockState={stockState}
+      movementType={movementType as "stock_in" | "adjustment" | "damaged" | "service_usage" | "pos_sale" | "return" | ""}
+      activeTab={activeTab}
+      stockPage={searchParams.get("stockPage") ?? undefined}
+      movementPage={searchParams.get("movementPage") ?? undefined}
+      pageSize={searchParams.get("pageSize") ?? undefined}
+      productFormOptions={sandboxProductFormOptions(snapshot)}
+    />
   );
 }
 
-function InvoicesScreen({ snapshot, id }: { snapshot: SandboxSnapshot; id?: string }) {
-  if (!id) {
-    return (
-      <ListScreen
-        title="Invoices"
-        description="Billing and balances."
-        columns={["Invoice", "Customer", "Status", "Balance"]}
-        rows={snapshot.invoices.map((item) => ({
-          href: `/invoices/${item.id}`,
-          cells: [item.invoiceNumber, customerName(snapshot, item.customerId), item.status.replaceAll("_", " "), formatCurrency(item.balance)],
-        }))}
-      />
-    );
+function readInventoryStockState(value: string | null) {
+  if (value === "in_stock" || value === "low" || value === "out" || value === "missing") return value;
+  return "all" as const;
+}
+
+function InvoicesScreen({
+  snapshot,
+  id,
+  searchParams,
+}: {
+  snapshot: SandboxSnapshot;
+  id?: string;
+  searchParams: URLSearchParams;
+}) {
+  if (id) {
+    const invoice = toInvoiceDetail(snapshot, id);
+    if (!invoice) return <Missing title="Invoice" />;
+    return <InvoiceDetailPageContent invoice={invoice} canCancel={invoice.canCancel} />;
   }
 
-  const invoice = snapshot.invoices.find((item) => item.id === id);
-  if (!invoice) return <Missing title="Invoice" />;
-  const payments = snapshot.payments.filter((item) => item.invoiceId === invoice.id);
+  const statusParam = searchParams.get("status") ?? "";
+  const status =
+    statusParam === "unpaid" ||
+    statusParam === "partially_paid" ||
+    statusParam === "paid" ||
+    statusParam === "cancelled"
+      ? (statusParam as InvoiceStatus)
+      : "";
+
   return (
-    <div className="space-y-6">
-      <PageHeader title={invoice.invoiceNumber} description={customerName(snapshot, invoice.customerId)} backHref="/invoices" backLabel="Back to invoices" />
-      <SectionCard title="Balance" description={`Total ${formatCurrency(invoice.totalAmount)} · Paid ${formatCurrency(invoice.paidAmount)}`}>
-        <StatusBadge tone={invoice.balance > 0 ? "warning" : "success"}>{invoice.status.replaceAll("_", " ")}</StatusBadge>
-        <p className="mt-3 text-lg font-semibold">{formatCurrency(invoice.balance)} remaining</p>
-      </SectionCard>
-      <SectionCard title="Record payment" description="Collections update the invoice balance locally.">
-        <PaymentForm invoiceId={invoice.id} />
-      </SectionCard>
-      <SimpleTable columns={["Payment", "Method", "Amount", "Date"]} rows={payments.map((item) => [item.paymentNumber, item.paymentMethod, formatCurrency(item.amount), formatDate(item.paidAt)])} />
-    </div>
+    <InvoicesPageView
+      invoices={listSandboxInvoices(snapshot, {
+        search: searchParams.get("search") ?? "",
+        status,
+      })}
+      search={searchParams.get("search") ?? ""}
+      status={status}
+      page={searchParams.get("page") ?? undefined}
+      branchSelector={sandboxBranchSelector(snapshot)}
+    />
   );
 }
 
-function PaymentsScreen({ snapshot, id }: { snapshot: SandboxSnapshot; id?: string }) {
-  if (!id) {
-    return (
-      <ListScreen
-        title="Payments"
-        description="Collections and history."
-        columns={["Payment", "Invoice", "Method", "Amount"]}
-        rows={snapshot.payments.map((item) => ({
-          href: `/payments/${item.id}`,
-          cells: [
-            item.paymentNumber,
-            snapshot.invoices.find((invoice) => invoice.id === item.invoiceId)?.invoiceNumber ?? "—",
-            item.paymentMethod,
-            formatCurrency(item.amount),
-          ],
-        }))}
-      />
-    );
+function PaymentsScreen({
+  snapshot,
+  id,
+  searchParams,
+}: {
+  snapshot: SandboxSnapshot;
+  id?: string;
+  searchParams: URLSearchParams;
+}) {
+  if (id) {
+    const payment = toPaymentDetail(snapshot, id);
+    if (!payment) return <Missing title="Payment" />;
+    return <PaymentDetailPageContent payment={payment} />;
   }
 
-  const payment = snapshot.payments.find((item) => item.id === id);
-  if (!payment) return <Missing title="Payment" />;
+  const methodParam = searchParams.get("paymentMethod") ?? "";
+  const paymentMethod = (
+    ["cash", "gcash", "bank_transfer", "card", "check", "other"] as const
+  ).includes(methodParam as PaymentMethod)
+    ? (methodParam as PaymentMethod)
+    : "";
+
   return (
-    <RecordDetail
-      title={payment.paymentNumber}
-      subtitle={formatCurrency(payment.amount)}
-      backHref="/payments"
-      rows={[
-        ["Method", payment.paymentMethod],
-        ["Reference", payment.referenceNumber],
-        ["Notes", payment.notes],
-        ["Paid", formatDate(payment.paidAt)],
-      ]}
+    <PaymentsPageView
+      payments={listSandboxPayments(snapshot, {
+        search: searchParams.get("search") ?? "",
+        paymentMethod,
+      })}
+      search={searchParams.get("search") ?? ""}
+      paymentMethod={paymentMethod}
+      page={searchParams.get("page") ?? undefined}
+      branchSelector={sandboxBranchSelector(snapshot)}
     />
   );
 }
 
 function PosScreen({ snapshot }: { snapshot: SandboxSnapshot }) {
-  return (
-    <div className="space-y-6">
-      <PageHeader title="Point of Sale" description="Direct retail sales saved in this browser." />
-      <SectionCard title="New sale" description="Choose a product, take payment, and stock is reduced.">
-        <PosForm snapshot={snapshot} />
-      </SectionCard>
-      <SimpleTable
-        columns={["Sale", "Total", "When"]}
-        rows={snapshot.posSales.map((item) => [item.saleNumber, formatCurrency(item.totalAmount), formatDate(item.createdAt)])}
-      />
-    </div>
-  );
+  return <PosPageView terminal={toPosTerminalData(snapshot)} branchSelector={sandboxBranchSelector(snapshot)} />;
 }
 
-function StaffScreen({ snapshot, id, action }: { snapshot: SandboxSnapshot; id?: string; action?: string }) {
+function StaffScreen({
+  snapshot,
+  id,
+  action,
+  searchParams,
+}: {
+  snapshot: SandboxSnapshot;
+  id?: string;
+  action?: string;
+  searchParams: URLSearchParams;
+}) {
   if (id === "new" || action === "edit") {
     const member = snapshot.staff.find((item) => item.id === id);
     return (
       <div className="space-y-6">
         <PageHeader
           title={member ? `Edit ${member.firstName} ${member.lastName}` : "New Staff Record"}
-          description="Personnel stay in this browser. Portal logins are not created."
+          description={
+            member
+              ? "Keep personnel data clean so later attendance and assignment logic has stable inputs."
+              : "Create personnel records for attendance, payroll, and workshop assignments."
+          }
           backHref="/staff"
           backLabel="Back to staff"
         />
@@ -837,17 +939,59 @@ function StaffScreen({ snapshot, id, action }: { snapshot: SandboxSnapshot; id?:
     );
   }
 
+  const roleParam = searchParams.get("role") ?? "";
+  const role = (
+    ["owner", "admin", "mechanic", "cashier", "inventory_staff", "service_advisor"] as const
+  ).includes(roleParam as StaffRole)
+    ? (roleParam as StaffRole)
+    : "";
+
   return (
-    <ListScreen
-      title="Staff"
-      description="Personnel records."
-      actionHref="/staff/new"
-      actionLabel="New Staff"
-      columns={["Name", "Role", "Status"]}
-      rows={snapshot.staff.map((item) => ({
-        href: `/staff/${item.id}/edit`,
-        cells: [`${item.firstName} ${item.lastName}`, item.role.replaceAll("_", " "), item.status],
-      }))}
+    <StaffPageView
+      staff={listSandboxStaff(snapshot, {
+        search: searchParams.get("search") ?? "",
+        role,
+      })}
+      search={searchParams.get("search") ?? ""}
+      role={role}
+      page={searchParams.get("page") ?? undefined}
+    />
+  );
+}
+
+function MechanicPortalScreen({
+  snapshot,
+  page,
+  searchParams,
+}: {
+  snapshot: SandboxSnapshot;
+  page?: string;
+  searchParams: URLSearchParams;
+}) {
+  const mechanic = snapshot.staff.find((member) => member.role === "mechanic");
+  const displayName = mechanic ? `${mechanic.firstName} ${mechanic.lastName}` : "Carlo Dela Cruz";
+
+  if (!page || page === "attendance") {
+    return <MechanicPortalAttendancePage data={toMechanicPortalAttendanceData(snapshot)} />;
+  }
+
+  if (page === "history") {
+    const data = toMechanicPortalHistoryData(snapshot, searchParams.get("month") ?? undefined);
+    return <MechanicPortalHistoryPage key={`${data.month}:${data.initialSelectedDate}`} data={data} />;
+  }
+
+  if (page === "amendments") {
+    return <MechanicPortalAmendmentsPage data={toMechanicPortalAmendmentsData(snapshot)} />;
+  }
+
+  if (page === "profile") {
+    return <MechanicPortalProfilePage displayName={displayName} role="mechanic" />;
+  }
+
+  return (
+    <PageHeader
+      title="Page not in the mechanic portal"
+      description="Open attendance, history, correction requests, or profile."
     />
   );
 }
@@ -873,77 +1017,123 @@ function AttendanceScreen({
   return <AttendancePageContent data={toAttendancePageData(snapshot, searchParams)} />;
 }
 
-function PayrollScreen({ snapshot, id }: { snapshot: SandboxSnapshot; id?: string }) {
+function PayrollScreen({
+  snapshot,
+  id,
+  searchParams,
+}: {
+  snapshot: SandboxSnapshot;
+  id?: string;
+  searchParams: URLSearchParams;
+}) {
   if (!id) {
+    const tab = searchParams.get("tab");
+    const activeTab: PayrollPageTab =
+      tab === "compensation" || tab === "remittance" ? tab : "periods";
     return (
-      <div className="space-y-6">
-        <PageHeader title="Payroll" description="Compensation setup and payroll periods." />
-        <PayrollPeriodForm />
-        <ListScreen
-          title="Periods"
-          description="Open a period to regenerate pay from local attendance."
-          columns={["Period", "Range", "Status"]}
-          rows={snapshot.payrollPeriods.map((item) => ({
-            href: `/payroll/${item.id}`,
-            cells: [item.label, `${item.periodStartDate} – ${item.periodEndDate}`, item.status],
-          }))}
-        />
-      </div>
+      <PayrollPageContent
+        data={toSandboxPayrollPageData(snapshot, searchParams)}
+        remittanceData={toSandboxRemittanceSummary(snapshot, searchParams.get("month"))}
+        activeTab={activeTab}
+        periodPage={searchParams.get("periodPage") ?? undefined}
+        staffPage={searchParams.get("staffPage") ?? undefined}
+        branchSelector={sandboxBranchSelector(snapshot)}
+      />
     );
   }
 
-  const period = snapshot.payrollPeriods.find((item) => item.id === id);
-  if (!period) return <Missing title="Payroll period" />;
-  const items = snapshot.payrollItems.filter((item) => item.periodId === period.id);
-  return (
-    <div className="space-y-6">
-      <PageHeader title={period.label} description={`${period.periodStartDate} to ${period.periodEndDate}`} backHref="/payroll" backLabel="Back to payroll" />
-      <Button type="button" onClick={() => void updateSandboxShop((current) => generatePayrollCutRecord(current, period.id))}>
-        Generate payroll cut
-      </Button>
-      <SimpleTable
-        columns={["Staff", "Present", "Base", "Net"]}
-        rows={items.map((item) => [item.fullName, String(item.presentCount), formatCurrency(item.basePay), formatCurrency(item.netPay)])}
-      />
-    </div>
-  );
+  const data = toSandboxPayrollPeriodDetail(snapshot, id);
+  if (!data) return <Missing title="Payroll period" />;
+  return <PayrollPeriodDetail data={data} />;
 }
 
-function ReportsScreen({ snapshot }: { snapshot: SandboxSnapshot }) {
-  const collected = snapshot.payments.reduce((sum, item) => sum + item.amount, 0);
+function ReportsScreen({
+  snapshot,
+  searchParams,
+}: {
+  snapshot: SandboxSnapshot;
+  searchParams: URLSearchParams;
+}) {
   return (
-    <div className="space-y-6">
-      <PageHeader title="Reports" description="Trends from the sample shop in this browser." />
-      <SimpleTable
-        columns={["Measure", "Value"]}
-        rows={[
-          ["Customers", String(snapshot.customers.length)],
-          ["Open job orders", String(snapshot.jobOrders.filter((item) => item.status === "in_progress").length)],
-          ["Collected", formatCurrency(collected)],
-          ["Unpaid balance", formatCurrency(snapshot.invoices.reduce((sum, item) => sum + item.balance, 0))],
-        ]}
-      />
-    </div>
-  );
-}
-
-function DocumentsScreen({ snapshot, id }: { snapshot: SandboxSnapshot; id?: string }) {
-  if (id === "blank-preview") {
-    return <PageHeader title="Blank preview" description="Print layouts in the sandbox use the browser print dialog." />;
-  }
-  if (id === "new" || id) {
-    return <DocumentEditor snapshot={snapshot} documentId={id === "new" ? undefined : id} />;
-  }
-  return (
-    <ListScreen
-      title="Documents"
-      description="Printable notes saved in this browser."
-      actionHref="/documents/new"
-      actionLabel="New Document"
-      columns={["Title", "Status"]}
-      rows={snapshot.documents.map((item) => ({ href: `/documents/${item.id}`, cells: [item.title, item.status] }))}
+    <ReportsPageView
+      reports={toSandboxReportsPageData(snapshot, {
+        preset: searchParams.get("preset"),
+        from: searchParams.get("from"),
+        to: searchParams.get("to"),
+        groupBy: searchParams.get("groupBy"),
+      })}
+      branchSelector={sandboxBranchSelector(snapshot)}
+      showDownloadPdf={false}
     />
   );
+}
+
+function DocumentsScreen({
+  snapshot,
+  id,
+  searchParams,
+}: {
+  snapshot: SandboxSnapshot;
+  id?: string;
+  searchParams: URLSearchParams;
+}) {
+  const editorData = toSandboxDocumentEditorData(snapshot);
+
+  if (id === "blank-preview") {
+    return <BlankDocumentRedirect />;
+  }
+
+  if (id === "new") {
+    const template = searchParams.get("template");
+    if (!template) return <NewDocumentTemplatePicker />;
+    if (!isDocumentTemplateName(template)) return <Missing title="Document" />;
+
+    return (
+      <DocumentEditorWorkspace
+        businessProfile={editorData.businessProfile}
+        branchName={editorData.branchName}
+        showBranchContext={editorData.showBranchContext}
+        template={template}
+      />
+    );
+  }
+
+  if (id) {
+    const document = snapshot.documents
+      .map((item) => normalizeSandboxDocument(item))
+      .find((item) => item.id === id);
+    if (!document || document.status === "archived") return <Missing title="Document" />;
+
+    return (
+      <DocumentEditorWorkspace
+        businessProfile={editorData.businessProfile}
+        branchName={editorData.branchName}
+        showBranchContext={editorData.showBranchContext}
+        document={document}
+      />
+    );
+  }
+
+  const status = searchParams.get("status") ?? "all";
+
+  return (
+    <DocumentsPageView
+      documents={listSandboxDocuments(snapshot, searchParams.get("search") ?? "", status)}
+      search={searchParams.get("search") ?? ""}
+      status={status}
+      page={searchParams.get("page") ?? undefined}
+    />
+  );
+}
+
+function BlankDocumentRedirect() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/documents/new?template=blank");
+  }, [router]);
+
+  return null;
 }
 
 function SettingsScreen({
@@ -973,25 +1163,30 @@ function SettingsScreen({
   }
   if (id === "timekeeping") {
     return (
-      <ListScreen
-        title="Timekeeping"
-        description="Holiday rules used when payroll is generated."
-        columns={["Date", "Label", "Treatment"]}
-        rows={snapshot.holidays.map((item) => ({ href: "/settings/timekeeping", cells: [item.holidayDate, item.label, item.payTreatment.replaceAll("_", " ")] }))}
+      <TimekeepingCalendarPageContent
+        data={toTimekeepingCalendarPageData(snapshot)}
+        branchSelector={sandboxBranchSelector(snapshot)}
       />
     );
   }
   if (id === "vehicle-lookups") {
     return (
-      <ListScreen
-        title="Vehicle lookups"
-        description="Makes and models available on the vehicle form."
-        columns={["Make", "Models"]}
-        rows={snapshot.vehicleMakes.map((make) => ({
-          href: "/settings/vehicle-lookups",
-          cells: [make.name, snapshot.vehicleModels.filter((model) => model.makeId === make.id).map((model) => model.name).join(", ")],
-        }))}
-      />
+      <div className="space-y-0">
+        <PageHeader
+          title="Vehicle lookups"
+          description="Internal make, model, and dropdown reference data for vehicle registration."
+          actions={
+            <PageHeaderActions
+              primary={
+                <Button asChild variant="outline">
+                  <Link href="/settings">Back to settings</Link>
+                </Button>
+              }
+            />
+          }
+        />
+        <VehicleLookupsPageContent data={toVehicleLookupPageData(snapshot)} />
+      </div>
     );
   }
   if (id === "website") {
@@ -1032,9 +1227,9 @@ function SettingsScreen({
           enableShelfLocation: snapshot.business.enableShelfLocation,
           payrollStandardDailyHours: snapshot.business.payrollStandardDailyHours,
           payrollHolidayPremiumRate: snapshot.business.payrollHolidayPremiumRate,
-          payrollDefaultSssAmount: "0",
-          payrollDefaultPhilhealthAmount: "0",
-          payrollDefaultPagibigAmount: "0",
+          payrollDefaultSssAmount: snapshot.business.payrollDefaultSssAmount,
+          payrollDefaultPhilhealthAmount: snapshot.business.payrollDefaultPhilhealthAmount,
+          payrollDefaultPagibigAmount: snapshot.business.payrollDefaultPagibigAmount,
         }}
       />
     </div>
@@ -1064,13 +1259,113 @@ function QuickAccessScreen({ snapshot }: { snapshot: SandboxSnapshot }) {
   );
 }
 
-function PrintScreen({ snapshot, path }: { snapshot: SandboxSnapshot; path: string }) {
-  const id = path.split("/").filter((part) => part !== "print").at(-1);
+function PrintScreen({
+  snapshot,
+  path,
+  searchParams,
+}: {
+  snapshot: SandboxSnapshot;
+  path: string;
+  searchParams: URLSearchParams;
+}) {
+  const segments = path.split("/").filter(Boolean);
+  const [section, id, action, extra] = segments;
+
+  if (section === "payroll" && id === "remittance" && action === "print") {
+    const document = toSandboxRemittancePrintDocument(snapshot, searchParams.get("month"));
+    return (
+      <ReportPage wrapInPrintPage={false} toolbar={<ReportToolbar />}>
+        <ReportAutoPrint enabled={searchParams.get("autoprint") === "1"} />
+        <RemittancePrintLayout document={document} />
+      </ReportPage>
+    );
+  }
+
+  if (section === "payroll" && action === "payslip" && id && extra) {
+    const document = toSandboxPayslipPrintDocument(snapshot, id, extra);
+    if (!document) return <Missing title="Payslip" />;
+    return (
+      <ReportPage wrapInPrintPage={false} toolbar={<ReportToolbar primaryPrintLabel="Print payslip" />}>
+        <ReportAutoPrint enabled={searchParams.get("autoprint") === "1"} />
+        <PayslipPrintLayout document={document} />
+      </ReportPage>
+    );
+  }
+
+  if (section === "payroll" && action === "print" && id) {
+    const document = toSandboxPayrollPrintDocument(snapshot, id);
+    if (!document) return <Missing title="Payroll period" />;
+    return (
+      <ReportPage wrapInPrintPage={false} toolbar={<ReportToolbar primaryPrintLabel="Print payroll" />}>
+        <ReportAutoPrint enabled={searchParams.get("autoprint") === "1"} />
+        <PayrollPrintLayout document={document} />
+      </ReportPage>
+    );
+  }
+
+  if (section === "quotations" && action === "print" && id) {
+    const document = toQuotationPrintDocument(snapshot, id);
+    if (!document) return <Missing title="Quotation" />;
+    const mode = resolveQuotationPrintMode(searchParams.get("mode") ?? undefined);
+
+    return (
+      <ReportPage
+        wrapInPrintPage={false}
+        toolbar={<QuotationPrintToolbar quotationId={document.quotation.id} mode={mode} showDownload={false} />}
+      >
+        <QuotationPrintLayout document={document} mode={mode} />
+      </ReportPage>
+    );
+  }
+
+  if (section === "job-orders" && action === "print" && id) {
+    const document = toJobOrderPrintDocument(snapshot, id);
+    if (!document) return <Missing title="Job order" />;
+    const hidePrices = resolveJobOrderPrintHidePrices({
+      hidePrices: searchParams.get("hidePrices") ?? undefined,
+      showPrices: searchParams.get("showPrices") ?? undefined,
+    });
+
+    return (
+      <ReportPage
+        wrapInPrintPage={false}
+        toolbar={
+          <ReportToolbar
+            alternatePrintHref={`/job-orders/${document.jobOrder.id}/print${hidePrices ? "?showPrices=1" : ""}`}
+            showingAlternatePrint={hidePrices}
+            alternatePrintLabel="Print with Prices"
+            primaryPrintLabel="Print Job Order"
+          />
+        }
+      >
+        <ReportAutoPrint enabled={searchParams.get("autoprint") === "1"} />
+        <JobOrderPrintLayout document={document} hidePrices={hidePrices} />
+      </ReportPage>
+    );
+  }
+
+  if (section === "reports" && segments.at(-1) === "print") {
+    const document = toSandboxReportsPrintDocument(snapshot, {
+      preset: searchParams.get("preset"),
+      from: searchParams.get("from"),
+      to: searchParams.get("to"),
+      groupBy: searchParams.get("groupBy"),
+    });
+
+    return (
+      <ReportPage wrapInPrintPage={false} toolbar={<ReportToolbar primaryPrintLabel="Print report" />}>
+        <ReportAutoPrint enabled={searchParams.get("autoprint") === "1"} />
+        <ReportsPrintLayout document={document} />
+      </ReportPage>
+    );
+  }
+
+  const fallbackId = segments.filter((part) => part !== "print").at(-1);
   const title =
-    snapshot.invoices.find((item) => item.id === id)?.invoiceNumber ??
-    snapshot.quotations.find((item) => item.id === id)?.quotationNumber ??
-    snapshot.jobOrders.find((item) => item.id === id)?.jobOrderNumber ??
-    snapshot.payments.find((item) => item.id === id)?.paymentNumber ??
+    snapshot.invoices.find((item) => item.id === fallbackId)?.invoiceNumber ??
+    snapshot.quotations.find((item) => item.id === fallbackId)?.quotationNumber ??
+    snapshot.jobOrders.find((item) => item.id === fallbackId)?.jobOrderNumber ??
+    snapshot.payments.find((item) => item.id === fallbackId)?.paymentNumber ??
     "Sample shop document";
   return (
     <div className="space-y-6 print:space-y-4">
@@ -1078,241 +1373,6 @@ function PrintScreen({ snapshot, path }: { snapshot: SandboxSnapshot; path: stri
       <p className="text-sm text-muted-foreground">{snapshot.business.address}</p>
       <Button type="button" onClick={() => window.print()}>Print</Button>
     </div>
-  );
-}
-
-function JobDetailsForm({ snapshot, jobOrder }: { snapshot: SandboxSnapshot; jobOrder: SandboxSnapshot["jobOrders"][number] }) {
-  const [message, setMessage] = useState<string | null>(null);
-  return (
-    <form
-      className="grid gap-3"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        const result = saveJobOrderDetailsRecord(snapshot, {
-          jobOrderId: jobOrder.id,
-          mileageIn: String(formData.get("mileageIn") ?? ""),
-          mileageOut: String(formData.get("mileageOut") ?? ""),
-          customerConcern: String(formData.get("customerConcern") ?? ""),
-          inspectionNotes: String(formData.get("inspectionNotes") ?? ""),
-          diagnosis: String(formData.get("diagnosis") ?? ""),
-          workPerformed: String(formData.get("workPerformed") ?? ""),
-        });
-        if (!result.ok) {
-          setMessage("Check mileage and notes, then try again.");
-          return;
-        }
-        void updateSandboxShop(() => result.snapshot);
-        setMessage("Saved in this browser.");
-      }}
-    >
-      {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
-      <Input name="mileageIn" defaultValue={jobOrder.mileageIn ?? ""} placeholder="Mileage in" />
-      <Input name="mileageOut" defaultValue={jobOrder.mileageOut ?? ""} placeholder="Mileage out" />
-      <Textarea name="customerConcern" defaultValue={jobOrder.customerConcern ?? ""} placeholder="Customer concern" />
-      <Textarea name="diagnosis" defaultValue={jobOrder.diagnosis ?? ""} placeholder="Diagnosis" />
-      <Textarea name="workPerformed" defaultValue={jobOrder.workPerformed ?? ""} placeholder="Work performed" />
-      <Textarea name="inspectionNotes" defaultValue={jobOrder.inspectionNotes ?? ""} placeholder="Inspection notes" />
-      <Button type="submit">Save job details</Button>
-    </form>
-  );
-}
-
-function PartUsageForm({ snapshot, jobOrderId }: { snapshot: SandboxSnapshot; jobOrderId: string }) {
-  const [message, setMessage] = useState<string | null>(null);
-  return (
-    <form
-      className="grid gap-3 md:grid-cols-[1fr_8rem_auto]"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        try {
-          const next = recordPartUsageRecord(
-            snapshot,
-            jobOrderId,
-            String(formData.get("productId")),
-            Number(formData.get("quantity")),
-          );
-          void updateSandboxShop(() => next);
-          setMessage("Stock updated.");
-        } catch (error) {
-          setMessage(error instanceof Error ? error.message : "Could not use that part.");
-        }
-      }}
-    >
-      <NativeSelect name="productId" defaultValue={snapshot.products[0]?.id}>
-        {snapshot.products.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.availableQuantity})</option>)}
-      </NativeSelect>
-      <Input name="quantity" defaultValue="1" />
-      <Button type="submit">Use part</Button>
-      {message ? <p className="text-sm text-muted-foreground md:col-span-3">{message}</p> : null}
-    </form>
-  );
-}
-
-function PaymentForm({ invoiceId }: { invoiceId: string }) {
-  const [message, setMessage] = useState<string | null>(null);
-  return (
-    <form
-      className="grid gap-3 md:grid-cols-2"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        void updateSandboxShop((current) => {
-          const result = recordPaymentRecord(current, {
-            invoiceId,
-            amount: String(formData.get("amount") ?? ""),
-            paymentMethod: String(formData.get("paymentMethod") ?? "cash"),
-            referenceNumber: String(formData.get("referenceNumber") ?? ""),
-            notes: String(formData.get("notes") ?? ""),
-          });
-          if (!result.ok) {
-            throw new Error("Enter a payment amount greater than zero.");
-          }
-          return result.snapshot;
-        }).then(() => setMessage("Payment saved in this browser.")).catch((error: unknown) => {
-          setMessage(error instanceof Error ? error.message : "Could not record the payment.");
-        });
-      }}
-    >
-      <Input name="amount" placeholder="Amount" />
-      <NativeSelect name="paymentMethod" defaultValue="cash">
-        {PAYMENT_METHOD_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-      </NativeSelect>
-      <Input name="referenceNumber" placeholder="Reference" />
-      <Input name="notes" placeholder="Notes" />
-      <Button type="submit">Record payment</Button>
-      {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
-    </form>
-  );
-}
-
-function ReceiveStockForm({ snapshot }: { snapshot: SandboxSnapshot }) {
-  return (
-    <form
-      className="grid gap-3 md:grid-cols-[1fr_8rem_auto]"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        void updateSandboxShop((current) => receiveStockRecord(current, String(formData.get("productId")), Number(formData.get("quantity"))));
-      }}
-    >
-      <NativeSelect name="productId" defaultValue={snapshot.products[0]?.id}>
-        {snapshot.products.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-      </NativeSelect>
-      <Input name="quantity" defaultValue="1" />
-      <Button type="submit">Receive</Button>
-    </form>
-  );
-}
-
-function PosForm({ snapshot }: { snapshot: SandboxSnapshot }) {
-  const [message, setMessage] = useState<string | null>(null);
-  return (
-    <form
-      className="grid gap-3 md:grid-cols-2"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        try {
-          const next = completePosSaleRecord(snapshot, {
-            customerId: String(formData.get("customerId") || "") || null,
-            productId: String(formData.get("productId")),
-            quantity: Number(formData.get("quantity")),
-            paymentMethod: String(formData.get("paymentMethod")) as SandboxSnapshot["payments"][number]["paymentMethod"],
-            referenceNumber: String(formData.get("referenceNumber") ?? ""),
-          });
-          void updateSandboxShop(() => next);
-          setMessage("Sale saved in this browser.");
-        } catch (error) {
-          setMessage(error instanceof Error ? error.message : "Could not complete the sale.");
-        }
-      }}
-    >
-      <NativeSelect name="productId" defaultValue={snapshot.products[0]?.id}>
-        {snapshot.products.map((item) => <option key={item.id} value={item.id}>{item.name} · {formatCurrency(item.sellingPrice)}</option>)}
-      </NativeSelect>
-      <Input name="quantity" defaultValue="1" />
-      <NativeSelect name="customerId" defaultValue={snapshot.customers[0]?.id}>
-        {snapshot.customers.map((item) => <option key={item.id} value={item.id}>{item.displayName}</option>)}
-      </NativeSelect>
-      <NativeSelect name="paymentMethod" defaultValue="cash">
-        {PAYMENT_METHOD_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-      </NativeSelect>
-      <Input name="referenceNumber" placeholder="Reference" />
-      <Button type="submit">Complete sale</Button>
-      {message ? <p className="text-sm text-muted-foreground md:col-span-2">{message}</p> : null}
-    </form>
-  );
-}
-
-function PayrollPeriodForm() {
-  return (
-    <form
-      className="grid gap-3 md:grid-cols-2"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        void updateSandboxShop((current) => {
-          const result = createPayrollPeriodRecord(current, {
-            label: String(formData.get("label") ?? ""),
-            periodStartDate: String(formData.get("periodStartDate") ?? ""),
-            periodEndDate: String(formData.get("periodEndDate") ?? ""),
-            payoutDate: String(formData.get("payoutDate") ?? ""),
-            notes: String(formData.get("notes") ?? ""),
-            applyGovernmentDeductions: false,
-          });
-          if (!result.ok) {
-            throw new Error("Check the payroll dates and label.");
-          }
-          return result.snapshot;
-        });
-      }}
-    >
-      <Input name="label" placeholder="Period label" />
-      <Input name="periodStartDate" type="date" />
-      <Input name="periodEndDate" type="date" />
-      <Input name="payoutDate" type="date" />
-      <Input name="notes" placeholder="Notes" />
-      <Button type="submit">Create period</Button>
-    </form>
-  );
-}
-
-function DocumentEditor({ snapshot, documentId }: { snapshot: SandboxSnapshot; documentId?: string }) {
-  const document = snapshot.documents.find((item) => item.id === documentId);
-  return (
-    <form
-      className="space-y-4"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const formData = new FormData(event.currentTarget);
-        void updateSandboxShop((current) => {
-          const title = String(formData.get("title") ?? "Untitled");
-          const body = String(formData.get("body") ?? "");
-          if (document) {
-            return {
-              ...current,
-              documents: current.documents.map((item) =>
-                item.id === document.id ? { ...item, title, body, status: "saved", updatedAt: new Date().toISOString() } : item,
-              ),
-            };
-          }
-          return {
-            ...current,
-            documents: [
-              ...current.documents,
-              { id: crypto.randomUUID(), title, body, status: "saved", updatedAt: new Date().toISOString() },
-            ],
-          };
-        }).then(() => window.location.assign("/documents"));
-      }}
-    >
-      <PageHeader title={document ? document.title : "New Document"} description="Saved only in this browser." backHref="/documents" backLabel="Back to documents" />
-      <Input name="title" defaultValue={document?.title ?? ""} placeholder="Title" />
-      <Textarea name="body" defaultValue={document?.body ?? ""} rows={8} />
-      <Button type="submit">Save document</Button>
-    </form>
   );
 }
 
@@ -1458,10 +1518,6 @@ function RecordDetail({
       </SectionCard>
     </div>
   );
-}
-
-function LineTable({ lines }: { lines: SandboxSnapshot["quotationLines"] }) {
-  return <SimpleTable columns={["Item", "Qty", "Price", "Total"]} rows={lines.map((item) => [item.description, String(item.quantity), formatCurrency(item.unitPrice), formatCurrency(item.total)])} />;
 }
 
 function Missing({ title }: { title: string }) {

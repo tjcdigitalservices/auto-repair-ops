@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { FormStatusMessage } from "@/components/shared/form-status";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { AttendanceGeofenceMap } from "@/features/attendance/components/attendance-geofence-map";
 import { updateAttendanceAccessSettingsAction } from "@/features/attendance/actions/timekeeping-actions";
+import { saveSandboxAttendanceAccessAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import type { AttendanceAccessSettingsFormValues } from "@/features/attendance/types";
 import { INITIAL_TIMEKEEPING_ACTION_STATE } from "@/features/attendance/utils";
 import { useFormValues } from "@/lib/use-form-values";
@@ -50,8 +50,9 @@ export function AttendanceAccessSettingsForm({
 }: {
   initialValues: AttendanceAccessSettingsFormValues;
 }) {
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     updateAttendanceAccessSettingsAction,
+    saveSandboxAttendanceAccessAction,
     INITIAL_TIMEKEEPING_ACTION_STATE,
   );
   const { values, updateFormValue } = useFormValues(initialValues);

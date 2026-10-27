@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Download } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { importPhilippineHolidaySuggestionsAction } from "@/features/attendance/actions/timekeeping-actions";
+import { importSandboxPhilippineHolidaysAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import {
   buildPhilippineHolidaySuggestionRows,
   formatPhilippineHolidaySuggestionPayTreatmentLabel,
@@ -82,8 +84,9 @@ function PhilippineHolidayImportForm({
   existingHolidays: BranchHolidaySummary[];
 }) {
   const router = useRouter();
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     importPhilippineHolidaySuggestionsAction,
+    importSandboxPhilippineHolidaysAction,
     INITIAL_TIMEKEEPING_ACTION_STATE,
   );
   const yearOptions = useMemo(

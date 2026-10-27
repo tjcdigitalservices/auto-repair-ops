@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 
 import {
@@ -21,6 +21,9 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import type { JobOrderDetailTab, JobOrderItemType } from "@/features/job-orders/types";
 import { addJobOrderItemAction } from "@/features/job-orders/actions/job-order-actions";
+import { addSandboxJobOrderItemAction } from "@/features/sandbox/form-actions";
+import { readSandboxShop } from "@/features/sandbox/store";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import { mapInlineCreateResultToPickerOption } from "@/features/products/picker-mappers";
 import { QuickCreateProductDialog } from "@/features/products/components/quick-create-product-dialog";
 import { QuickCreateServiceDialog } from "@/features/services/components/quick-create-service-dialog";
@@ -58,7 +61,11 @@ export function JobOrderAdditionalItemForm({
   redirectTab: JobOrderDetailTab;
   closeDialog: () => void;
 }) {
-  const [state, formAction] = useActionState(addJobOrderItemAction, INITIAL_FORM_ACTION_STATE);
+  const [state, formAction] = useBoundAction(
+    addJobOrderItemAction,
+    addSandboxJobOrderItemAction,
+    INITIAL_FORM_ACTION_STATE,
+  );
   const [catalogState, setCatalogState] = useState<
     | { status: "loading"; options: null; error: null }
     | { status: "ready"; options: CatalogOptions; error: null }
@@ -81,6 +88,44 @@ export function JobOrderAdditionalItemForm({
     let isMounted = true;
 
     async function loadCatalogOptions() {
+      const snapshot = readSandboxShop();
+      if (snapshot) {
+        if (isMounted) {
+          setCatalogState({
+            status: "ready",
+            options: {
+              products: snapshot.products
+                .filter((product) => product.status === "active")
+                .map((product) => ({
+                  id: product.id,
+                  name: product.name,
+                  sku: product.sku,
+                  barcode: product.barcode,
+                  oemNumber: null,
+                  unitLabel: product.unitLabel,
+                  unitPrice: product.sellingPrice,
+                  availableQuantity: product.availableQuantity,
+                  hasStockRecord: true,
+                })),
+              services: snapshot.services
+                .filter((service) => service.status === "active")
+                .map((service) => ({
+                  id: service.id,
+                  label: service.name,
+                  category: service.category,
+                  unitPrice: service.laborPrice,
+                })),
+              permissions: {
+                canCreateProducts: true,
+                canCreateServices: true,
+              },
+            },
+            error: null,
+          });
+        }
+        return;
+      }
+
       try {
         const response = await fetch("/api/job-orders/item-options", {
           signal: controller.signal,

@@ -12,6 +12,7 @@ import type {
   InventoryStockFilterState,
 } from "@/features/inventory/types";
 import { INVENTORY_STOCK_STATE_OPTIONS } from "@/features/inventory/constants";
+import { stripSandboxBasePath } from "@/features/sandbox/constants";
 import { formatInventoryMovementType } from "@/features/inventory/utils";
 
 type InventoryFilterToolbarProps = {
@@ -26,7 +27,7 @@ export function InventoryFilterToolbar({
   movementType,
 }: InventoryFilterToolbarProps) {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = stripSandboxBasePath(usePathname());
   const [isPending, startTransition] = useTransition();
   const [searchValue, setSearchValue] = useState(search);
   const [stockStateValue, setStockStateValue] =

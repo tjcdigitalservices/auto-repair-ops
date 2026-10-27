@@ -1,11 +1,13 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { SubmitButton } from "@/components/shared/submit-button";
 import { type ButtonProps } from "@/components/ui/button";
 import { updatePayrollPeriodStatusAction } from "@/features/payroll/actions/payroll-actions";
+import { updateSandboxPayrollPeriodStatusAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import type { PayrollPeriodStatus } from "@/features/payroll/types";
 import { INITIAL_PAYROLL_FORM_ACTION_STATE } from "@/features/payroll/utils";
 
@@ -26,8 +28,9 @@ export function PayrollPeriodStatusSubmit({
   formId?: string;
 } & Omit<ButtonProps, "type">) {
   const router = useRouter();
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     updatePayrollPeriodStatusAction,
+    updateSandboxPayrollPeriodStatusAction,
     INITIAL_PAYROLL_FORM_ACTION_STATE,
   );
 
@@ -65,8 +68,9 @@ export function PayrollPeriodHiddenStatusForm({
   formId: string;
 }) {
   const router = useRouter();
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     updatePayrollPeriodStatusAction,
+    updateSandboxPayrollPeriodStatusAction,
     INITIAL_PAYROLL_FORM_ACTION_STATE,
   );
 

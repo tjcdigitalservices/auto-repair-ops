@@ -4,6 +4,7 @@ import { Download, Printer } from "lucide-react";
 
 import { IconActionLink } from "@/components/shared/icon-action";
 import type { PayrollPeriodItemSummary } from "@/features/payroll/types";
+import { useSandboxOptional } from "@/features/sandbox/use-bound-action";
 
 export function PayrollPeriodItemPayslipActions({
   periodId,
@@ -12,6 +13,7 @@ export function PayrollPeriodItemPayslipActions({
   periodId: string;
   item: PayrollPeriodItemSummary;
 }) {
+  const sandbox = useSandboxOptional();
   const printHref = `/payroll/${periodId}/payslip/${item.id}/print`;
   const pdfHref = `/api/payroll/${periodId}/payslip/${item.id}/pdf`;
 
@@ -22,11 +24,13 @@ export function PayrollPeriodItemPayslipActions({
         label={`Print payslip for ${item.fullName}`}
         icon={Printer}
       />
-      <IconActionLink
-        href={pdfHref}
-        label={`Download payslip PDF for ${item.fullName}`}
-        icon={Download}
-      />
+      {sandbox ? null : (
+        <IconActionLink
+          href={pdfHref}
+          label={`Download payslip PDF for ${item.fullName}`}
+          icon={Download}
+        />
+      )}
     </div>
   );
 }

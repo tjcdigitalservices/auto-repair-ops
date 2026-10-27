@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useEffect } from "react";
 import { Plus } from "lucide-react";
 
 import {
@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { addAttendanceAllowedIpAction } from "@/features/attendance/actions/timekeeping-actions";
+import { addSandboxAllowedIpAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import type { AttendanceAllowedIpFormValues } from "@/features/attendance/types";
 import { INITIAL_TIMEKEEPING_ACTION_STATE } from "@/features/attendance/utils";
 import { useFormValues } from "@/lib/use-form-values";
@@ -27,8 +29,9 @@ export function AttendanceAllowedIpForm({
   currentDetectedIp: string | null;
   closeDialog?: () => void;
 }) {
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     addAttendanceAllowedIpAction,
+    addSandboxAllowedIpAction,
     INITIAL_TIMEKEEPING_ACTION_STATE,
   );
   const { values, setValues, updateFormValue } = useFormValues<AttendanceAllowedIpFormValues>({

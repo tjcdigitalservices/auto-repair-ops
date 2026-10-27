@@ -31,6 +31,7 @@ import {
   formatBranchHolidayKindLabel,
   formatBranchHolidayPayTreatmentLabel,
 } from "@/features/attendance/utils";
+import { stripSandboxBasePath } from "@/features/sandbox/constants";
 import { formatDate } from "@/lib/dates";
 import type { PageBranchSelectorProps } from "@/lib/branches";
 import { cn } from "@/lib/utils";
@@ -42,7 +43,7 @@ export function TimekeepingCalendarPageContent({
   data: TimekeepingCalendarPageData;
   branchSelector: PageBranchSelectorProps;
 }) {
-  const pathname = usePathname();
+  const pathname = stripSandboxBasePath(usePathname());
   const router = useRouter();
   const searchParams = useSearchParams();
   const showBranchContext = branchSelector.showBranchContext;

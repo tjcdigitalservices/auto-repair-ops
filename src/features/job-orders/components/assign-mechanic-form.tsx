@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { assignMechanicAction } from "@/features/job-orders/actions/job-order-actions";
+import { assignSandboxMechanicAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 
 import {
   FieldError,
@@ -14,7 +16,6 @@ import { SubmitButton } from "@/components/shared/submit-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { assignMechanicAction } from "@/features/job-orders/actions/job-order-actions";
 import type { JobOrderDetailTab, JobOrderMechanicOption } from "@/features/job-orders/types";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
 import { useFormValues } from "@/lib/use-form-values";
@@ -28,7 +29,11 @@ export function AssignMechanicForm({
   mechanics: JobOrderMechanicOption[];
   redirectTab: JobOrderDetailTab;
 }) {
-  const [state, formAction] = useActionState(assignMechanicAction, INITIAL_FORM_ACTION_STATE);
+  const [state, formAction] = useBoundAction(
+    assignMechanicAction,
+    assignSandboxMechanicAction,
+    INITIAL_FORM_ACTION_STATE,
+  );
   const { values, updateFormValue } = useFormValues({
     staffId: mechanics[0]?.id ?? "",
     taskDescription: "",

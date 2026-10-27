@@ -1,6 +1,14 @@
 "use client";
 
-import { useActionState } from "react";
+import {
+  recordJobOrderPartReturnAction,
+  recordJobOrderPartUsageAction,
+} from "@/features/job-orders/actions/job-order-actions";
+import {
+  recordSandboxJobOrderPartReturnAction,
+  recordSandboxJobOrderPartUsageAction,
+} from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 
 import {
   FieldError,
@@ -12,10 +20,6 @@ import {
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  recordJobOrderPartReturnAction,
-  recordJobOrderPartUsageAction,
-} from "@/features/job-orders/actions/job-order-actions";
 import type { JobOrderDetailTab } from "@/features/job-orders/types";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
 import { useFormValues } from "@/lib/use-form-values";
@@ -33,10 +37,18 @@ export function JobOrderPartUsageForm({
   maxQuantity: number;
   redirectTab: JobOrderDetailTab;
 }) {
-  const [state, formAction] = useActionState(
-    mode === "use" ? recordJobOrderPartUsageAction : recordJobOrderPartReturnAction,
+  const [useState, useFormAction] = useBoundAction(
+    recordJobOrderPartUsageAction,
+    recordSandboxJobOrderPartUsageAction,
     INITIAL_FORM_ACTION_STATE,
   );
+  const [returnState, returnFormAction] = useBoundAction(
+    recordJobOrderPartReturnAction,
+    recordSandboxJobOrderPartReturnAction,
+    INITIAL_FORM_ACTION_STATE,
+  );
+  const state = mode === "use" ? useState : returnState;
+  const formAction = mode === "use" ? useFormAction : returnFormAction;
   const { values, updateFormValue } = useFormValues({
     quantity: getDefaultQuantity(maxQuantity),
     notes: "",

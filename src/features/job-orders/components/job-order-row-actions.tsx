@@ -10,6 +10,8 @@ import {
   TableRowActionsMenuLink,
 } from "@/components/shared/table-row-actions-menu";
 import { deleteJobOrderAction } from "@/features/job-orders/actions/job-order-actions";
+import { deleteSandboxJobOrderAction } from "@/features/sandbox/form-actions";
+import { useBoundFormAction } from "@/features/sandbox/use-bound-action";
 
 export function JobOrderRowActions({
   jobOrderId,
@@ -21,6 +23,7 @@ export function JobOrderRowActions({
   canDelete: boolean;
 }) {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const deleteAction = useBoundFormAction(deleteJobOrderAction, deleteSandboxJobOrderAction);
 
   return (
     <>
@@ -45,7 +48,7 @@ export function JobOrderRowActions({
           description="This job order and its line items will be removed permanently. Linked approved quotations return to pending approval. Job orders with active invoices or used parts cannot be deleted."
           confirmLabel="Delete job order"
           cancelLabel="Keep job order"
-          action={deleteJobOrderAction}
+          action={deleteAction}
           fields={[{ name: "jobOrderId", value: jobOrderId }]}
           closeOnSubmit={false}
           open={isDeleteOpen}

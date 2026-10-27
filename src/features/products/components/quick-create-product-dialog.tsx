@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 
 import { FieldError, FormRequiredFieldsNote, FormStatusMessage } from "@/components/shared/form-status";
@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { INITIAL_INLINE_PRODUCT_ACTION_STATE } from "@/features/products/inline-product-action-state";
+import { createSandboxInlineProductAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import {
   createInlineProductAction,
 } from "@/features/products/actions/product-actions";
@@ -124,8 +126,9 @@ function QuickCreateProductDialogForm({
   initialName: string;
   hideTrigger: boolean;
 }) {
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     createInlineProductAction,
+    createSandboxInlineProductAction,
     INITIAL_INLINE_PRODUCT_ACTION_STATE,
   );
   const handledCreatedProductId = useRef<string | null>(null);

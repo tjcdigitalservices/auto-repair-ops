@@ -10,7 +10,7 @@ import {
   MIN_ATTENDANCE_GEOFENCE_RADIUS_METERS,
   isValidCoordinate,
 } from "@/lib/geolocation/geofence";
-import { isPublicIpAddress } from "@/lib/network/request-ip";
+import { isPublicIpAddress } from "@/lib/network/public-ip";
 
 const geofenceLatitudeSchema = z.preprocess(
   parseOptionalNumber,

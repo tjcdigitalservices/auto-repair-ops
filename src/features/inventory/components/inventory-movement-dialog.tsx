@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUpDown } from "lucide-react";
 
 import { FieldError, FormStatusMessage } from "@/components/shared/form-status";
@@ -15,6 +15,9 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { submitInventoryMovementAction } from "@/features/inventory/actions/inventory-actions";
 import type { InventoryMovementAdminMode, InventoryProductOption } from "@/features/inventory/types";
+import type { ProductFormOptionsData } from "@/features/products/types";
+import { submitSandboxInventoryMovementAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import { formatInventoryQuantity } from "@/features/inventory/utils";
 import { QuickCreateProductDialog } from "@/features/products/components/quick-create-product-dialog";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
@@ -51,6 +54,7 @@ export function InventoryMovementDialog({
   triggerText,
   showTrigger = true,
   canCreateProducts = false,
+  productFormOptions = null,
   open,
   onOpenChange,
 }: {
@@ -62,11 +66,13 @@ export function InventoryMovementDialog({
   triggerText?: string;
   showTrigger?: boolean;
   canCreateProducts?: boolean;
+  productFormOptions?: ProductFormOptionsData | null;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     submitInventoryMovementAction,
+    submitSandboxInventoryMovementAction,
     INITIAL_FORM_ACTION_STATE,
   );
   const [productOptions, setProductOptions] = useState<InventoryProductOption[]>(
@@ -241,6 +247,7 @@ export function InventoryMovementDialog({
                 <div className="pt-1">
                   <QuickCreateProductDialog
                     triggerLabel="Add new product"
+                    initialOptions={productFormOptions}
                     onCreated={(product) => {
                       setProductOptions((current) => {
                         const nextProduct = {

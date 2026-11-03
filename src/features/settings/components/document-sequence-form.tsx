@@ -1,7 +1,5 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { FormSection } from "@/components/shared/form-section";
 import {
   FieldError,
@@ -14,6 +12,8 @@ import {
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { saveSandboxDocumentSequenceAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import { updateDocumentSequenceSettingsAction } from "@/features/settings/actions/settings-actions";
 import type { SettingsDocumentSequence } from "@/features/settings/types";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
@@ -24,8 +24,9 @@ export function DocumentSequenceForm({
 }: {
   sequence: SettingsDocumentSequence;
 }) {
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     updateDocumentSequenceSettingsAction,
+    saveSandboxDocumentSequenceAction,
     INITIAL_FORM_ACTION_STATE,
   );
   const { values, updateFormValue } = useFormValues({

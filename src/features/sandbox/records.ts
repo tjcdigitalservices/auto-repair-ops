@@ -33,6 +33,7 @@ import { SANDBOX_IDS } from "@/features/sandbox/ids";
 import {
   SANDBOX_SHOP_PUBLIC_IP,
   createSandboxServiceHistoryRecords,
+  createSandboxShopSettings,
   createSandboxStockMovements,
   createSandboxTimekeepingDefaults,
 } from "@/features/sandbox/seed";
@@ -40,6 +41,7 @@ import type {
   SandboxAttendanceAccess,
   SandboxBusiness,
   SandboxCustomer,
+  SandboxDocumentSequenceMeta,
   SandboxDtrAmendment,
   SandboxHoliday,
   SandboxLine,
@@ -541,6 +543,113 @@ export function saveBusinessProfile(snapshot: SandboxSnapshot, values: Partial<S
     business: {
       ...snapshot.business,
       ...values,
+    },
+  };
+}
+
+export function ensureSandboxShopSettings(snapshot: SandboxSnapshot): SandboxSnapshot {
+  if (snapshot.shopSettings?.documentSequences?.length) {
+    return snapshot;
+  }
+  return {
+    ...snapshot,
+    shopSettings: createSandboxShopSettings(),
+  };
+}
+
+export function saveSandboxOperationalRules(
+  snapshot: SandboxSnapshot,
+  values: Pick<
+    SandboxBusiness,
+    | "allowGlobalProductCatalog"
+    | "allowGlobalServiceCatalog"
+    | "allowPartialPayments"
+    | "requireInvoiceBeforeJobCompletion"
+    | "requireInvoiceBeforeVehicleRelease"
+    | "allowReleaseWithBalance"
+    | "requireFullPaymentBeforeRelease"
+    | "requireAdditionalItemPreApproval"
+    | "enableBarcodeSupport"
+    | "enableShelfLocation"
+    | "payrollStandardDailyHours"
+    | "payrollHolidayPremiumRate"
+    | "payrollDefaultSssAmount"
+    | "payrollDefaultPhilhealthAmount"
+    | "payrollDefaultPagibigAmount"
+  >,
+) {
+  return {
+    ...snapshot,
+    business: {
+      ...snapshot.business,
+      ...values,
+    },
+  };
+}
+
+export function saveSandboxThemeColors(
+  snapshot: SandboxSnapshot,
+  values: { themePrimaryColor: string; themeAccentColor: string },
+) {
+  const shop = ensureSandboxShopSettings(snapshot);
+  return {
+    ...shop,
+    shopSettings: {
+      ...shop.shopSettings!,
+      themePrimaryColor: values.themePrimaryColor,
+      themeAccentColor: values.themeAccentColor,
+    },
+  };
+}
+
+export function saveSandboxPublicPresence(
+  snapshot: SandboxSnapshot,
+  values: {
+    websiteUrl: string;
+    facebookUrl: string;
+    facebookLabel: string;
+    storeHours: Record<string, string>;
+  },
+) {
+  const shop = ensureSandboxShopSettings(snapshot);
+  return {
+    ...shop,
+    shopSettings: {
+      ...shop.shopSettings!,
+      websiteUrl: values.websiteUrl,
+      facebookUrl: values.facebookUrl,
+      facebookLabel: values.facebookLabel,
+      storeHours: values.storeHours,
+    },
+  };
+}
+
+export function saveSandboxDocumentSequence(
+  snapshot: SandboxSnapshot,
+  values: {
+    key: SandboxDocumentSequenceMeta["key"];
+    prefix: string;
+    padding: number;
+    lastValue: number;
+  },
+) {
+  const shop = ensureSandboxShopSettings(snapshot);
+  const sequences = { ...shop.sequences };
+  if (values.key === "quotation") sequences.quotation = values.lastValue;
+  if (values.key === "job_order") sequences.jobOrder = values.lastValue;
+  if (values.key === "invoice") sequences.invoice = values.lastValue;
+  if (values.key === "sale") sequences.pos = values.lastValue;
+
+  return {
+    ...shop,
+    sequences,
+    shopSettings: {
+      ...shop.shopSettings!,
+      documentSequences: shop.shopSettings!.documentSequences.map((item) =>
+        item.key === values.key
+          ? { ...item, prefix: values.prefix, padding: values.padding }
+          : item,
+      ),
     },
   };
 }

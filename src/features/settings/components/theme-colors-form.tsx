@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import {
   FieldError,
@@ -11,6 +11,8 @@ import { FormSection } from "@/components/shared/form-section";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { saveSandboxThemeColorsAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import { updateThemeColorsSettingsAction } from "@/features/settings/actions/settings-actions";
 import type { ThemePalettePreview } from "@/features/settings/types";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
@@ -21,8 +23,9 @@ export function ThemeColorsForm({
 }: {
   themePalette: ThemePalettePreview;
 }) {
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     updateThemeColorsSettingsAction,
+    saveSandboxThemeColorsAction,
     INITIAL_FORM_ACTION_STATE,
   );
   const [buttonColor, setButtonColor] = useState(themePalette.primaryColor);
@@ -139,11 +142,11 @@ function ColorSwatchPicker({
 }) {
   return (
     <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={name}>
-      {options.map((option) => {
+      {options.map((option, index) => {
         const isSelected = option.hsl === selected;
         return (
           <button
-            key={`${name}-${option.hsl}`}
+            key={`${name}-${option.hsl}-${index}`}
             type="button"
             role="radio"
             aria-checked={isSelected}

@@ -83,6 +83,7 @@ import type { ReportsPageData, ReportsPrintDocument } from "@/features/reports/t
 import {
   customerName,
   ensureSandboxServiceHistory,
+  ensureSandboxShopSettings,
   ensureSandboxStockMovements,
   ensureSandboxTimekeeping,
   normalizeSandboxDocument,
@@ -115,6 +116,12 @@ import type { ServiceListItem } from "@/features/services/types";
 import type { StaffListItem, StaffRole } from "@/features/staff/types";
 import type { SupplierListItem } from "@/features/suppliers/types";
 import type {
+  BusinessSettingsValues,
+  SettingsDocumentSequence,
+  SettingsPageTab,
+  SettingsTabPageData,
+} from "@/features/settings/types";
+import type {
   VehicleLookupOptionGroup,
   VehicleLookupPageData,
   VehicleLookupType,
@@ -123,6 +130,7 @@ import type {
 } from "@/features/vehicles/types";
 import { SANDBOX_SHOP_PUBLIC_IP } from "@/features/sandbox/seed";
 import type { SandboxSnapshot } from "@/features/sandbox/types";
+import { DEFAULT_BRAND_PACK } from "@/lib/branding/types";
 import { roundCurrency } from "@/lib/currency";
 
 const VEHICLE_LOOKUP_LABELS: Record<VehicleLookupType, string> = {
@@ -2448,6 +2456,166 @@ export function toSandboxReportsPrintDocument(
 
 function sumReportBy<T>(rows: T[], selector: (row: T) => number) {
   return roundCurrency(rows.reduce((sum, row) => sum + selector(row), 0));
+}
+
+const DOCUMENT_SEQUENCE_LABELS: Record<SettingsDocumentSequence["key"], string> = {
+  quotation: "Quotation numbers",
+  job_order: "Job order numbers",
+  invoice: "Invoice numbers",
+  sale: "POS sale numbers",
+};
+
+function uniqueThemeCandidates(
+  candidates: Array<{ hsl: string; label: string }>,
+): Array<{ hsl: string; label: string }> {
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    const key = candidate.hsl.trim().toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+export function toSandboxBusinessSettingsValues(snapshot: SandboxSnapshot): BusinessSettingsValues {
+  return {
+    businessName: snapshot.business.name,
+    businessLogoUrl: snapshot.business.logoDataUrl,
+    businessMarkUrl: snapshot.business.markDataUrl,
+    businessAddress: snapshot.business.address,
+    businessContact: snapshot.business.contact,
+    businessEmail: snapshot.business.email,
+    businessVatRegistrationNo: snapshot.business.vatRegistrationNo,
+    receiptFooter: snapshot.business.receiptFooter,
+    defaultTaxRate: snapshot.business.defaultTaxRate,
+    allowGlobalProductCatalog: snapshot.business.allowGlobalProductCatalog,
+    allowGlobalServiceCatalog: snapshot.business.allowGlobalServiceCatalog,
+    allowPartialPayments: snapshot.business.allowPartialPayments,
+    requireInvoiceBeforeJobCompletion: snapshot.business.requireInvoiceBeforeJobCompletion,
+    requireInvoiceBeforeVehicleRelease: snapshot.business.requireInvoiceBeforeVehicleRelease,
+    allowReleaseWithBalance: snapshot.business.allowReleaseWithBalance,
+    requireFullPaymentBeforeRelease: snapshot.business.requireFullPaymentBeforeRelease,
+    requireAdditionalItemPreApproval: snapshot.business.requireAdditionalItemPreApproval,
+    enableBarcodeSupport: snapshot.business.enableBarcodeSupport,
+    enableShelfLocation: snapshot.business.enableShelfLocation,
+    payrollStandardDailyHours: snapshot.business.payrollStandardDailyHours,
+    payrollHolidayPremiumRate: String(Number(snapshot.business.payrollHolidayPremiumRate) * 100),
+    payrollDefaultSssAmount: snapshot.business.payrollDefaultSssAmount,
+    payrollDefaultPhilhealthAmount: snapshot.business.payrollDefaultPhilhealthAmount,
+    payrollDefaultPagibigAmount: snapshot.business.payrollDefaultPagibigAmount,
+  };
+}
+
+export function toSandboxSettingsTabPageData(
+  snapshot: SandboxSnapshot,
+  tab: SettingsPageTab,
+): SettingsTabPageData {
+  const shop = ensureSandboxShopSettings(snapshot);
+  const settings = toSandboxBusinessSettingsValues(shop);
+  const shopSettings = shop.shopSettings!;
+
+  switch (tab) {
+    case "profile":
+      return { tab, settings };
+    case "branches":
+      return {
+        tab,
+        branches: [
+          {
+            id: shop.branch.id,
+            name: shop.branch.name,
+            code: shop.branch.code,
+            isMain: shop.branch.isMain,
+          },
+        ],
+        selectedBranchId: shop.branch.id,
+        canSwitch: false,
+        canManageBranches: false,
+        canEditTenantBranding: false,
+        branding: {
+          tenantId: null,
+          slug: "sample-auto-care",
+          appName: DEFAULT_BRAND_PACK.appName,
+          companyName: shop.business.name,
+          supportEmail: shop.business.email || null,
+          phone: shop.business.contact || null,
+          address: shop.business.address || null,
+          primaryColor: shopSettings.themePrimaryColor,
+          primaryColorStrong: DEFAULT_BRAND_PACK.primaryColorStrong,
+          primaryColorHover: DEFAULT_BRAND_PACK.primaryColorHover,
+          accentColor: shopSettings.themeAccentColor,
+          accentColorDark: DEFAULT_BRAND_PACK.accentColorDark,
+          softColor: DEFAULT_BRAND_PACK.softColor,
+          borderColor: DEFAULT_BRAND_PACK.borderColor,
+          fontSans: DEFAULT_BRAND_PACK.fontSans,
+          fontDisplay: DEFAULT_BRAND_PACK.fontDisplay,
+          logoSrc: shop.business.logoDataUrl ?? DEFAULT_BRAND_PACK.logoSrc,
+          logoTightSrc: DEFAULT_BRAND_PACK.logoTightSrc,
+          markSrc: shop.business.markDataUrl ?? DEFAULT_BRAND_PACK.markSrc,
+          faviconSrc: DEFAULT_BRAND_PACK.faviconSrc,
+          appleTouchIconSrc: DEFAULT_BRAND_PACK.appleTouchIconSrc,
+          loginBackgroundSrc: DEFAULT_BRAND_PACK.loginBackgroundSrc,
+          heroBackgroundSrc: DEFAULT_BRAND_PACK.heroBackgroundSrc,
+          featureBackgroundSrc: DEFAULT_BRAND_PACK.featureBackgroundSrc,
+          facebookUrl: shopSettings.facebookUrl || null,
+          facebookLabel: shopSettings.facebookLabel || null,
+          mapsUrl: null,
+          websiteUrl: shopSettings.websiteUrl || null,
+          googleReviewsUrl: null,
+          storeHours: DEFAULT_BRAND_PACK.storeHours.map((entry) => ({ ...entry })),
+          metaTitle: shop.business.name,
+          metaDescription: DEFAULT_BRAND_PACK.metaDescription,
+          tagline: DEFAULT_BRAND_PACK.tagline,
+          receiptFooterDefault: shop.business.receiptFooter || DEFAULT_BRAND_PACK.receiptFooterDefault,
+        },
+      };
+    case "operations":
+      return { tab, settings };
+    case "theme":
+      return {
+        tab,
+        themePalette: {
+          primaryColor: shopSettings.themePrimaryColor,
+          accentColor: shopSettings.themeAccentColor,
+          candidates: uniqueThemeCandidates([
+            { hsl: shopSettings.themePrimaryColor, label: "Current buttons" },
+            { hsl: shopSettings.themeAccentColor, label: "Current accent" },
+            { hsl: DEFAULT_BRAND_PACK.primaryColor, label: "Default navy" },
+            { hsl: DEFAULT_BRAND_PACK.accentColor, label: "Default red" },
+            { hsl: "210 80% 35%", label: "Workshop blue" },
+            { hsl: "28 85% 48%", label: "Amber accent" },
+          ]),
+        },
+      };
+    case "presence":
+      return {
+        tab,
+        publicPresence: {
+          websiteUrl: shopSettings.websiteUrl,
+          facebookUrl: shopSettings.facebookUrl,
+          facebookLabel: shopSettings.facebookLabel,
+          storeHours: shopSettings.storeHours,
+        },
+      };
+    case "documents": {
+      const lastValueByKey: Record<SettingsDocumentSequence["key"], number> = {
+        quotation: shop.sequences.quotation,
+        job_order: shop.sequences.jobOrder,
+        invoice: shop.sequences.invoice,
+        sale: shop.sequences.pos,
+      };
+      return {
+        tab,
+        documentSequences: shopSettings.documentSequences.map((item) => ({
+          key: item.key,
+          label: DOCUMENT_SEQUENCE_LABELS[item.key],
+          prefix: item.prefix,
+          padding: item.padding,
+          lastValue: lastValueByKey[item.key],
+        })),
+      };
+    }
+  }
 }
 
 export function toVehicleLookupPageData(snapshot: SandboxSnapshot): VehicleLookupPageData {

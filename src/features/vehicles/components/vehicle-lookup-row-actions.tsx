@@ -8,6 +8,14 @@ import {
   TableRowActionsMenuSeparator,
 } from "@/components/shared/table-row-actions-menu";
 import {
+  deleteSandboxVehicleMakeAction,
+  deleteSandboxVehicleModelAction,
+  updateSandboxVehicleLookupOptionStatusAction,
+  updateSandboxVehicleMakeStatusAction,
+  updateSandboxVehicleModelStatusAction,
+} from "@/features/sandbox/form-actions";
+import { useBoundFormAction } from "@/features/sandbox/use-bound-action";
+import {
   deleteVehicleMakeAction,
   deleteVehicleModelAction,
   updateVehicleLookupOptionStatusAction,
@@ -24,12 +32,17 @@ import { LookupStatusFormMenuItem } from "@/features/vehicles/components/vehicle
 
 export function VehicleMakeRowActions({ make }: { make: VehicleMakeItem }) {
   const nextStatus = make.status === "active" ? "inactive" : "active";
+  const statusAction = useBoundFormAction(
+    updateVehicleMakeStatusAction,
+    updateSandboxVehicleMakeStatusAction,
+  );
+  const deleteAction = useBoundFormAction(deleteVehicleMakeAction, deleteSandboxVehicleMakeAction);
 
   return (
     <TableRowActionsMenu label={`Open actions for ${make.name}`}>
       <LookupStatusFormMenuItem
         label={make.status === "active" ? "Deactivate make" : "Activate make"}
-        action={updateVehicleMakeStatusAction}
+        action={statusAction}
         fields={{
           makeId: make.id,
           status: nextStatus,
@@ -44,7 +57,7 @@ export function VehicleMakeRowActions({ make }: { make: VehicleMakeItem }) {
         description="This make and all of its models will be removed from the registration catalog. Existing vehicle records keep their saved make and model text."
         confirmLabel="Delete make"
         cancelLabel="Keep make"
-        action={deleteVehicleMakeAction}
+        action={deleteAction}
         fields={[{ name: "makeId", value: make.id }]}
         icon={Trash2}
         tone="destructive"
@@ -56,12 +69,17 @@ export function VehicleMakeRowActions({ make }: { make: VehicleMakeItem }) {
 export function VehicleModelRowActions({ model }: { model: VehicleModelItem }) {
   const nextStatus = model.status === "active" ? "inactive" : "active";
   const modelLabel = model.makeName ? `${model.makeName} ${model.name}` : model.name;
+  const statusAction = useBoundFormAction(
+    updateVehicleModelStatusAction,
+    updateSandboxVehicleModelStatusAction,
+  );
+  const deleteAction = useBoundFormAction(deleteVehicleModelAction, deleteSandboxVehicleModelAction);
 
   return (
     <TableRowActionsMenu label={`Open actions for ${model.name}`}>
       <LookupStatusFormMenuItem
         label={model.status === "active" ? "Deactivate model" : "Activate model"}
-        action={updateVehicleModelStatusAction}
+        action={statusAction}
         fields={{
           modelId: model.id,
           status: nextStatus,
@@ -76,7 +94,7 @@ export function VehicleModelRowActions({ model }: { model: VehicleModelItem }) {
         description="This model will be removed from the registration catalog. Existing vehicle records keep their saved make and model text."
         confirmLabel="Delete model"
         cancelLabel="Keep model"
-        action={deleteVehicleModelAction}
+        action={deleteAction}
         fields={[{ name: "modelId", value: model.id }]}
         icon={Trash2}
         tone="destructive"
@@ -87,12 +105,16 @@ export function VehicleModelRowActions({ model }: { model: VehicleModelItem }) {
 
 export function VehicleLookupOptionRowActions({ item }: { item: VehicleLookupOptionItem }) {
   const nextStatus = item.status === "active" ? "inactive" : "active";
+  const statusAction = useBoundFormAction(
+    updateVehicleLookupOptionStatusAction,
+    updateSandboxVehicleLookupOptionStatusAction,
+  );
 
   return (
     <TableRowActionsMenu label={`Open actions for ${item.label}`}>
       <LookupStatusFormMenuItem
         label={item.status === "active" ? "Deactivate option" : "Activate option"}
-        action={updateVehicleLookupOptionStatusAction}
+        action={statusAction}
         fields={{
           optionId: item.id,
           status: nextStatus,

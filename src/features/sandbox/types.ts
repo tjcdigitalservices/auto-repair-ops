@@ -61,6 +61,22 @@ export type SandboxSequences = {
   payroll: number;
 };
 
+export type SandboxDocumentSequenceMeta = {
+  key: "quotation" | "job_order" | "invoice" | "sale";
+  prefix: string;
+  padding: number;
+};
+
+export type SandboxShopSettings = {
+  themePrimaryColor: string;
+  themeAccentColor: string;
+  websiteUrl: string;
+  facebookUrl: string;
+  facebookLabel: string;
+  storeHours: Record<string, string>;
+  documentSequences: SandboxDocumentSequenceMeta[];
+};
+
 export type SandboxCustomer = {
   id: string;
   customerCode: string | null;
@@ -504,4 +520,5 @@ export type SandboxSnapshot = {
   staffDevices?: SandboxStaffDevice[];
   dtrAmendments?: SandboxDtrAmendment[];
   stockMovements?: SandboxStockMovement[];
+  shopSettings?: SandboxShopSettings;
 };

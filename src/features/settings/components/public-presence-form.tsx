@@ -1,7 +1,5 @@
 "use client";
 
-import { useActionState } from "react";
-
 import {
   FieldError,
   FormRequiredFieldsNote,
@@ -14,6 +12,8 @@ import { FormSection } from "@/components/shared/form-section";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { saveSandboxPublicPresenceAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import { updatePublicPresenceSettingsAction } from "@/features/settings/actions/settings-actions";
 import {
   STORE_HOUR_DAY_NAMES,
@@ -28,8 +28,9 @@ export function PublicPresenceForm({
 }: {
   initialValues: PublicPresenceSettingsValues;
 }) {
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     updatePublicPresenceSettingsAction,
+    saveSandboxPublicPresenceAction,
     INITIAL_FORM_ACTION_STATE,
   );
   const initialFormValues: Record<string, string> = {

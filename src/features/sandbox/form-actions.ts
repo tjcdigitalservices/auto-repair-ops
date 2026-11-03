@@ -106,8 +106,20 @@ import {
 import type { VehicleStatus } from "@/features/vehicles/types";
 import {
   businessProfileSettingsSchema,
+  documentSequenceSettingsSchema,
+  operationalRulesSettingsSchema,
   parseBusinessProfileSettingsFormData,
+  parseDocumentSequenceSettingsFormData,
+  parseOperationalRulesSettingsFormData,
+  parsePublicPresenceSettingsFormData,
+  parseThemeColorsSettingsFormData,
+  publicPresenceSettingsSchema,
+  themeColorsSettingsSchema,
 } from "@/features/settings/schemas/settings-forms";
+import {
+  STORE_HOUR_DAY_NAMES,
+  storeHourFieldName,
+} from "@/features/settings/store-hours.shared";
 import type { InlineCustomerCreateActionState } from "@/features/customers/inline-customer-action-state";
 import {
   parseQuotationFormData,
@@ -132,8 +144,13 @@ import {
   generatePayrollCutRecord,
   rejectQuotationRecord,
   reviseQuotationRecord,
+  ensureSandboxShopSettings,
   saveBusinessProfile,
   saveCustomerRecord,
+  saveSandboxDocumentSequence,
+  saveSandboxOperationalRules,
+  saveSandboxPublicPresence,
+  saveSandboxThemeColors,
   saveProductRecord,
   saveQuotationFromForm,
   saveServiceRecord,
@@ -363,6 +380,94 @@ export async function saveSandboxBusinessProfileAction(
   await updateSandboxShop(() => next);
   go("/settings");
   return { status: "success" };
+}
+
+export async function saveSandboxOperationalRulesAction(
+  _previous: FormActionState,
+  formData: FormData,
+): Promise<FormActionState> {
+  const snapshot = readSandboxShop();
+  if (!snapshot) return loadingError();
+
+  const parsed = operationalRulesSettingsSchema.safeParse(parseOperationalRulesSettingsFormData(formData));
+  if (!parsed.success) return toFormActionState(parsed.error);
+
+  const next = saveSandboxOperationalRules(snapshot, {
+    ...parsed.data,
+    payrollHolidayPremiumRate: String(Number(parsed.data.payrollHolidayPremiumRate) / 100),
+  });
+  await updateSandboxShop(() => next);
+  go("/settings?tab=operations");
+  return { status: "success", message: "Operational rules saved." };
+}
+
+export async function saveSandboxThemeColorsAction(
+  _previous: FormActionState,
+  formData: FormData,
+): Promise<FormActionState> {
+  const snapshot = readSandboxShop();
+  if (!snapshot) return loadingError();
+
+  const parsed = themeColorsSettingsSchema.safeParse(parseThemeColorsSettingsFormData(formData));
+  if (!parsed.success) return toFormActionState(parsed.error);
+
+  const next = saveSandboxThemeColors(ensureSandboxShopSettings(snapshot), {
+    themePrimaryColor: parsed.data.buttonColor,
+    themeAccentColor: parsed.data.accentColor,
+  });
+  await updateSandboxShop(() => next);
+  go("/settings?tab=theme");
+  return { status: "success", message: "Theme colors saved." };
+}
+
+export async function saveSandboxPublicPresenceAction(
+  _previous: FormActionState,
+  formData: FormData,
+): Promise<FormActionState> {
+  const snapshot = readSandboxShop();
+  if (!snapshot) return loadingError();
+
+  const parsed = publicPresenceSettingsSchema.safeParse(parsePublicPresenceSettingsFormData(formData));
+  if (!parsed.success) return toFormActionState(parsed.error);
+
+  const presenceValues = parsed.data as Record<string, string>;
+  const storeHours = Object.fromEntries(
+    STORE_HOUR_DAY_NAMES.map((day) => [
+      storeHourFieldName(day),
+      presenceValues[storeHourFieldName(day)] ?? "",
+    ]),
+  );
+
+  const next = saveSandboxPublicPresence(ensureSandboxShopSettings(snapshot), {
+    websiteUrl: parsed.data.websiteUrl,
+    facebookUrl: parsed.data.facebookUrl,
+    facebookLabel: parsed.data.facebookLabel,
+    storeHours,
+  });
+  await updateSandboxShop(() => next);
+  go("/settings?tab=presence");
+  return { status: "success", message: "Public presence saved." };
+}
+
+export async function saveSandboxDocumentSequenceAction(
+  _previous: FormActionState,
+  formData: FormData,
+): Promise<FormActionState> {
+  const snapshot = readSandboxShop();
+  if (!snapshot) return loadingError();
+
+  const parsed = documentSequenceSettingsSchema.safeParse(parseDocumentSequenceSettingsFormData(formData));
+  if (!parsed.success) return toFormActionState(parsed.error);
+
+  const next = saveSandboxDocumentSequence(ensureSandboxShopSettings(snapshot), {
+    key: parsed.data.key,
+    prefix: parsed.data.prefix,
+    padding: Number(parsed.data.padding),
+    lastValue: Number(parsed.data.lastValue),
+  });
+  await updateSandboxShop(() => next);
+  go("/settings?tab=documents");
+  return { status: "success", message: "Document sequence saved." };
 }
 
 export async function saveSandboxAttendanceAction(

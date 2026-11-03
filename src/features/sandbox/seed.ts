@@ -1,20 +1,24 @@
 import { DateTime } from "luxon";
 
 import { createDefaultDocumentJson } from "@/components/document-engine/persistence/document-content";
+import { SETTINGS_DOCUMENT_SEQUENCE_DEFAULTS } from "@/features/settings/document-sequence-defaults";
+import { mapStoreHoursToFormValues } from "@/features/settings/store-hours.shared";
 import type {
   SandboxAllowedIp,
   SandboxAttendanceAccess,
   SandboxJobOrder,
   SandboxLine,
+  SandboxShopSettings,
   SandboxSnapshot,
   SandboxStaffDevice,
   SandboxStockMovement,
 } from "@/features/sandbox/types";
 import { SANDBOX_IDS as ID } from "@/features/sandbox/ids";
+import { DEFAULT_BRAND_PACK } from "@/lib/branding/types";
 
 const ZONE = "Asia/Manila";
 
-export const SANDBOX_SEED_REVISION = 6;
+export const SANDBOX_SEED_REVISION = 7;
 
 export const SANDBOX_SHOP_PUBLIC_IP = "203.177.14.22";
 
@@ -311,6 +315,7 @@ export function createSandboxSeed(now = new Date()): SandboxSnapshot {
       pos: 2,
       payroll: 4,
     },
+    shopSettings: createSandboxShopSettings(),
     customers: [
       customer(ID.customerMaria, "CUS-0001", "individual", "Maria Santos", "Maria", "Santos", null, "0917 100 2201", "maria.santos@example.com", createdAt),
       customer(ID.customerSantos, "CUS-0002", "company", "Santos Logistics", null, null, "Santos Logistics", "0918 200 3302", "fleet@santoslogistics.example", createdAt),
@@ -1025,4 +1030,20 @@ function lookup(
   sortOrder: number,
 ): SandboxSnapshot["lookupOptions"][number] {
   return { id, lookupType, label, status: "active", sortOrder };
+}
+
+export function createSandboxShopSettings(): SandboxShopSettings {
+  return {
+    themePrimaryColor: DEFAULT_BRAND_PACK.primaryColor,
+    themeAccentColor: DEFAULT_BRAND_PACK.accentColor,
+    websiteUrl: "https://sampleautocare.test",
+    facebookUrl: "https://facebook.com/sampleautocare",
+    facebookLabel: "Sample Auto Care",
+    storeHours: mapStoreHoursToFormValues([...DEFAULT_BRAND_PACK.storeHours]),
+    documentSequences: SETTINGS_DOCUMENT_SEQUENCE_DEFAULTS.map((item) => ({
+      key: item.key,
+      prefix: item.prefix,
+      padding: item.padding,
+    })),
+  };
 }

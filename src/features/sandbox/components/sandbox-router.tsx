@@ -67,7 +67,8 @@ import { QuotationCreateFlow } from "@/features/quotations/components/quotation-
 import { QuotationDetailPageContent } from "@/features/quotations/components/quotation-detail-page-content";
 import { QuotationForm } from "@/features/quotations/components/quotation-form";
 import { QuotationsPageView } from "@/features/quotations/components/quotations-page-view";
-import { BusinessProfileForm } from "@/features/settings/components/business-profile-form";
+import { SettingsPageTabs } from "@/features/settings/components/settings-page-tabs";
+import { resolveSettingsPageTab } from "@/features/settings/utils";
 import { ServiceForm } from "@/features/services/components/service-form";
 import { StaffForm } from "@/features/staff/components/staff-form";
 import { SupplierForm } from "@/features/suppliers/components/supplier-form";
@@ -135,6 +136,7 @@ import {
   toPaymentDetail,
   toSandboxReportsPageData,
   toSandboxReportsPrintDocument,
+  toSandboxSettingsTabPageData,
   toVehicleDetail,
   toVehicleLookupPageData,
 } from "@/features/sandbox/view-models";
@@ -210,7 +212,15 @@ export function SandboxRouter({ snapshot }: { snapshot: SandboxSnapshot }) {
     return <DocumentsScreen snapshot={snapshot} id={id} searchParams={searchParams} />;
   }
   if (section === "settings") {
-    return <SettingsScreen snapshot={snapshot} id={id} action={action} extra={extra} />;
+    return (
+      <SettingsScreen
+        snapshot={snapshot}
+        id={id}
+        action={action}
+        extra={extra}
+        searchParams={searchParams}
+      />
+    );
   }
   if (section === "quick-access") {
     return <QuickAccessScreen snapshot={snapshot} />;
@@ -1141,24 +1151,27 @@ function SettingsScreen({
   id,
   action,
   extra,
+  searchParams,
 }: {
   snapshot: SandboxSnapshot;
   id?: string;
   action?: string;
   extra?: string;
+  searchParams: URLSearchParams;
 }) {
   if (id === "branches") {
     return (
-      <RecordDetail
-        title={snapshot.branch.name}
-        subtitle={snapshot.branch.code}
-        backHref="/settings"
-        rows={[
-          ["Address", snapshot.branch.address],
-          ["Phone", snapshot.branch.contactNumber],
-          ["Email", snapshot.branch.email],
-        ]}
-      />
+      <div className="space-y-0">
+        <PageHeader
+          title="Settings"
+          description="Business identity and operational billing behavior."
+        />
+        <SettingsPageTabs
+          activeTab="branches"
+          data={toSandboxSettingsTabPageData(snapshot, "branches")}
+          resolveTabData={(tab) => toSandboxSettingsTabPageData(snapshot, tab)}
+        />
+      </div>
     );
   }
   if (id === "timekeeping") {
@@ -1201,36 +1214,17 @@ function SettingsScreen({
     );
   }
 
+  const activeTab = resolveSettingsPageTab(searchParams.get("tab") ?? undefined);
   return (
-    <div className="space-y-6">
-      <PageHeader title="Settings" description="Business identity for this browser." />
-      <BusinessProfileForm
-        initialValues={{
-          businessName: snapshot.business.name,
-          businessLogoUrl: snapshot.business.logoDataUrl,
-          businessMarkUrl: snapshot.business.markDataUrl,
-          businessAddress: snapshot.business.address,
-          businessContact: snapshot.business.contact,
-          businessEmail: snapshot.business.email,
-          businessVatRegistrationNo: snapshot.business.vatRegistrationNo,
-          receiptFooter: snapshot.business.receiptFooter,
-          defaultTaxRate: snapshot.business.defaultTaxRate,
-          allowGlobalProductCatalog: snapshot.business.allowGlobalProductCatalog,
-          allowGlobalServiceCatalog: snapshot.business.allowGlobalServiceCatalog,
-          allowPartialPayments: snapshot.business.allowPartialPayments,
-          requireInvoiceBeforeJobCompletion: snapshot.business.requireInvoiceBeforeJobCompletion,
-          requireInvoiceBeforeVehicleRelease: snapshot.business.requireInvoiceBeforeVehicleRelease,
-          allowReleaseWithBalance: snapshot.business.allowReleaseWithBalance,
-          requireFullPaymentBeforeRelease: snapshot.business.requireFullPaymentBeforeRelease,
-          requireAdditionalItemPreApproval: snapshot.business.requireAdditionalItemPreApproval,
-          enableBarcodeSupport: snapshot.business.enableBarcodeSupport,
-          enableShelfLocation: snapshot.business.enableShelfLocation,
-          payrollStandardDailyHours: snapshot.business.payrollStandardDailyHours,
-          payrollHolidayPremiumRate: snapshot.business.payrollHolidayPremiumRate,
-          payrollDefaultSssAmount: snapshot.business.payrollDefaultSssAmount,
-          payrollDefaultPhilhealthAmount: snapshot.business.payrollDefaultPhilhealthAmount,
-          payrollDefaultPagibigAmount: snapshot.business.payrollDefaultPagibigAmount,
-        }}
+    <div className="space-y-0">
+      <PageHeader
+        title="Settings"
+        description="Business identity and operational billing behavior."
+      />
+      <SettingsPageTabs
+        activeTab={activeTab}
+        data={toSandboxSettingsTabPageData(snapshot, activeTab)}
+        resolveTabData={(tab) => toSandboxSettingsTabPageData(snapshot, tab)}
       />
     </div>
   );

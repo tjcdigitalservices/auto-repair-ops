@@ -1,7 +1,5 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { FormSection } from "@/components/shared/form-section";
 import {
   FieldError,
@@ -15,6 +13,8 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { saveSandboxOperationalRulesAction } from "@/features/sandbox/form-actions";
+import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import { updateOperationalRulesSettingsAction } from "@/features/settings/actions/settings-actions";
 import type { BusinessSettingsValues } from "@/features/settings/types";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
@@ -25,8 +25,9 @@ export function OperationalRulesForm({
 }: {
   initialValues: BusinessSettingsValues;
 }) {
-  const [state, formAction] = useActionState(
+  const [state, formAction] = useBoundAction(
     updateOperationalRulesSettingsAction,
+    saveSandboxOperationalRulesAction,
     INITIAL_FORM_ACTION_STATE,
   );
   const { values, updateFormValue } = useFormValues({

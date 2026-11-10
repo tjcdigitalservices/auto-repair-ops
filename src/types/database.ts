@@ -2440,6 +2440,10 @@ export type Database = {
         };
         Returns: Json;
       };
+      seed_default_vehicle_lookups_for_tenant: {
+        Args: { p_tenant_id: string };
+        Returns: undefined;
+      };
       customer_get_shop_calendar: {
         Args: Record<string, never>;
         Returns: Json;

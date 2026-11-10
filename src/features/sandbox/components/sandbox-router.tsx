@@ -279,6 +279,7 @@ function CustomersScreen({
             address: customer.address ?? "",
             notes: customer.notes ?? "",
             status: customer.status,
+            createPortalLogin: false,
           }}
         />
       </div>
@@ -1561,6 +1562,7 @@ function emptyCustomer() {
     address: "",
     notes: "",
     status: "active" as const,
+    createPortalLogin: false,
   };
 }
 

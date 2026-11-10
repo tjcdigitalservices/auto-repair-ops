@@ -27,6 +27,7 @@ describe("sandbox shop", () => {
       address: "Makati",
       notes: "",
       status: "active",
+      createPortalLogin: false,
     });
     await firstVisit.update(() => saved.snapshot);
 

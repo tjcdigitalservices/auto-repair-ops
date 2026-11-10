@@ -30,11 +30,15 @@ export async function listBookings(filters: {
   }
 
   if (filters.rangeStart) {
-    query = query.gte("scheduled_start", `${filters.rangeStart}T00:00:00.000Z`);
+    query = query.gte("scheduled_start", `${filters.rangeStart}T00:00:00+08:00`);
   }
 
   if (filters.rangeEnd) {
-    query = query.lte("scheduled_start", `${filters.rangeEnd}T23:59:59.999Z`);
+    // Exclusive next-day bound avoids UTC/Manila edge clipping on the last calendar day.
+    const [y, m, d] = filters.rangeEnd.split("-").map(Number);
+    const next = new Date(Date.UTC(y, m - 1, d + 1));
+    const nextKey = `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, "0")}-${String(next.getUTCDate()).padStart(2, "0")}`;
+    query = query.lt("scheduled_start", `${nextKey}T00:00:00+08:00`);
   }
 
   const { data, error } = await query;

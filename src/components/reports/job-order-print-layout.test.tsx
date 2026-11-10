@@ -20,6 +20,7 @@ const documentFixture: JobOrderPrintDocument = {
     jobOrderNumber: "JO-MAIN-0001",
     quotationId: "quotation-1",
     quotationNumber: "QT-MAIN-0001",
+    quotationApprovedAt: null,
     customerId: "customer-1",
     customerName: "Louise Suresca",
     vehicleId: "vehicle-1",

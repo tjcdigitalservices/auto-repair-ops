@@ -865,6 +865,7 @@ function customer(
     address: "Quezon City",
     notes: null,
     status: "active",
+    linkedUserId: null,
     createdAt,
     updatedAt: createdAt,
   };

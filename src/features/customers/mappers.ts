@@ -20,6 +20,7 @@ type CustomerListRow = Pick<
   | "contact_number"
   | "email"
   | "status"
+  | "linked_user_id"
   | "created_at"
   | "updated_at"
 >;
@@ -34,6 +35,7 @@ export function mapCustomerRowToListItem(row: CustomerListRow): CustomerListItem
     contactNumber: row.contact_number,
     email: row.email,
     status: row.status,
+    linkedUserId: row.linked_user_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -75,7 +77,10 @@ export function mapCustomerRowToOption(row: CustomerOptionRow): CustomerOption {
   };
 }
 
-export function mapCustomerDetailToFormValues(customer: CustomerDetail): CustomerFormValues {
+export function mapCustomerDetailToFormValues(
+  customer: CustomerDetail,
+  options?: { portalLoginEmail?: string | null },
+): CustomerFormValues {
   return {
     customerId: customer.id,
     customerType: customer.customerType,
@@ -87,5 +92,8 @@ export function mapCustomerDetailToFormValues(customer: CustomerDetail): Custome
     address: customer.address ?? "",
     notes: customer.notes ?? "",
     status: customer.status,
+    createPortalLogin: false,
+    hasLinkedPortalAccount: Boolean(customer.linkedUserId),
+    portalLoginEmail: options?.portalLoginEmail ?? null,
   };
 }

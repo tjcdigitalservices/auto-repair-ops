@@ -541,6 +541,7 @@ export type Database = {
           address: string | null;
           notes: string | null;
           status: Database["public"]["Enums"]["record_status"];
+          linked_user_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -558,6 +559,7 @@ export type Database = {
           address?: string | null;
           notes?: string | null;
           status?: Database["public"]["Enums"]["record_status"];
+          linked_user_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };

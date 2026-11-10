@@ -22,6 +22,7 @@ export const customerFormSchema = z
     address: z.string().trim(),
     notes: z.string().trim(),
     status: customerStatusSchema,
+    createPortalLogin: z.boolean(),
   })
   .superRefine((value, ctx) => {
     if (value.customerType === "individual") {
@@ -49,6 +50,14 @@ export const customerFormSchema = z
         message: "Company or fleet name is required.",
       });
     }
+
+    if (value.createPortalLogin && !value.email) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["email"],
+        message: "Email is required to create a customer app login.",
+      });
+    }
   });
 
 export function deriveCustomerDisplayName(values: CustomerFormValues) {
@@ -71,6 +80,7 @@ export function parseCustomerFormData(formData: FormData): CustomerFormValues {
     address: readString(formData, "address"),
     notes: readString(formData, "notes"),
     status: readString(formData, "status") as CustomerFormValues["status"],
+    createPortalLogin: formData.get("createPortalLogin") === "on",
   };
 }
 

@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { CustomerForm } from "@/features/customers/components/customer-form";
 import { mapCustomerDetailToFormValues } from "@/features/customers/mappers";
 import { getCustomerById } from "@/features/customers/queries/customer-queries";
+import { getPortalEmailForLinkedUser } from "@/features/customers/services/customer-portal-login";
 import { requireStaffCapability } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
@@ -24,13 +25,20 @@ export default async function EditCustomerPage({ params }: EditCustomerPageProps
     notFound();
   }
 
+  const portalLoginEmail = customer.linkedUserId
+    ? await getPortalEmailForLinkedUser(customer.linkedUserId).catch(() => customer.email)
+    : null;
+
   return (
     <div className="space-y-6">
       <PageHeader
         title={`Edit ${customer.displayName}`}
         description="Update this customer without leaking database row shapes into the UI layer."
       />
-      <CustomerForm mode="edit" initialValues={mapCustomerDetailToFormValues(customer)} />
+      <CustomerForm
+        mode="edit"
+        initialValues={mapCustomerDetailToFormValues(customer, { portalLoginEmail })}
+      />
     </div>
   );
 }

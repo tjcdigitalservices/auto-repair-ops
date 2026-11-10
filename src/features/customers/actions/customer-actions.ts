@@ -4,25 +4,132 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { applyBranchFilter, getBranchScopedServerClient } from "@/lib/branches";
-import { INITIAL_FORM_ACTION_STATE, toFormActionState, type FormActionState } from "@/lib/forms";
+import { toFormActionState } from "@/lib/forms";
 import {
   customerFormSchema,
   deriveCustomerDisplayName,
   parseCustomerFormData,
 } from "@/features/customers/schemas/customer-form-schema";
+import {
+  deleteCustomerPortalLogin,
+  provisionCustomerPortalLogin,
+} from "@/features/customers/services/customer-portal-login";
+import {
+  INITIAL_CUSTOMER_ACTION_STATE,
+  type CustomerActionState,
+} from "@/features/customers/types";
 
 export async function createCustomerAction(
-  _prevState: FormActionState = INITIAL_FORM_ACTION_STATE,
+  _prevState: CustomerActionState = INITIAL_CUSTOMER_ACTION_STATE,
   formData: FormData,
-): Promise<FormActionState> {
+): Promise<CustomerActionState> {
   return saveCustomer(formData);
 }
 
 export async function updateCustomerAction(
-  _prevState: FormActionState = INITIAL_FORM_ACTION_STATE,
+  _prevState: CustomerActionState = INITIAL_CUSTOMER_ACTION_STATE,
   formData: FormData,
-): Promise<FormActionState> {
+): Promise<CustomerActionState> {
   return saveCustomer(formData);
+}
+
+export async function provisionCustomerPortalLoginAction(
+  _prevState: CustomerActionState = INITIAL_CUSTOMER_ACTION_STATE,
+  formData: FormData,
+): Promise<CustomerActionState> {
+  const customerId = readFormDataString(formData, "customerId");
+
+  if (!customerId) {
+    return { status: "error", message: "Customer id is required." };
+  }
+
+  const { branchScope, supabase } = await getBranchScopedServerClient("customers:write");
+  const { data: customer, error } = await applyBranchFilter(
+    supabase
+      .from("customers")
+      .select(
+        "id, display_name, first_name, last_name, company_name, email, linked_user_id, status",
+      ),
+    branchScope.selectedBranchId,
+  )
+    .eq("id", customerId)
+    .maybeSingle();
+
+  if (error) {
+    return { status: "error", message: error.message };
+  }
+
+  if (!customer) {
+    return { status: "error", message: "Customer record not found." };
+  }
+
+  if (customer.linked_user_id) {
+    return { status: "error", message: "This customer already has an app login." };
+  }
+
+  if (!customer.email?.trim()) {
+    return {
+      status: "error",
+      message: "Add an email on the customer record before creating an app login.",
+    };
+  }
+
+  if (customer.status !== "active") {
+    return {
+      status: "error",
+      message: "Only active customers can receive an app login.",
+    };
+  }
+
+  let createdLogin: Awaited<ReturnType<typeof provisionCustomerPortalLogin>> | null = null;
+
+  try {
+    createdLogin = await provisionCustomerPortalLogin({
+      email: customer.email,
+      lastName: customer.last_name,
+      companyName: customer.company_name,
+      displayName: customer.display_name,
+    });
+
+    const { error: linkError } = await applyBranchFilter(
+      supabase.from("customers").update({ linked_user_id: createdLogin.userId }),
+      branchScope.selectedBranchId,
+    ).eq("id", customerId);
+
+    if (linkError) {
+      throw new Error(linkError.message);
+    }
+  } catch (provisionError) {
+    if (createdLogin?.userId) {
+      try {
+        await deleteCustomerPortalLogin(createdLogin.userId);
+      } catch {
+        // Best-effort cleanup only.
+      }
+    }
+
+    return {
+      status: "error",
+      message:
+        provisionError instanceof Error
+          ? provisionError.message
+          : "Customer app login could not be created.",
+    };
+  }
+
+  revalidatePath("/customers");
+  revalidatePath(`/customers/${customerId}`);
+
+  return {
+    status: "success",
+    message: "Customer app login created.",
+    portalLogin: {
+      customerId,
+      customerName: customer.display_name,
+      email: createdLogin.email,
+      temporaryPassword: createdLogin.temporaryPassword,
+    },
+  };
 }
 
 export async function deleteCustomerAction(formData: FormData) {
@@ -62,7 +169,7 @@ export async function deleteCustomerAction(formData: FormData) {
   redirect("/customers");
 }
 
-async function saveCustomer(formData: FormData): Promise<FormActionState> {
+async function saveCustomer(formData: FormData): Promise<CustomerActionState> {
   const parsed = customerFormSchema.safeParse(parseCustomerFormData(formData));
 
   if (!parsed.success) {
@@ -88,15 +195,18 @@ async function saveCustomer(formData: FormData): Promise<FormActionState> {
     status: values.status,
   };
 
+  const isCreate = !values.customerId;
+  const shouldCreatePortalLogin = isCreate && values.createPortalLogin;
+
   const operation = values.customerId
     ? applyBranchFilter(
         supabase.from("customers").update(payload),
         branchScope.selectedBranchId,
       )
         .eq("id", values.customerId)
-        .select("id")
+        .select("id, display_name")
         .single()
-    : supabase.from("customers").insert(payload).select("id").single();
+    : supabase.from("customers").insert(payload).select("id, display_name").single();
 
   const { data, error } = await operation;
 
@@ -107,10 +217,73 @@ async function saveCustomer(formData: FormData): Promise<FormActionState> {
     };
   }
 
-  revalidatePath("/customers");
-  if (data?.id) {
-    revalidatePath(`/customers/${data.id}`);
+  if (!data?.id) {
+    return {
+      status: "error",
+      message: "Customer record could not be saved.",
+    };
   }
+
+  if (shouldCreatePortalLogin) {
+    let createdLogin: Awaited<ReturnType<typeof provisionCustomerPortalLogin>> | null = null;
+
+    try {
+      createdLogin = await provisionCustomerPortalLogin({
+        email: values.email,
+        lastName: values.lastName,
+        companyName: values.companyName,
+        displayName: data.display_name,
+      });
+
+      const { error: linkError } = await applyBranchFilter(
+        supabase.from("customers").update({ linked_user_id: createdLogin.userId }),
+        branchScope.selectedBranchId,
+      ).eq("id", data.id);
+
+      if (linkError) {
+        throw new Error(linkError.message);
+      }
+    } catch (provisionError) {
+      if (createdLogin?.userId) {
+        try {
+          await deleteCustomerPortalLogin(createdLogin.userId);
+        } catch {
+          // Best-effort cleanup only.
+        }
+      }
+
+      await applyBranchFilter(
+        supabase.from("customers").delete(),
+        branchScope.selectedBranchId,
+      ).eq("id", data.id);
+
+      return {
+        status: "error",
+        message:
+          provisionError instanceof Error
+            ? provisionError.message
+            : "Customer app login could not be created. The customer record was rolled back.",
+      };
+    }
+
+    revalidatePath("/customers");
+    revalidatePath(`/customers/${data.id}`);
+    revalidatePath("/vehicles");
+
+    return {
+      status: "success",
+      message: "Customer created with app login.",
+      portalLogin: {
+        customerId: data.id,
+        customerName: data.display_name,
+        email: createdLogin.email,
+        temporaryPassword: createdLogin.temporaryPassword,
+      },
+    };
+  }
+
+  revalidatePath("/customers");
+  revalidatePath(`/customers/${data.id}`);
   revalidatePath("/vehicles");
 
   redirect(values.customerId ? `/customers/${values.customerId}` : `/customers/${data.id}`);

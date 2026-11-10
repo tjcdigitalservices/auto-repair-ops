@@ -41,6 +41,7 @@ type CustomerListRow = Pick<
   | "contact_number"
   | "email"
   | "status"
+  | "linked_user_id"
   | "created_at"
   | "updated_at"
 >;
@@ -52,7 +53,7 @@ export async function listCustomers(search?: string): Promise<CustomerListItem[]
     supabase
     .from("customers")
     .select(
-      "id, customer_code, customer_type, display_name, contact_number, email, status, created_at, updated_at",
+      "id, customer_code, customer_type, display_name, contact_number, email, status, linked_user_id, created_at, updated_at",
     )
     .order("display_name", { ascending: true }),
     branchScope.selectedBranchId,

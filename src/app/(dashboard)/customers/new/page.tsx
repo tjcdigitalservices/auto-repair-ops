@@ -25,6 +25,7 @@ export default async function NewCustomerPage() {
           address: "",
           notes: "",
           status: "active",
+          createPortalLogin: false,
         }}
       />
     </div>

@@ -22,6 +22,9 @@ export function CustomerDetailSidebar({ customer }: { customer: CustomerDetail }
         <div className="space-y-4">
           <EntityDetailField label="Contact number">{customer.contactNumber}</EntityDetailField>
           <EntityDetailField label="Email">{customer.email}</EntityDetailField>
+          <EntityDetailField label="Mobile app login">
+            {customer.linkedUserId ? "Enabled" : "Not created"}
+          </EntityDetailField>
         </div>
       </EntityDetailSection>
 

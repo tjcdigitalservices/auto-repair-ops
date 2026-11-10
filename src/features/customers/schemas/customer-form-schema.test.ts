@@ -17,6 +17,24 @@ describe("customerFormSchema", () => {
       address: "",
       notes: "",
       status: "active",
+      createPortalLogin: false,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("requires email when creating a portal login", () => {
+    const result = customerFormSchema.safeParse({
+      customerType: "individual",
+      firstName: "Maria",
+      lastName: "Santos",
+      companyName: "",
+      contactNumber: "",
+      email: "",
+      address: "",
+      notes: "",
+      status: "active",
+      createPortalLogin: true,
     });
 
     expect(result.success).toBe(false);
@@ -33,6 +51,7 @@ describe("customerFormSchema", () => {
       address: "",
       notes: "",
       status: "active",
+      createPortalLogin: false,
     });
 
     expect(displayName).toBe("ABC Fleet Services");

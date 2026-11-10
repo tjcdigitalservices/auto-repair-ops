@@ -72,6 +72,7 @@ import {
 } from "@/features/customers/schemas/customer-form-schema";
 import type { FormActionState } from "@/lib/forms";
 import { toFormActionState } from "@/lib/forms";
+import type { CustomerActionState } from "@/features/customers/types";
 import type { PayrollFormActionState } from "@/features/payroll/types";
 import {
   compensationProfileSchema,
@@ -210,9 +211,9 @@ function loadingError(): FormActionState {
 }
 
 export async function saveSandboxCustomerAction(
-  _previous: FormActionState,
+  _previous: CustomerActionState,
   formData: FormData,
-): Promise<FormActionState> {
+): Promise<CustomerActionState> {
   const snapshot = readSandboxShop();
   if (!snapshot) return loadingError();
 
@@ -220,6 +221,13 @@ export async function saveSandboxCustomerAction(
   if (!parsed.success) return toFormActionState(parsed.error);
 
   try {
+    if (parsed.data.createPortalLogin) {
+      return {
+        status: "error",
+        message: "Customer app login is not available in sandbox mode.",
+      };
+    }
+
     const result = saveCustomerRecord(snapshot, parsed.data);
     await updateSandboxShop(() => result.snapshot);
     go(`/customers/${result.id}`);

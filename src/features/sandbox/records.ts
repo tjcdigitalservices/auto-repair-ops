@@ -90,6 +90,7 @@ export function saveCustomerRecord(snapshot: SandboxSnapshot, values: CustomerFo
     address: values.address || null,
     notes: values.notes || null,
     status: values.status,
+    linkedUserId: existing?.linkedUserId ?? null,
     createdAt: existing?.createdAt ?? timestamp,
     updatedAt: timestamp,
   };

@@ -13,6 +13,7 @@ export type CustomerListItem = {
   contactNumber: string | null;
   email: string | null;
   status: CustomerStatus;
+  linkedUserId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -104,4 +105,25 @@ export type CustomerFormValues = {
   address: string;
   notes: string;
   status: CustomerStatus;
+  createPortalLogin: boolean;
+  hasLinkedPortalAccount?: boolean;
+  portalLoginEmail?: string | null;
+};
+
+export type CustomerPortalLoginSuccessPayload = {
+  customerId: string;
+  customerName: string;
+  email: string;
+  temporaryPassword: string;
+};
+
+export type CustomerActionState = {
+  status: "idle" | "error" | "success";
+  message?: string;
+  fieldErrors?: Record<string, string[] | undefined>;
+  portalLogin?: CustomerPortalLoginSuccessPayload;
+};
+
+export const INITIAL_CUSTOMER_ACTION_STATE: CustomerActionState = {
+  status: "idle",
 };

@@ -368,6 +368,7 @@ export function toCustomerListItem(customer: SandboxSnapshot["customers"][number
     contactNumber: customer.contactNumber,
     email: customer.email,
     status: customer.status,
+    linkedUserId: customer.linkedUserId,
     createdAt: customer.createdAt,
     updatedAt: customer.updatedAt,
   };

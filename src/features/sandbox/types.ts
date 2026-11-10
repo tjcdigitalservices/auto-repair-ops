@@ -90,6 +90,7 @@ export type SandboxCustomer = {
   address: string | null;
   notes: string | null;
   status: SandboxRecordStatus;
+  linkedUserId: string | null;
   createdAt: string;
   updatedAt: string;
 };

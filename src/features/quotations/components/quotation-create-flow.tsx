@@ -1235,6 +1235,7 @@ function QuickCustomerCreateForm({
       address: '',
       notes: '',
       status: 'active',
+      createPortalLogin: false,
     });
 
   useEffect(() => {
@@ -1250,6 +1251,7 @@ function QuickCustomerCreateForm({
         address: '',
         notes: '',
         status: 'active',
+        createPortalLogin: false,
       });
     }
   }, [onCreated, setValues, state]);

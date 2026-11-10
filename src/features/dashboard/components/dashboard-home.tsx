@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import {
   AlertTriangle,
+  CalendarClock,
   CarFront,
   ClipboardList,
   PackageSearch,
@@ -28,7 +29,7 @@ import { JobOrderStatusBadge } from '@/features/job-orders/components/job-order-
 import { InvoiceStatusBadge } from '@/features/invoices/components/invoice-status-badge';
 import { RevenueTrendChart } from '@/features/reports/components/revenue-trend-chart';
 import { formatCurrency } from '@/lib/currency';
-import { formatDate } from '@/lib/dates';
+import { formatDate, formatDateTime } from '@/lib/dates';
 import { formatInventoryQuantity } from '@/features/inventory/utils';
 import type { DashboardData } from '@/features/dashboard/queries/dashboard-queries';
 
@@ -67,6 +68,17 @@ export function DashboardHome({ dashboard }: { dashboard: DashboardData }) {
           href="/quotations?status=pending"
         />
         <StatCard
+          title="Booking requests"
+          value={String(dashboard.metrics.pendingBookingRequests)}
+          description="Customer visits waiting for confirmation"
+          icon={CalendarClock}
+          tone={dashboard.metrics.pendingBookingRequests > 0 ? 'warning' : 'neutral'}
+          badge={
+            dashboard.metrics.pendingBookingRequests > 0 ? 'Confirm' : 'Clear'
+          }
+          href="/bookings?view=list&status=requested"
+        />
+        <StatCard
           title="Active job orders"
           value={String(dashboard.metrics.activeJobOrders)}
           description="Current workshop workload"
@@ -100,6 +112,56 @@ export function DashboardHome({ dashboard }: { dashboard: DashboardData }) {
       </MetricGrid>
 
       <div className="grid gap-6 xl:grid-cols-2">
+        <SectionCard
+          title="Booking requests"
+          description="Customer app visits waiting for the shop to confirm."
+          action={
+            <Button asChild size="sm" variant="outline">
+              <Link href="/bookings?view=list&status=requested">Open bookings</Link>
+            </Button>
+          }
+          contentClassName="p-0"
+        >
+          {dashboard.recentBookingRequests.length === 0 ? (
+            <div className="p-5">
+              <EmptyState
+                title="No booking requests"
+                description="When customers request a checkup or repair in the app, they show up here for confirmation."
+              />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>When</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Vehicle</TableHead>
+                  <TableHead>Service</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {dashboard.recentBookingRequests.map((booking) => (
+                  <TableRow key={booking.id}>
+                    <TableCell>
+                      <Link
+                        href={`/bookings?view=list&status=requested`}
+                        className="font-medium text-foreground underline-offset-4 hover:underline"
+                      >
+                        {formatDateTime(booking.scheduledStart)}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{booking.customerName}</TableCell>
+                    <TableCell className="text-muted-foreground">{booking.vehicleLabel}</TableCell>
+                    <TableCell className="capitalize text-muted-foreground">
+                      {booking.serviceKind}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </SectionCard>
+
         <SectionCard
           title="Recent quotations"
           description="Latest estimates waiting to move into workshop execution."

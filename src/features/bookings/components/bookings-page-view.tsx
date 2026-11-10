@@ -8,6 +8,7 @@ import { BookingsCalendarView } from "@/features/bookings/components/bookings-ca
 import { BookingsListPanel } from "@/features/bookings/components/bookings-list-panel";
 import type { BookingListItem, BookingStatus, BookingsCalendarData } from "@/features/bookings/types";
 import { stripSandboxBasePath } from "@/features/sandbox/constants";
+import { cn } from "@/lib/utils";
 
 export function BookingsPageView({
   bookings,
@@ -32,6 +33,7 @@ export function BookingsPageView({
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeView = searchParams.get("view") === "list" ? "list" : "calendar";
+  const isCalendarView = activeView === "calendar";
 
   function updateView(nextView: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -48,27 +50,52 @@ export function BookingsPageView({
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Bookings"
-        description="Calendar for daily capacity, closures, and upcoming visits. List view supports search and filters."
-      />
+    <div
+      className={cn(
+        isCalendarView
+          ? "flex h-[calc(100dvh-8.25rem-var(--sandbox-chrome-offset,0px))] flex-col gap-3 overflow-hidden"
+          : "space-y-6",
+      )}
+    >
+      <div className="shrink-0 space-y-3">
+        <PageHeader
+          title="Bookings"
+          titleClassName={isCalendarView ? "text-2xl" : undefined}
+          description={
+            isCalendarView
+              ? "Tap a day for schedule details. Use List for search and filters."
+              : "Calendar for daily capacity, closures, and upcoming visits. List view supports search and filters."
+          }
+        />
 
-      {migrationHint ? (
-        <div className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-foreground">
-          {migrationHint}
-        </div>
-      ) : null}
+        {migrationHint ? (
+          <div className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-foreground">
+            {migrationHint}
+          </div>
+        ) : null}
+      </div>
 
-      <Tabs defaultValue="calendar" value={activeView} onValueChange={updateView} className="min-w-0">
-        <TabsList>
+      <Tabs
+        defaultValue="calendar"
+        value={activeView}
+        onValueChange={updateView}
+        className={cn("min-w-0", isCalendarView && "flex min-h-0 flex-1 flex-col")}
+      >
+        <TabsList className="shrink-0">
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
           <TabsTrigger value="list" count={calendarBookings.length || undefined}>
             List
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="calendar" className="mt-6">
+        <TabsContent
+          value="calendar"
+          className={cn(
+            isCalendarView
+              ? "mt-0 flex min-h-0 flex-1 flex-col space-y-0 overflow-hidden pt-3"
+              : "mt-6",
+          )}
+        >
           <BookingsCalendarView calendar={calendar} />
         </TabsContent>
 

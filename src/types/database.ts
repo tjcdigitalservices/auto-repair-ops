@@ -388,6 +388,8 @@ export type Database = {
           payroll_default_sss_amount: number;
           payroll_default_philhealth_amount: number;
           payroll_default_pagibig_amount: number;
+          booking_max_concurrent: number;
+          booking_slot_minutes: number;
           default_tax_rate: number;
           business_name: string;
           business_logo_path: string | null;
@@ -425,6 +427,8 @@ export type Database = {
           payroll_default_sss_amount?: number;
           payroll_default_philhealth_amount?: number;
           payroll_default_pagibig_amount?: number;
+          booking_max_concurrent?: number;
+          booking_slot_minutes?: number;
           default_tax_rate?: number;
           business_name: string;
           business_logo_path?: string | null;
@@ -2434,6 +2438,14 @@ export type Database = {
           p_email?: string | null;
           p_address?: string | null;
         };
+        Returns: Json;
+      };
+      customer_get_shop_calendar: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      customer_get_available_slots: {
+        Args: { p_date: string };
         Returns: Json;
       };
       customer_request_booking: {

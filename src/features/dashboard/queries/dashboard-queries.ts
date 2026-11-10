@@ -38,6 +38,7 @@ export type DashboardData = {
     totalCustomers: number;
     totalVehicles: number;
     pendingQuotations: number;
+    pendingBookingRequests: number;
     activeJobOrders: number;
     lowStockItems: number;
     unpaidInvoices: number;
@@ -57,6 +58,14 @@ export type DashboardData = {
     vehicleLabel: string;
     status: TableRow<"job_orders">["status"];
     createdAt: string;
+  }>;
+  recentBookingRequests: Array<{
+    id: string;
+    customerName: string;
+    vehicleLabel: string;
+    serviceKind: string;
+    scheduledStart: string;
+    customerConcern: string;
   }>;
   inventoryAlerts: Array<{
     productId: string;
@@ -88,6 +97,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     totalCustomers,
     totalVehicles,
     pendingQuotations,
+    pendingBookingRequests,
     activeJobOrders,
     lowStockItems,
     unpaidInvoicesCount,
@@ -114,6 +124,9 @@ export async function getDashboardData(): Promise<DashboardData> {
             branchScope.selectedBranchId,
           ),
         )
+      : Promise.resolve(0),
+    context.capabilities.includes("bookings:read")
+      ? getPendingBookingRequestCount(supabase, branchScope.selectedBranchId)
       : Promise.resolve(0),
     context.capabilities.includes("job_orders:read")
       ? getExactCount(
@@ -150,13 +163,23 @@ export async function getDashboardData(): Promise<DashboardData> {
       : Promise.resolve(0),
   ]);
 
-  const [recentQuotations, recentJobOrders, inventoryAlerts, unpaidInvoices, businessSettings, serviceTrend] =
-    await Promise.all([
+  const [
+    recentQuotations,
+    recentJobOrders,
+    recentBookingRequests,
+    inventoryAlerts,
+    unpaidInvoices,
+    businessSettings,
+    serviceTrend,
+  ] = await Promise.all([
       context.capabilities.includes("quotations:read")
         ? getRecentQuotations(supabase, branchScope.selectedBranchId)
         : Promise.resolve([]),
       context.capabilities.includes("job_orders:read")
         ? getRecentJobOrders(supabase, branchScope.selectedBranchId)
+        : Promise.resolve([]),
+      context.capabilities.includes("bookings:read")
+        ? getRecentBookingRequests(supabase, branchScope.selectedBranchId)
         : Promise.resolve([]),
       context.capabilities.includes("inventory:read")
         ? getInventoryAlerts(supabase, branchScope.selectedBranchId)
@@ -195,12 +218,14 @@ export async function getDashboardData(): Promise<DashboardData> {
       totalCustomers,
       totalVehicles,
       pendingQuotations,
+      pendingBookingRequests,
       activeJobOrders,
       lowStockItems,
       unpaidInvoices: unpaidInvoicesCount,
     },
     recentQuotations,
     recentJobOrders,
+    recentBookingRequests,
     inventoryAlerts,
     unpaidInvoices,
     quotationAndServiceTrend,
@@ -208,6 +233,74 @@ export async function getDashboardData(): Promise<DashboardData> {
     requireInvoiceBeforeVehicleRelease,
     serviceTrend,
   };
+}
+
+async function getPendingBookingRequestCount(
+  supabase: Awaited<ReturnType<typeof getBranchScopedServerClient>>["supabase"],
+  branchId: string | null,
+) {
+  try {
+    return await getExactCount(
+      applyBranchFilter(
+        supabase
+          .from("scheduled_bookings")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "requested"),
+        branchId,
+      ),
+    );
+  } catch {
+    return 0;
+  }
+}
+
+async function getRecentBookingRequests(
+  supabase: Awaited<ReturnType<typeof getBranchScopedServerClient>>["supabase"],
+  branchId: string | null,
+): Promise<DashboardData["recentBookingRequests"]> {
+  const { data, error } = await applyBranchFilter(
+    supabase
+      .from("scheduled_bookings")
+      .select("id, scheduled_start, service_kind, customer_concern, customer_id, vehicle_id, status")
+      .eq("status", "requested")
+      .order("scheduled_start", { ascending: true })
+      .limit(5),
+    branchId,
+  );
+
+  if (error) {
+    return [];
+  }
+
+  const rows = data ?? [];
+  if (rows.length === 0) return [];
+
+  const customerIds = [...new Set(rows.map((row) => row.customer_id))];
+  const vehicleIds = [...new Set(rows.map((row) => row.vehicle_id))];
+
+  const [{ data: customers }, { data: vehicles }] = await Promise.all([
+    supabase.from("customers").select("id, display_name").in("id", customerIds),
+    supabase.from("vehicles").select("id, make, model, year, plate_number").in("id", vehicleIds),
+  ]);
+
+  const customerMap = new Map((customers ?? []).map((row) => [row.id, row.display_name]));
+  const vehicleMap = new Map(
+    (vehicles ?? []).map((row) => [
+      row.id,
+      `${row.make} ${row.model}${row.year ? ` (${row.year})` : ""}${
+        row.plate_number ? ` · ${row.plate_number}` : ""
+      }`,
+    ]),
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    customerName: customerMap.get(row.customer_id) ?? "Customer",
+    vehicleLabel: vehicleMap.get(row.vehicle_id) ?? "Vehicle",
+    serviceKind: row.service_kind,
+    scheduledStart: row.scheduled_start,
+    customerConcern: row.customer_concern,
+  }));
 }
 
 async function getRecentQuotations(

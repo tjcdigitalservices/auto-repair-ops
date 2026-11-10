@@ -267,6 +267,13 @@ export async function getReportsPageData(input: {
         tone: "warning",
       },
       {
+        label: "Booking requests",
+        value: await getPendingBookingRequestAlertCount(supabase, branchScope.selectedBranchId),
+        kind: "count",
+        helper: "Customer app visits waiting for shop confirmation",
+        tone: "warning",
+      },
+      {
         label: "Unpaid invoices",
         value: unpaidInvoices.length,
         kind: "count",
@@ -291,13 +298,6 @@ export async function getReportsPageData(input: {
         kind: "count",
         helper: "Items with no available quantity right now",
         tone: "danger",
-      },
-      {
-        label: "Current on-hand quantity",
-        value: sumBy(inventoryStockRows, (row) => row.quantity_on_hand),
-        kind: "quantity",
-        helper: "Live quantity on hand across all stocked items",
-        tone: "info",
       },
     ],
     revenueTrend: buildRevenueTrend({
@@ -430,6 +430,25 @@ async function getSaleItems(saleIds: string[]) {
   }
 
   return (data ?? []) as SaleItemRow[];
+}
+
+async function getPendingBookingRequestAlertCount(
+  supabase: Awaited<ReturnType<typeof getBranchScopedServerClient>>["supabase"],
+  branchId: string | null,
+) {
+  const { count, error } = await applyBranchFilter(
+    supabase
+      .from("scheduled_bookings")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "requested"),
+    branchId,
+  );
+
+  if (error) {
+    return 0;
+  }
+
+  return count ?? 0;
 }
 
 function sumBy<T>(rows: T[], selector: (row: T) => number) {

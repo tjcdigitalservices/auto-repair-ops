@@ -431,6 +431,7 @@ export function toDashboardData(snapshot: SandboxSnapshot): DashboardData {
       totalCustomers: snapshot.customers.filter((item) => item.status === "active").length,
       totalVehicles: snapshot.vehicles.filter((item) => item.status === "active").length,
       pendingQuotations: snapshot.quotations.filter((item) => item.status === "draft" || item.status === "pending_approval").length,
+      pendingBookingRequests: snapshot.scheduledBookings.filter((item) => item.status === "requested").length,
       activeJobOrders: snapshot.jobOrders.filter((item) => ACTIVE_JOB_STATUSES.has(item.status)).length,
       lowStockItems: snapshot.products.filter((item) => item.availableQuantity <= item.reorderLevel).length,
       unpaidInvoices: snapshot.invoices.filter((item) => item.balance > 0 && item.status !== "cancelled").length,
@@ -456,6 +457,18 @@ export function toDashboardData(snapshot: SandboxSnapshot): DashboardData {
         vehicleLabel: vehicleLabel(snapshot, item.vehicleId),
         status: item.status,
         createdAt: item.createdAt,
+      })),
+    recentBookingRequests: [...snapshot.scheduledBookings]
+      .filter((item) => item.status === "requested")
+      .sort((left, right) => left.scheduledStart.localeCompare(right.scheduledStart))
+      .slice(0, 5)
+      .map((item) => ({
+        id: item.id,
+        customerName: customerName(snapshot, item.customerId),
+        vehicleLabel: vehicleLabel(snapshot, item.vehicleId),
+        serviceKind: item.serviceKind,
+        scheduledStart: item.scheduledStart,
+        customerConcern: item.customerConcern,
       })),
     inventoryAlerts: snapshot.products
       .filter((item) => item.availableQuantity <= item.reorderLevel)

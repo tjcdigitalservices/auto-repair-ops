@@ -48,10 +48,10 @@ const PERIOD_PERFORMANCE_HREFS: Record<string, string> = {
 
 const OPERATIONAL_ALERT_HREFS: Record<string, string> = {
   "Open job orders": "#reports-status-breakdowns",
+  "Booking requests": "/bookings?view=list&status=requested",
   "Unpaid invoices": "#reports-unpaid-invoices",
   "Low Stock Items": "/inventory?stockState=low",
   "Out of Stock Items": "/inventory?stockState=out",
-  "Current on-hand quantity": "#reports-stock-movements",
 };
 
 export function ReportsPageView({

@@ -480,6 +480,52 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["daily_arrivals"]["Insert"]>;
         Relationships: [];
       };
+      scheduled_bookings: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          branch_id: string;
+          customer_id: string;
+          vehicle_id: string;
+          scheduled_start: string;
+          scheduled_end: string | null;
+          service_kind: string;
+          customer_concern: string;
+          notes: string | null;
+          status: string;
+          created_by: string;
+          created_by_staff_id: string | null;
+          confirmed_at: string | null;
+          cancelled_at: string | null;
+          checked_in_at: string | null;
+          daily_arrival_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          branch_id: string;
+          customer_id: string;
+          vehicle_id: string;
+          scheduled_start: string;
+          scheduled_end?: string | null;
+          service_kind?: string;
+          customer_concern?: string;
+          notes?: string | null;
+          status?: string;
+          created_by?: string;
+          created_by_staff_id?: string | null;
+          confirmed_at?: string | null;
+          cancelled_at?: string | null;
+          checked_in_at?: string | null;
+          daily_arrival_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["scheduled_bookings"]["Insert"]>;
+        Relationships: [];
+      };
       customers: {
         Row: {
           id: string;
@@ -2380,6 +2426,41 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      customer_update_profile: {
+        Args: {
+          p_contact_number?: string | null;
+          p_email?: string | null;
+          p_address?: string | null;
+        };
+        Returns: Json;
+      };
+      customer_request_booking: {
+        Args: {
+          p_vehicle_id: string;
+          p_scheduled_start: string;
+          p_service_kind?: string;
+          p_customer_concern?: string;
+          p_scheduled_end?: string | null;
+        };
+        Returns: Json;
+      };
+      customer_cancel_booking: {
+        Args: { p_booking_id: string };
+        Returns: Json;
+      };
+      staff_confirm_booking: {
+        Args: { p_booking_id: string };
+        Returns: Json;
+      };
+      staff_update_booking_status: {
+        Args: { p_booking_id: string; p_status: string };
+        Returns: Json;
+      };
+      check_in_scheduled_booking: {
+        Args: { p_booking_id: string };
+        Returns: Json;
+      };
+
       add_job_order_item: {
         Args: {
           p_job_order_id: string;

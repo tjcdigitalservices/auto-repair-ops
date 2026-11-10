@@ -26,7 +26,7 @@ export function useDocumentEditor({
         id: "document-composer-body",
         "aria-label": "Document Body",
         class: cn(
-          "document-editor-content min-h-full text-[12px] leading-[1.68] text-slate-800 outline-none",
+          "document-editor-content min-h-full text-[11px] leading-[1.4] text-slate-900 outline-none",
           "focus:outline-none",
         ),
       },

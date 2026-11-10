@@ -84,7 +84,12 @@ export function DocumentComposer({
 
   return (
     <DocumentEditorProvider editor={editor}>
-      <div className={cn("document-composer flex h-[calc(100dvh-3.5rem)] flex-col gap-2", className)}>
+      <div
+        className={cn(
+          "document-composer flex h-[calc(100dvh-3.5rem-var(--sandbox-chrome-offset,0px))] flex-col gap-2",
+          className,
+        )}
+      >
         <div className="document-composer-chrome no-print shrink-0 space-y-2">
           <PageHeader
             title={moduleTitle}

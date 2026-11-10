@@ -99,7 +99,18 @@ export type {
   MergeVariableRenderProps,
 } from "@/components/document-engine/variables/types";
 export { DocumentPaginatedPages } from "@/components/document-engine/document-paginated-pages";
-export { paginateDocumentHtml } from "@/components/document-engine/page-manager/paginate-document-html";
+export {
+  paginateDocumentHtml,
+  paginateDocumentPages,
+} from "@/components/document-engine/page-manager/paginate-document-html";
+export type { PaginatedDocumentPage } from "@/components/document-engine/page-manager/paginate-document-html";
+export {
+  findPageIndexForBlockIndex,
+  focusDocumentPageAtClick,
+  getDocumentBlockIndexAtPos,
+  getDocumentBlockStartPos,
+  resolveDocumentPosForPageClick,
+} from "@/components/document-engine/page-manager/document-page-editing";
 export { createPageManager } from "@/components/document-engine/page-manager/page-manager";
 export { buildDocumentPageContext } from "@/components/document-engine/page-manager/build-document-page-context";
 export { usePageManager } from "@/components/document-engine/page-manager/use-page-manager";

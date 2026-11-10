@@ -1,35 +1,33 @@
 "use client";
 
-import { useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useFormStatus } from "react-dom";
 
 import { Button } from "@/components/ui/button";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { signOutAction } from "@/features/auth/actions/auth-actions";
 
 export function SignOutButton({
   className,
 }: {
   className?: string;
 }) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  return (
+    <form action={signOutAction} className="w-full">
+      <SignOutSubmitButton className={className} />
+    </form>
+  );
+}
+
+function SignOutSubmitButton({ className }: { className?: string }) {
+  const { pending } = useFormStatus();
 
   return (
     <Button
-      type="button"
+      type="submit"
       variant="outline"
-      disabled={isPending}
+      disabled={pending}
       className={className}
-      onClick={() => {
-        startTransition(async () => {
-          const supabase = createSupabaseBrowserClient();
-          await supabase.auth.signOut();
-          router.replace("/login");
-          router.refresh();
-        });
-      }}
     >
-      {isPending ? "Signing out..." : "Sign out"}
+      {pending ? "Signing out..." : "Sign out"}
     </Button>
   );
 }

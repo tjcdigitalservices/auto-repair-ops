@@ -75,8 +75,11 @@ export function SandboxShell({ children }: { children: React.ReactNode }) {
 
   return (
     <SandboxModeProvider>
-      <div className="min-h-svh bg-slate-50">
-        <div className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-950">
+      <div
+        className="min-h-svh bg-slate-50"
+        style={{ ["--sandbox-chrome-offset" as string]: "3.25rem" }}
+      >
+        <div className="no-print sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-950">
           <p>
             {path.startsWith("/portal")
               ? `Sandbox — viewing as ${mechanicName}, mechanic. Saved only in this browser.`

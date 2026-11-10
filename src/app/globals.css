@@ -165,6 +165,9 @@
 
 .document-page-body-host {
   position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .document-editor-overlay--idle {
@@ -178,6 +181,11 @@
 
 .document-editor-overlay {
   z-index: 2;
+  overflow: hidden;
+}
+
+.document-editor-overlay .ProseMirror {
+  overflow: hidden;
 }
 
 .document-composer-print-root {
@@ -448,20 +456,41 @@
     width: var(--print-page-width) !important;
   }
 
+  .document-viewport-scale,
+  .document-viewport-pages,
+  .document-viewport-page {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
   .document-viewport-scale {
     width: var(--print-page-width) !important;
+  }
+
+  .document-composer-print-root {
+    display: contents;
   }
 
   .document-editable-page.print-page {
     height: var(--print-page-height) !important;
     min-height: var(--print-page-height) !important;
-    max-height: none !important;
-    overflow: visible !important;
+    max-height: var(--print-page-height) !important;
+    overflow: hidden !important;
     box-shadow: none !important;
   }
 
-  .print-page--document .document-editable-region {
-    overflow: visible !important;
+  .print-page--document .document-editable-region,
+  .print-page--document .document-page-body-host {
+    overflow: hidden !important;
+    max-height: 100% !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  .document-paginated-stack {
+    margin: 0 !important;
   }
 
   .print-page-stack,
@@ -478,14 +507,18 @@
     min-height: var(--print-page-height);
     margin: 0;
     box-shadow: none;
-    break-after: page;
-    page-break-after: always;
-  }
-
-  .print-page:last-child,
-  .report-print-page:last-child {
     break-after: auto;
     page-break-after: auto;
+    break-before: auto;
+    page-break-before: auto;
+  }
+
+  .print-page-stack > .print-page + .print-page,
+  .print-page-stack > .report-print-page + .report-print-page,
+  .report-print-stack > .print-page + .print-page,
+  .report-print-stack > .report-print-page + .report-print-page {
+    break-before: page;
+    page-break-before: always;
   }
 
   .job-order-print-page .print-document-footer {

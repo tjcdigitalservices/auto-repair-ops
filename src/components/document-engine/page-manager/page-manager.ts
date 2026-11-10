@@ -1,8 +1,11 @@
-import { paginateDocumentHtml, type PaginateDocumentHtmlOptions } from "@/components/document-engine/page-manager/paginate-document-html";
+import {
+  paginateDocumentPages,
+  type PaginateDocumentHtmlOptions,
+  type PaginatedDocumentPage,
+} from "@/components/document-engine/page-manager/paginate-document-html";
 
-export type DocumentPageSlice = {
+export type DocumentPageSlice = PaginatedDocumentPage & {
   index: number;
-  html: string;
 };
 
 export type PageManagerSnapshot = {
@@ -11,13 +14,20 @@ export type PageManagerSnapshot = {
 };
 
 export class PageManager {
-  private pages: DocumentPageSlice[] = [{ index: 0, html: "<p><br></p>" }];
+  private pages: DocumentPageSlice[] = [
+    {
+      index: 0,
+      html: "<p><br></p>",
+      startBlockIndex: 0,
+      endBlockIndex: 1,
+      startOffsetPx: 0,
+    },
+  ];
 
   paginate(html: string, options?: PaginateDocumentHtmlOptions): PageManagerSnapshot {
-    const htmlPages = paginateDocumentHtml(html, options);
-    this.pages = htmlPages.map((pageHtml, index) => ({
+    this.pages = paginateDocumentPages(html, options).map((page, index) => ({
+      ...page,
       index,
-      html: pageHtml,
     }));
 
     return this.getSnapshot();

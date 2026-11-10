@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import {
   DOCUMENT_ZOOM_OPTIONS,
+  PRINT_PAGE_HEIGHT_PX,
   PRINT_PAGE_WIDTH_PX,
   type DocumentZoomMode,
 } from "@/components/document-engine/constants";
@@ -57,8 +58,40 @@ export function DocumentViewport({
   className?: string;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
+  const pageStackRef = useRef<HTMLDivElement>(null);
+  const [stackHeightPx, setStackHeightPx] = useState(PRINT_PAGE_HEIGHT_PX);
   const fitScale = useDocumentViewportScale(viewportRef, zoomMode === "fit");
   const effectiveScale = zoomMode === "fit" ? fitScale : zoomMode;
+
+  useLayoutEffect(() => {
+    const pageStack = pageStackRef.current;
+
+    if (!pageStack) {
+      return;
+    }
+
+    function updateHeight() {
+      const nextHeight = Math.ceil(pageStack!.offsetHeight);
+
+      if (nextHeight > 0) {
+        setStackHeightPx((current) => (current === nextHeight ? current : nextHeight));
+      }
+    }
+
+    updateHeight();
+
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(pageStack);
+
+    return () => observer.disconnect();
+  }, [children]);
+
+  const scaledWidth = PRINT_PAGE_WIDTH_PX * effectiveScale;
+  const scaledHeight = stackHeightPx * effectiveScale;
 
   return (
     <section className={cn("document-viewport-panel flex min-h-0 flex-1 flex-col", className)}>
@@ -73,16 +106,19 @@ export function DocumentViewport({
         <div
           className="document-viewport-scale shrink-0"
           style={{
-            width: PRINT_PAGE_WIDTH_PX * effectiveScale,
+            width: scaledWidth,
+            height: scaledHeight,
           }}
         >
           <div
             className="document-viewport-pages"
             style={{
-              width: PRINT_PAGE_WIDTH_PX * effectiveScale,
+              width: scaledWidth,
+              height: scaledHeight,
             }}
           >
             <div
+              ref={pageStackRef}
               className="document-viewport-page"
               style={{
                 width: PRINT_PAGE_WIDTH_PX,

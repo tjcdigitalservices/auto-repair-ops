@@ -2444,6 +2444,10 @@ export type Database = {
         Args: { p_tenant_id: string };
         Returns: undefined;
       };
+      current_customer_tenant_id: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
       customer_get_shop_calendar: {
         Args: Record<string, never>;
         Returns: Json;
@@ -2464,6 +2468,18 @@ export type Database = {
       };
       customer_cancel_booking: {
         Args: { p_booking_id: string };
+        Returns: Json;
+      };
+      staff_create_booking: {
+        Args: {
+          p_customer_id: string;
+          p_vehicle_id: string;
+          p_scheduled_start: string;
+          p_service_kind?: string;
+          p_customer_concern?: string;
+          p_notes?: string | null;
+          p_scheduled_end?: string | null;
+        };
         Returns: Json;
       };
       staff_confirm_booking: {

@@ -5,6 +5,7 @@ import { QuotationPrintToolbar } from "@/components/reports/quotation-print-tool
 import { ReportPage } from "@/components/reports/report-page";
 import { resolveQuotationPrintMode } from "@/features/quotations/report-utils";
 import { getQuotationPrintDocument } from "@/features/quotations/queries/quotation-print-queries";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,19 @@ export default async function QuotationPrintPage({
     notFound();
   }
 
+  const supabase = await getSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: staff } = user
+    ? await supabase
+        .from("staff")
+        .select("id")
+        .eq("linked_user_id", user.id)
+        .eq("status", "active")
+        .maybeSingle()
+    : { data: null };
+
   return (
     <ReportPage
       wrapInPrintPage={false}
@@ -37,6 +51,7 @@ export default async function QuotationPrintPage({
         <QuotationPrintToolbar
           quotationId={document.quotation.id}
           mode={mode}
+          showDownload={Boolean(staff)}
         />
       }
     >

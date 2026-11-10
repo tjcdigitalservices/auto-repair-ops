@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   BarChart3,
   Boxes,
+  CalendarClock,
   CarFront,
   ChevronLeft,
   ChevronRight,
@@ -47,6 +48,7 @@ const ICONS: Record<
   customers: Users,
   vehicles: CarFront,
   quotations: FileText,
+  bookings: CalendarClock,
   documents: FileText,
   'job-orders': ClipboardList,
   inventory: Boxes,

@@ -29,6 +29,9 @@ import {
   resolveAttendancePageFilters,
 } from "@/features/attendance/utils";
 import { getBusinessNow } from "@/lib/dates";
+import { buildBookingsCalendarData } from "@/features/bookings/bookings-calendar-utils";
+import type { BookingListItem, BookingStatus, BookingsCalendarData } from "@/features/bookings/types";
+import { storeHourFieldName, STORE_HOUR_DAY_NAMES } from "@/features/settings/store-hours.shared";
 import type { CustomerDetail, CustomerDocumentHistoryItem, CustomerListItem } from "@/features/customers/types";
 import type { ServiceHistoryEntry, ServiceHistoryLineItem } from "@/features/service-history/types";
 import {
@@ -923,6 +926,77 @@ export function filterSandboxQuotations(
     })
     .filter((item) => !query || item.quotationNumber.toLowerCase().includes(query))
     .map((item) => toQuotationListItem(snapshot, item));
+}
+
+export function filterSandboxBookings(
+  snapshot: SandboxSnapshot,
+  search: string,
+  status: string,
+): BookingListItem[] {
+  const query = search.trim().toLowerCase();
+
+  return snapshot.scheduledBookings
+    .filter((item) => (status ? item.status === status : true))
+    .map((item) => toSandboxBookingListItem(snapshot, item))
+    .filter((item) => {
+      if (!query) {
+        return true;
+      }
+
+      return (
+        item.customerName.toLowerCase().includes(query) ||
+        item.vehicleLabel.toLowerCase().includes(query) ||
+        item.customerConcern.toLowerCase().includes(query)
+      );
+    });
+}
+
+export function buildSandboxBookingsCalendarData(
+  snapshot: SandboxSnapshot,
+  bookings: BookingListItem[],
+  month?: string,
+  selectedDate?: string,
+): BookingsCalendarData {
+  const storeHours = STORE_HOUR_DAY_NAMES.map((day) => ({
+    day,
+    hours: snapshot.shopSettings?.storeHours?.[storeHourFieldName(day)]?.trim() || "",
+  }));
+
+  const holidays = (snapshot.holidays ?? []).map((holiday) => ({
+    holidayDate: holiday.holidayDate,
+    label: holiday.label,
+    holidayKind: holiday.holidayKind,
+  }));
+
+  return buildBookingsCalendarData({
+    bookings,
+    storeHours,
+    holidays,
+    month,
+    selectedDate,
+  });
+}
+
+function toSandboxBookingListItem(
+  snapshot: SandboxSnapshot,
+  booking: SandboxSnapshot["scheduledBookings"][number],
+): BookingListItem {
+  const customer = snapshot.customers.find((item) => item.id === booking.customerId);
+  const vehicle = snapshot.vehicles.find((item) => item.id === booking.vehicleId);
+
+  return {
+    id: booking.id,
+    scheduledStart: booking.scheduledStart,
+    scheduledEnd: booking.scheduledEnd,
+    serviceKind: booking.serviceKind,
+    customerConcern: booking.customerConcern,
+    status: booking.status as BookingStatus,
+    customerId: booking.customerId,
+    customerName: customer?.displayName ?? "Customer",
+    vehicleId: booking.vehicleId,
+    vehicleLabel: vehicle ? vehicleLabel(snapshot, vehicle.id) : "Vehicle",
+    createdBy: booking.createdBy,
+  };
 }
 
 export function toQuotationFormOptions(snapshot: SandboxSnapshot): QuotationFormOptions {

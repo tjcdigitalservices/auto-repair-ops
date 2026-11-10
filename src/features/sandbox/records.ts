@@ -2734,3 +2734,73 @@ export function deleteSandboxStaffDevice(snapshot: SandboxSnapshot, deviceId: st
 export function formatSequence(prefix: string, value: number) {
   return `${prefix}-${String(value).padStart(4, "0")}`;
 }
+
+export function confirmSandboxBookingRecord(snapshot: SandboxSnapshot, bookingId: string) {
+  const booking = snapshot.scheduledBookings.find((item) => item.id === bookingId);
+
+  if (!booking) {
+    return { ok: false as const, message: "Booking not found." };
+  }
+
+  if (booking.status !== "requested") {
+    return { ok: false as const, message: "Only requested bookings can be confirmed." };
+  }
+
+  return {
+    ok: true as const,
+    snapshot: {
+      ...snapshot,
+      scheduledBookings: snapshot.scheduledBookings.map((item) =>
+        item.id === bookingId ? { ...item, status: "confirmed" as const } : item,
+      ),
+    },
+  };
+}
+
+export function updateSandboxBookingStatusRecord(
+  snapshot: SandboxSnapshot,
+  bookingId: string,
+  status: "cancelled" | "no_show",
+) {
+  const booking = snapshot.scheduledBookings.find((item) => item.id === bookingId);
+
+  if (!booking) {
+    return { ok: false as const, message: "Booking not found." };
+  }
+
+  if (booking.status === "checked_in" || booking.status === "cancelled") {
+    return { ok: false as const, message: "This booking can no longer be updated." };
+  }
+
+  return {
+    ok: true as const,
+    snapshot: {
+      ...snapshot,
+      scheduledBookings: snapshot.scheduledBookings.map((item) =>
+        item.id === bookingId ? { ...item, status } : item,
+      ),
+    },
+  };
+}
+
+export function checkInSandboxBookingRecord(snapshot: SandboxSnapshot, bookingId: string) {
+  const booking = snapshot.scheduledBookings.find((item) => item.id === bookingId);
+
+  if (!booking) {
+    return { ok: false as const, message: "Booking not found." };
+  }
+
+  if (booking.status !== "requested" && booking.status !== "confirmed") {
+    return { ok: false as const, message: "Only requested or confirmed bookings can be checked in." };
+  }
+
+  return {
+    ok: true as const,
+    snapshot: {
+      ...snapshot,
+      scheduledBookings: snapshot.scheduledBookings.map((item) =>
+        item.id === bookingId ? { ...item, status: "checked_in" as const } : item,
+      ),
+    },
+  };
+}

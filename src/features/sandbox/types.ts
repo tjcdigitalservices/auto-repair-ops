@@ -389,6 +389,18 @@ export type SandboxWebsitePost = {
   createdAt: string;
 };
 
+export type SandboxScheduledBooking = {
+  id: string;
+  customerId: string;
+  vehicleId: string;
+  scheduledStart: string;
+  scheduledEnd: string | null;
+  serviceKind: "checkup" | "repair" | "other";
+  customerConcern: string;
+  status: "requested" | "confirmed" | "checked_in" | "cancelled" | "no_show";
+  createdBy: "customer" | "staff";
+};
+
 export type SandboxQuoteRequest = {
   id: string;
   customerName: string;
@@ -512,6 +524,7 @@ export type SandboxSnapshot = {
   documents: SandboxDocument[];
   websitePosts: SandboxWebsitePost[];
   quoteRequests: SandboxQuoteRequest[];
+  scheduledBookings: SandboxScheduledBooking[];
   vehicleMakes: SandboxVehicleMake[];
   vehicleModels: SandboxVehicleModel[];
   lookupOptions: SandboxLookupOption[];

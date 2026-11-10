@@ -10,6 +10,8 @@ export type AppCapability =
   | "vehicles:write"
   | "quotations:read"
   | "quotations:write"
+  | "bookings:read"
+  | "bookings:write"
   | "job_orders:read"
   | "job_orders:write"
   | "inventory:read"
@@ -46,6 +48,8 @@ const ALL_CAPABILITIES: readonly AppCapability[] = [
   "vehicles:write",
   "quotations:read",
   "quotations:write",
+  "bookings:read",
+  "bookings:write",
   "job_orders:read",
   "job_orders:write",
   "inventory:read",
@@ -86,6 +90,8 @@ export const ROLE_CAPABILITIES: Record<StaffRole, readonly AppCapability[]> = {
     "vehicles:write",
     "quotations:read",
     "quotations:write",
+    "bookings:read",
+    "bookings:write",
     "job_orders:read",
     "job_orders:write",
     "inventory:read",
@@ -114,6 +120,7 @@ export const ROLE_CAPABILITIES: Record<StaffRole, readonly AppCapability[]> = {
     "dashboard:view",
     "customers:read",
     "vehicles:read",
+    "bookings:read",
     "products:read",
     "invoices:read",
     "payments:read",

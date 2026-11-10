@@ -18,7 +18,7 @@ import { DEFAULT_BRAND_PACK } from "@/lib/branding/types";
 
 const ZONE = "Asia/Manila";
 
-export const SANDBOX_SEED_REVISION = 7;
+export const SANDBOX_SEED_REVISION = 8;
 
 export const SANDBOX_SHOP_PUBLIC_IP = "203.177.14.22";
 
@@ -685,6 +685,30 @@ export function createSandboxSeed(now = new Date()): SandboxSnapshot {
         concern: "Air conditioning is weak at idle.",
         status: "new",
         createdAt,
+      },
+    ],
+    scheduledBookings: [
+      {
+        id: ID.bookingRequested,
+        customerId: ID.customerMaria,
+        vehicleId: ID.vehicleVios,
+        scheduledStart: clock.plus({ days: 1, hours: 9 }).toUTC().toISO()!,
+        scheduledEnd: clock.plus({ days: 1, hours: 10 }).toUTC().toISO()!,
+        serviceKind: "checkup",
+        customerConcern: "Routine maintenance and brake feel check before a long trip.",
+        status: "requested",
+        createdBy: "customer",
+      },
+      {
+        id: ID.bookingConfirmed,
+        customerId: ID.customerSantos,
+        vehicleId: ID.vehicleL300,
+        scheduledStart: clock.plus({ days: 3, hours: 14 }).toUTC().toISO()!,
+        scheduledEnd: null,
+        serviceKind: "repair",
+        customerConcern: "Intermittent starting issue in the mornings.",
+        status: "confirmed",
+        createdBy: "customer",
       },
     ],
     vehicleMakes: [

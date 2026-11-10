@@ -66,6 +66,7 @@ import { SuppliersPageView } from "@/features/suppliers/components/suppliers-pag
 import { QuotationCreateFlow } from "@/features/quotations/components/quotation-create-flow";
 import { QuotationDetailPageContent } from "@/features/quotations/components/quotation-detail-page-content";
 import { QuotationForm } from "@/features/quotations/components/quotation-form";
+import { BookingsPageView } from "@/features/bookings/components/bookings-page-view";
 import { QuotationsPageView } from "@/features/quotations/components/quotations-page-view";
 import { SettingsPageTabs } from "@/features/settings/components/settings-page-tabs";
 import { resolveSettingsPageTab } from "@/features/settings/utils";
@@ -98,6 +99,8 @@ import {
 import { updateSandboxShop } from "@/features/sandbox/store";
 import type { SandboxSnapshot } from "@/features/sandbox/types";
 import {
+  buildSandboxBookingsCalendarData,
+  filterSandboxBookings,
   filterSandboxQuotations,
   isQuotationStatusFilter,
   toAttendancePageData,
@@ -168,6 +171,9 @@ export function SandboxRouter({ snapshot }: { snapshot: SandboxSnapshot }) {
   }
   if (section === "quotations") {
     return <QuotationsScreen snapshot={snapshot} id={id} action={action} searchParams={searchParams} />;
+  }
+  if (section === "bookings") {
+    return <BookingsScreen snapshot={snapshot} searchParams={searchParams} />;
   }
   if (section === "job-orders") {
     return <JobOrdersScreen snapshot={snapshot} id={id} searchParams={searchParams} />;
@@ -600,6 +606,32 @@ function QuotationsScreen({
       quotations={filterSandboxQuotations(snapshot, searchParams.get("search") ?? "", status)}
       search={searchParams.get("search") ?? ""}
       status={status}
+      page={searchParams.get("page") ?? undefined}
+      branch={{ id: snapshot.branch.id, name: snapshot.branch.name, code: snapshot.branch.code }}
+    />
+  );
+}
+
+function BookingsScreen({
+  snapshot,
+  searchParams,
+}: {
+  snapshot: SandboxSnapshot;
+  searchParams: URLSearchParams;
+}) {
+  const statusParam = searchParams.get("status") ?? "";
+  const month = searchParams.get("month") ?? undefined;
+  const date = searchParams.get("date") ?? undefined;
+  const calendarBookings = filterSandboxBookings(snapshot, "", "");
+  const listBookings = filterSandboxBookings(snapshot, searchParams.get("search") ?? "", statusParam);
+
+  return (
+    <BookingsPageView
+      bookings={listBookings}
+      calendarBookings={calendarBookings}
+      calendar={buildSandboxBookingsCalendarData(snapshot, calendarBookings, month, date)}
+      search={searchParams.get("search") ?? ""}
+      status={(statusParam || "") as "" | import("@/features/bookings/types").BookingStatus}
       page={searchParams.get("page") ?? undefined}
       branch={{ id: snapshot.branch.id, name: snapshot.branch.name, code: snapshot.branch.code }}
     />

@@ -15,6 +15,7 @@ export type NavigationIconName =
   | "customers"
   | "vehicles"
   | "quotations"
+  | "bookings"
   | "documents"
   | "job-orders"
   | "inventory"
@@ -83,6 +84,14 @@ export const DASHBOARD_NAV_ITEMS: ReadonlyArray<{
     capability: "quotations:read",
     group: "Service Desk",
     iconName: "quotations",
+  },
+  {
+    href: "/bookings",
+    label: "Bookings",
+    description: "Customer appointment requests and check-ins.",
+    capability: "bookings:read",
+    group: "Service Desk",
+    iconName: "bookings",
   },
   {
     href: "/job-orders",

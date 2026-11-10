@@ -80,7 +80,7 @@ export const DEFAULT_BRAND_PACK = {
 type TenantBrandingRow = TableRow<"tenant_branding">;
 type TenantRow = Pick<TableRow<"tenants">, "id" | "slug" | "name">;
 
-function parseStoreHours(value: Json | null | undefined): StoreHoursDay[] {
+export function parseStoreHours(value: Json | null | undefined): StoreHoursDay[] {
   if (!Array.isArray(value)) {
     return [...DEFAULT_BRAND_PACK.storeHours];
   }

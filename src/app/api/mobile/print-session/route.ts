@@ -1,29 +1,12 @@
+import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { buildSupabaseAuthCookieHeader } from "@/lib/reports/pdf-auth";
 import { getPublicSupabaseConfig } from "@/lib/supabase/env";
 import type { Database } from "@/types/database";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function getProjectRef(supabaseUrl: string) {
-  return supabaseUrl.match(/https:\/\/([^.]+)/)?.[1] ?? "supabase";
-}
-
-function readJwtExpiry(accessToken: string): number | undefined {
-  try {
-    const payload = accessToken.split(".")[1];
-    if (!payload) return undefined;
-    const json = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
-      exp?: number;
-    };
-    return typeof json.exp === "number" ? json.exp : undefined;
-  } catch {
-    return undefined;
-  }
-}
 
 /** Only allow relative print paths for the shop document viewer. */
 function sanitizeNextPath(raw: string | null): string | null {
@@ -39,7 +22,8 @@ function sanitizeNextPath(raw: string | null): string | null {
 }
 
 /**
- * Mobile WebView bridge: accept a bearer session, set Supabase SSR cookies, redirect to print.
+ * Mobile WebView bridge: accept a bearer session, set Supabase SSR cookies via
+ * createServerClient.setSession, then redirect to the print page.
  */
 export async function POST(request: NextRequest) {
   const contentType = request.headers.get("content-type") ?? "";
@@ -68,7 +52,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { url, anonKey } = getPublicSupabaseConfig();
-  const supabase = createClient<Database>(url, anonKey, {
+  const probe = createClient<Database>(url, anonKey, {
     global: { headers: { Authorization: `Bearer ${accessToken}` } },
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
@@ -76,37 +60,35 @@ export async function POST(request: NextRequest) {
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser(accessToken);
+  } = await probe.auth.getUser(accessToken);
 
   if (error || !user) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
-  const expiresAt = readJwtExpiry(accessToken);
-  const storageKey = `sb-${getProjectRef(url)}-auth-token`;
-  const cookieHeader = buildSupabaseAuthCookieHeader(storageKey, {
-    access_token: accessToken,
-    refresh_token: refreshToken,
-    expires_at: expiresAt,
-    expires_in: expiresAt ? Math.max(expiresAt - Math.floor(Date.now() / 1000), 0) : undefined,
-    token_type: "bearer",
-    user,
-  });
-
   const redirectUrl = new URL(nextPath, request.nextUrl.origin);
   const response = NextResponse.redirect(redirectUrl, 303);
 
-  for (const part of cookieHeader.split("; ")) {
-    const eq = part.indexOf("=");
-    if (eq <= 0) continue;
-    const name = part.slice(0, eq);
-    const value = part.slice(eq + 1);
-    response.cookies.set(name, value, {
-      path: "/",
-      sameSite: "lax",
-      httpOnly: false,
-      secure: request.nextUrl.protocol === "https:",
-    });
+  const supabase = createServerClient<Database>(url, anonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          response.cookies.set(name, value, options);
+        });
+      },
+    },
+  });
+
+  const { error: sessionError } = await supabase.auth.setSession({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+  });
+
+  if (sessionError) {
+    return new NextResponse("Unable to establish print session.", { status: 401 });
   }
 
   return response;

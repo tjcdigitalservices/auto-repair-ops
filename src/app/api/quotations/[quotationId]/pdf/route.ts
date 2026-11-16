@@ -36,11 +36,30 @@ export async function GET(request: NextRequest, context: QuotationPdfRouteContex
   let storageKey = bearerAuth?.storageKey ?? null;
 
   if (bearerAuth) {
-    const allowed = await assertBearerStaffCapability(bearerAuth.supabase, "quotations:read");
-    if (!allowed) {
-      return new Response("Forbidden", { status: 403 });
+    const staffAllowed = await assertBearerStaffCapability(
+      bearerAuth.supabase,
+      "quotations:read",
+    );
+
+    if (!staffAllowed) {
+      const {
+        data: { user },
+      } = await bearerAuth.supabase.auth.getUser();
+      const { data: customer } = user
+        ? await bearerAuth.supabase
+            .from("customers")
+            .select("id")
+            .eq("linked_user_id", user.id)
+            .eq("status", "active")
+            .maybeSingle()
+        : { data: null };
+
+      if (!customer) {
+        return new Response("Forbidden", { status: 403 });
+      }
     }
 
+    // Staff capability or customer RLS: only rows the caller can read are returned.
     const { data: quotation, error } = await bearerAuth.supabase
       .from("quotations")
       .select("id, quotation_number")

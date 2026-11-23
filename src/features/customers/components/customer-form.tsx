@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   createCustomerAction,
   provisionCustomerPortalLoginAction,
+  resetCustomerPortalPasswordAction,
   updateCustomerAction,
 } from "@/features/customers/actions/customer-actions";
 import { CustomerPortalLoginSuccess } from "@/features/customers/components/customer-portal-login-success";
@@ -33,6 +34,7 @@ import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import { useFormValues } from "@/lib/use-form-values";
 
 const PROVISION_FORM_ID = "customer-portal-provision";
+const RESET_FORM_ID = "customer-portal-reset";
 
 export function CustomerForm({
   mode,
@@ -54,9 +56,19 @@ export function CustomerForm({
     }),
     INITIAL_CUSTOMER_ACTION_STATE,
   );
+  const [resetState, resetAction] = useBoundAction(
+    resetCustomerPortalPasswordAction,
+    async () => ({
+      status: "error" as const,
+      message: "Customer app password reset is not available in sandbox mode.",
+    }),
+    INITIAL_CUSTOMER_ACTION_STATE,
+  );
   const { values, updateFormValue } = useFormValues(initialValues);
 
-  const portalLogin = state.portalLogin ?? provisionState.portalLogin;
+  const portalLogin =
+    state.portalLogin ?? provisionState.portalLogin ?? resetState.portalLogin;
+  const isPasswordReset = Boolean(resetState.portalLogin);
 
   if (portalLogin) {
     return (
@@ -65,6 +77,12 @@ export function CustomerForm({
         customerName={portalLogin.customerName}
         email={portalLogin.email}
         temporaryPassword={portalLogin.temporaryPassword}
+        title={isPasswordReset ? "Customer app password reset" : undefined}
+        description={
+          isPasswordReset
+            ? `Share this new temporary password with ${portalLogin.customerName} once. It will not be shown again after you leave this page.`
+            : undefined
+        }
       />
     );
   }
@@ -73,6 +91,12 @@ export function CustomerForm({
     <>
       {mode === "edit" && !initialValues.hasLinkedPortalAccount ? (
         <form id={PROVISION_FORM_ID} action={provisionAction} className="hidden">
+          <input type="hidden" name="customerId" value={initialValues.customerId} />
+        </form>
+      ) : null}
+
+      {mode === "edit" && initialValues.hasLinkedPortalAccount ? (
+        <form id={RESET_FORM_ID} action={resetAction} className="hidden">
           <input type="hidden" name="customerId" value={initialValues.customerId} />
         </form>
       ) : null}
@@ -325,18 +349,25 @@ export function CustomerForm({
             ) : null}
 
             {mode === "edit" && initialValues.hasLinkedPortalAccount ? (
-              <div className="space-y-2">
-                <Label htmlFor="portalLoginEmail">Login email</Label>
-                <Input
-                  id="portalLoginEmail"
-                  value={initialValues.portalLoginEmail ?? initialValues.email}
-                  readOnly
-                  className="bg-muted/40 text-muted-foreground"
-                />
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="portalLoginEmail">Login email</Label>
+                  <Input
+                    id="portalLoginEmail"
+                    value={initialValues.portalLoginEmail ?? initialValues.email}
+                    readOnly
+                    className="bg-muted/40 text-muted-foreground"
+                  />
+                </div>
                 <p className="text-sm text-muted-foreground">
-                  This customer can already sign in on the mobile app. Ask them to change their
-                  password from Account if needed.
+                  This customer can already sign in on the mobile app. If they forgot their
+                  password, reset it here to generate a new temporary password (
+                  <span className="font-medium">lastname@year</span>). It is shown once.
                 </p>
+                <FormStatusMessage message={resetState.message} />
+                <Button type="submit" form={RESET_FORM_ID} variant="outline">
+                  Reset app password
+                </Button>
               </div>
             ) : null}
 

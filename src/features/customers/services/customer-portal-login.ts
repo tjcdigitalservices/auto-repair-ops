@@ -89,6 +89,40 @@ export async function deleteCustomerPortalLogin(userId: string) {
   }
 }
 
+export async function resetCustomerPortalPassword(params: {
+  linkedUserId: string;
+  lastName?: string | null;
+  companyName?: string | null;
+  displayName?: string | null;
+}): Promise<CustomerPortalLoginCredentials> {
+  const email = await getPortalEmailForLinkedUser(params.linkedUserId);
+
+  if (!email) {
+    throw new Error("Could not resolve the login email for this customer app account.");
+  }
+
+  const temporaryPassword = buildCustomerTemporaryPassword({
+    lastName: params.lastName,
+    companyName: params.companyName,
+    displayName: params.displayName,
+  });
+
+  const admin = getSupabaseAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(params.linkedUserId, {
+    password: temporaryPassword,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return {
+    userId: params.linkedUserId,
+    email,
+    temporaryPassword,
+  };
+}
+
 export async function findAuthUserIdByEmail(email: string) {
   const admin = getSupabaseAdminClient();
   const normalizedEmail = normalizeCustomerPortalEmail(email);

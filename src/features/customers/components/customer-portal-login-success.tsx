@@ -8,19 +8,23 @@ export function CustomerPortalLoginSuccess({
   email,
   temporaryPassword,
   customerId,
+  title = "Customer app login created",
+  description,
 }: {
   customerName: string;
   email: string;
   temporaryPassword: string;
   customerId: string;
+  title?: string;
+  description?: string;
 }) {
   return (
     <Card className="border-border/70 shadow-sm">
       <CardHeader>
-        <CardTitle>Customer app login created</CardTitle>
+        <CardTitle>{title}</CardTitle>
         <CardDescription>
-          Share these credentials with {customerName} once. They will not be shown again after you
-          leave this page.
+          {description ??
+            `Share these credentials with ${customerName} once. They will not be shown again after you leave this page.`}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">

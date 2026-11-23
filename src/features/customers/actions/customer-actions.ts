@@ -13,6 +13,7 @@ import {
 import {
   deleteCustomerPortalLogin,
   provisionCustomerPortalLogin,
+  resetCustomerPortalPassword,
 } from "@/features/customers/services/customer-portal-login";
 import {
   INITIAL_CUSTOMER_ACTION_STATE,
@@ -130,6 +131,82 @@ export async function provisionCustomerPortalLoginAction(
       temporaryPassword: createdLogin.temporaryPassword,
     },
   };
+}
+
+export async function resetCustomerPortalPasswordAction(
+  _prevState: CustomerActionState = INITIAL_CUSTOMER_ACTION_STATE,
+  formData: FormData,
+): Promise<CustomerActionState> {
+  const customerId = readFormDataString(formData, "customerId");
+
+  if (!customerId) {
+    return { status: "error", message: "Customer id is required." };
+  }
+
+  const { branchScope, supabase } = await getBranchScopedServerClient("customers:write");
+  const { data: customer, error } = await applyBranchFilter(
+    supabase
+      .from("customers")
+      .select(
+        "id, display_name, first_name, last_name, company_name, email, linked_user_id, status",
+      ),
+    branchScope.selectedBranchId,
+  )
+    .eq("id", customerId)
+    .maybeSingle();
+
+  if (error) {
+    return { status: "error", message: error.message };
+  }
+
+  if (!customer) {
+    return { status: "error", message: "Customer record not found." };
+  }
+
+  if (!customer.linked_user_id) {
+    return {
+      status: "error",
+      message: "This customer does not have an app login to reset.",
+    };
+  }
+
+  if (customer.status !== "active") {
+    return {
+      status: "error",
+      message: "Only active customers can have their app password reset.",
+    };
+  }
+
+  try {
+    const resetLogin = await resetCustomerPortalPassword({
+      linkedUserId: customer.linked_user_id,
+      lastName: customer.last_name,
+      companyName: customer.company_name,
+      displayName: customer.display_name,
+    });
+
+    revalidatePath("/customers");
+    revalidatePath(`/customers/${customerId}`);
+
+    return {
+      status: "success",
+      message: "Customer app password reset.",
+      portalLogin: {
+        customerId,
+        customerName: customer.display_name,
+        email: resetLogin.email,
+        temporaryPassword: resetLogin.temporaryPassword,
+      },
+    };
+  } catch (resetError) {
+    return {
+      status: "error",
+      message:
+        resetError instanceof Error
+          ? resetError.message
+          : "Customer app password could not be reset.",
+    };
+  }
 }
 
 export async function deleteCustomerAction(formData: FormData) {

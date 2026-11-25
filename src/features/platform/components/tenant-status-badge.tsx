@@ -12,8 +12,24 @@ const TONES: Record<
   canceled: "neutral",
 };
 
-export function TenantStatusBadge({ status }: { status: TenantStatus }) {
+const LABELS: Record<TenantStatus, string> = {
+  trial: "Trial",
+  active: "Active",
+  past_due: "Past due",
+  suspended: "Suspended",
+  canceled: "Canceled",
+};
+
+export function TenantStatusBadge({
+  status,
+  variant = "default",
+}: {
+  status: TenantStatus;
+  variant?: "default" | "table";
+}) {
   return (
-    <StatusBadge tone={TONES[status]}>{status.replace("_", " ")}</StatusBadge>
+    <StatusBadge tone={TONES[status]} variant={variant}>
+      {LABELS[status]}
+    </StatusBadge>
   );
 }

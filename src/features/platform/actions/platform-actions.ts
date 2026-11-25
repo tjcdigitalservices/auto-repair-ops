@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requirePlatformAdmin } from "@/lib/auth/session";
+import { writeAuditLog } from "@/lib/audit";
 import {
   INITIAL_FORM_ACTION_STATE,
   toFormActionState,
@@ -31,6 +32,17 @@ const createTenantSchema = z.object({
 const updateTenantStatusSchema = z.object({
   tenantId: z.string().uuid(),
   status: z.enum(["trial", "active", "past_due", "suspended", "canceled"]),
+});
+
+const updateTenantDetailsSchema = z.object({
+  tenantId: z.string().uuid(),
+  name: z.string().trim().min(2).max(120),
+  currencyCode: z
+    .string()
+    .trim()
+    .length(3)
+    .regex(/^[A-Za-z]{3}$/, "Use a 3-letter currency code."),
+  timezone: z.string().trim().min(3).max(64),
 });
 
 export async function createTenantAction(
@@ -232,7 +244,7 @@ export async function updateTenantStatusAction(
   _prevState: FormActionState = INITIAL_FORM_ACTION_STATE,
   formData: FormData,
 ): Promise<FormActionState> {
-  await requirePlatformAdmin();
+  const platformAdmin = await requirePlatformAdmin();
 
   const parsed = updateTenantStatusSchema.safeParse({
     tenantId: formData.get("tenantId"),
@@ -244,6 +256,12 @@ export async function updateTenantStatusAction(
   }
 
   const admin = getSupabaseAdminClient();
+  const { data: before } = await admin
+    .from("tenants")
+    .select("status")
+    .eq("id", parsed.data.tenantId)
+    .maybeSingle();
+
   const { error } = await admin
     .from("tenants")
     .update({ status: parsed.data.status })
@@ -253,7 +271,69 @@ export async function updateTenantStatusAction(
     return { status: "error", message: error.message };
   }
 
+  await writeAuditLog(admin, {
+    action: "tenant_status_updated",
+    entityType: "tenant",
+    entityId: parsed.data.tenantId,
+    userId: platformAdmin.userId,
+    beforeData: before ? { status: before.status } : null,
+    afterData: { status: parsed.data.status },
+  });
+
   revalidatePath("/platform");
   revalidatePath(`/platform/tenants/${parsed.data.tenantId}`);
   return { status: "success", message: "Tenant status updated." };
+}
+
+export async function updateTenantDetailsAction(
+  _prevState: FormActionState = INITIAL_FORM_ACTION_STATE,
+  formData: FormData,
+): Promise<FormActionState> {
+  const platformAdmin = await requirePlatformAdmin();
+
+  const parsed = updateTenantDetailsSchema.safeParse({
+    tenantId: formData.get("tenantId"),
+    name: formData.get("name"),
+    currencyCode: formData.get("currencyCode"),
+    timezone: formData.get("timezone"),
+  });
+
+  if (!parsed.success) {
+    return toFormActionState(parsed.error);
+  }
+
+  const admin = getSupabaseAdminClient();
+  const { data: before } = await admin
+    .from("tenants")
+    .select("name, currency_code, timezone")
+    .eq("id", parsed.data.tenantId)
+    .maybeSingle();
+
+  const after = {
+    name: parsed.data.name,
+    currency_code: parsed.data.currencyCode.toUpperCase(),
+    timezone: parsed.data.timezone,
+  };
+
+  const { error } = await admin
+    .from("tenants")
+    .update(after)
+    .eq("id", parsed.data.tenantId);
+
+  if (error) {
+    return { status: "error", message: error.message };
+  }
+
+  await writeAuditLog(admin, {
+    action: "tenant_details_updated",
+    entityType: "tenant",
+    entityId: parsed.data.tenantId,
+    userId: platformAdmin.userId,
+    beforeData: before,
+    afterData: after,
+  });
+
+  revalidatePath("/platform");
+  revalidatePath(`/platform/tenants/${parsed.data.tenantId}`);
+  return { status: "success", message: "Tenant details updated." };
 }

@@ -28,7 +28,8 @@ export function readSpreadsheetRows(
   options?: { preferredSheetName?: string; maxRows?: number },
 ) {
   const maxRows = options?.maxRows ?? SPREADSHEET_MAX_ROWS;
-  const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
+  // codepage 65001 = UTF-8 so CSV peso signs (₱) are not read as mojibake.
+  const workbook = XLSX.read(buffer, { type: "array", cellDates: true, codepage: 65001 });
   const preferred = options?.preferredSheetName?.trim().toLowerCase();
   const sheetName =
     workbook.SheetNames.find((name) => name.trim().toLowerCase() === preferred) ??
@@ -110,4 +111,52 @@ export function mapSpreadsheetHeaders(
 
 export function isBlankSpreadsheetRow(mapped: Record<string, unknown>) {
   return Object.values(mapped).every((value) => cleanSpreadsheetText(value) === "");
+}
+
+/**
+ * Accepts plain numbers and common spreadsheet money text (₱1,250.00, PHP 100, etc.).
+ * Empty/missing values return `fallback`.
+ */
+export function parseSpreadsheetNonNegativeNumber(
+  value: unknown,
+  fallback: number | null = null,
+): number | null {
+  if (value === null || value === undefined || value === "") {
+    return fallback;
+  }
+
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value >= 0 ? value : null;
+  }
+
+  if (value instanceof Date) {
+    return null;
+  }
+
+  // Keep digits/decimal only after stripping currency text (including UTF-8 peso
+  // misread as Latin-1 mojibake: â\u0082±).
+  const text = String(value)
+    .trim()
+    .replace(/\u00a0/g, " ")
+    .replace(/â\u0082±/g, "")
+    .replace(/^(php|php\.?|usd)\s*/i, "")
+    .replace(/[₱$€£¥]/g, "")
+    .replace(/,/g, "")
+    .replace(/\s+/g, "");
+
+  if (!text) {
+    return fallback;
+  }
+
+  if (/^\(.*\)$/.test(text)) {
+    return null;
+  }
+
+  const match = text.match(/^\d+(?:\.\d+)?$/);
+  if (!match) {
+    return null;
+  }
+
+  const parsed = Number(match[0]);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }

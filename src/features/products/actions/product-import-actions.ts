@@ -248,6 +248,7 @@ export async function importProductsFromFileAction(
           supabase,
           branchId,
           productId,
+          createdByUserId: context.userId,
           row,
         });
         if (stockChanged) {
@@ -456,72 +457,55 @@ async function upsertStockRow(params: {
   supabase: Awaited<ReturnType<typeof getBranchScopedServerClient>>["supabase"];
   branchId: string;
   productId: string;
+  createdByUserId: string;
   row: ParsedProductImportRow;
 }) {
-  const { data: existing, error: existingError } = await params.supabase
-    .from("inventory_stocks")
-    .select("id")
-    .eq("branch_id", params.branchId)
-    .eq("product_id", params.productId)
-    .maybeSingle();
+  const wantsQuantity = params.row.currentStock !== null;
+  const wantsSettings = params.row.reorderLevel > 0 || Boolean(params.row.shelfLocation?.trim());
 
-  if (existingError) {
-    throw new Error(existingError.message);
-  }
-
-  const stockPayload = {
-    quantity_on_hand: params.row.currentStock ?? 0,
-    reorder_level: params.row.reorderLevel,
-    shelf_location: params.row.shelfLocation,
-  };
-
-  if (existing) {
-    if (params.row.currentStock === null) {
-      const { error } = await params.supabase
-        .from("inventory_stocks")
-        .update({
-          reorder_level: params.row.reorderLevel,
-          shelf_location: params.row.shelfLocation,
-        })
-        .eq("id", existing.id);
-      if (error) {
-        throw new Error(error.message);
-      }
-      return true;
-    }
-
-    const { error } = await params.supabase
-      .from("inventory_stocks")
-      .update(stockPayload)
-      .eq("id", existing.id);
-    if (error) {
-      throw new Error(error.message);
-    }
-    return true;
-  }
-
-  if (
-    params.row.currentStock === null &&
-    params.row.reorderLevel <= 0 &&
-    !params.row.shelfLocation
-  ) {
+  if (!wantsQuantity && !wantsSettings) {
     return false;
   }
 
-  const { error } = await params.supabase.from("inventory_stocks").insert({
-    branch_id: params.branchId,
-    product_id: params.productId,
-    quantity_on_hand: params.row.currentStock ?? 0,
-    reserved_quantity: 0,
-    reorder_level: params.row.reorderLevel,
-    shelf_location: params.row.shelfLocation,
-  });
+  let changed = false;
 
-  if (error) {
-    throw new Error(error.message);
+  // inventory_stocks has no direct INSERT/UPDATE RLS — use security-definer RPCs.
+  if (wantsQuantity && (params.row.currentStock ?? 0) > 0) {
+    const { error } = await params.supabase.rpc("reconcile_inventory_stock", {
+      p_branch_id: params.branchId,
+      p_product_id: params.productId,
+      p_counted_quantity: params.row.currentStock!,
+      p_notes: "Product import",
+      p_created_by: params.createdByUserId,
+    });
+
+    if (error && !isMatchingStockError(error.message)) {
+      throw new Error(error.message);
+    }
+
+    changed = true;
   }
 
-  return true;
+  if (wantsSettings || (wantsQuantity && (params.row.currentStock ?? 0) === 0)) {
+    const { error } = await params.supabase.rpc("update_inventory_stock_settings", {
+      p_branch_id: params.branchId,
+      p_product_id: params.productId,
+      p_reorder_level: params.row.reorderLevel > 0 ? params.row.reorderLevel : null,
+      p_shelf_location: params.row.shelfLocation,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    changed = true;
+  }
+
+  return changed;
+}
+
+function isMatchingStockError(message: string) {
+  return /already matches the current stock/i.test(message);
 }
 
 function normalizeKey(value: string) {

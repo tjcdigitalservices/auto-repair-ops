@@ -635,6 +635,7 @@ export function QuotationCreateFlow({
             value={values.natureOfRepair}
           />
           <input type="hidden" name="status" value={values.status} />
+          <input type="hidden" name="quotationDate" value={values.quotationDate} />
           <input
             type="hidden"
             name="inspectionNotes"
@@ -961,6 +962,23 @@ export function QuotationCreateFlow({
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="reviewQuotationDate" required>
+                        Quotation date
+                      </Label>
+                      <Input
+                        id="reviewQuotationDate"
+                        type="date"
+                        value={values.quotationDate}
+                        onChange={(event) =>
+                          updateFormValue('quotationDate', event.target.value)
+                        }
+                      />
+                      <FieldError
+                        errors={quotationState.fieldErrors}
+                        name="quotationDate"
+                      />
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="reviewStatus" required>
                         Quotation status

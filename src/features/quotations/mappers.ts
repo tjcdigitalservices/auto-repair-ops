@@ -46,6 +46,7 @@ export function mapQuotationRowToListItem(
     discount: row.discount,
     tax: row.tax,
     totalAmount: row.total_amount,
+    quotationDate: row.quotation_date,
     createdAt: row.created_at,
     approvedAt: row.approved_at,
   };
@@ -99,6 +100,7 @@ export function mapQuotationDetailToFormValues(detail: QuotationDetail): Quotati
     vehicleId: detail.vehicleId,
     natureOfRepair: detail.natureOfRepair ?? "",
     inspectionNotes: detail.inspectionNotes ?? "",
+    quotationDate: detail.quotationDate,
     status: detail.status === "draft" ? "draft" : "pending_approval",
     discount: formatMoneyInputValue(detail.discount),
     tax: formatMoneyInputValue(detail.tax),
@@ -130,6 +132,7 @@ export function mapJobOrderDetailToReviseFormValues(params: {
     vehicleId: params.quotation.vehicleId,
     natureOfRepair: params.quotation.natureOfRepair ?? "",
     inspectionNotes: params.jobOrder.inspectionNotes ?? params.quotation.inspectionNotes ?? "",
+    quotationDate: params.quotation.quotationDate,
     status: "pending_approval",
     discount: formatMoneyInputValue(params.quotation.discount),
     tax: formatMoneyInputValue(params.quotation.tax),

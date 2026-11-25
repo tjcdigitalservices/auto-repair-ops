@@ -714,6 +714,7 @@ export function saveQuotationFromForm(
                   notes: values.natureOfRepair || item.notes,
                   natureOfRepair: values.natureOfRepair || null,
                   inspectionNotes: values.inspectionNotes || null,
+                  quotationDate: values.quotationDate,
                 }
               : item,
           )
@@ -732,6 +733,7 @@ export function saveQuotationFromForm(
               notes: values.natureOfRepair || null,
               natureOfRepair: values.natureOfRepair || null,
               inspectionNotes: values.inspectionNotes || null,
+              quotationDate: values.quotationDate,
               createdAt: timestamp,
               approvedAt: null,
             },
@@ -1579,6 +1581,7 @@ export function applySandboxInventoryMovement(
     mode: "stock_in" | "recount" | "damaged";
     quantity: number;
     notes: string | null;
+    movementDate?: string;
   },
   now = new Date(),
 ) {
@@ -1622,6 +1625,7 @@ export function applySandboxInventoryMovement(
       newQuantity,
       referenceType,
       notes: input.notes,
+      movementDate: input.movementDate ?? now.toISOString().slice(0, 10),
       createdAt: now.toISOString(),
     }, products),
   };
@@ -1833,6 +1837,7 @@ export function completePosCartRecord(
       newQuantity,
       referenceType: "pos_sale",
       notes: input.notes || "Point of sale",
+      movementDate: timestamp.slice(0, 10),
       createdAt: timestamp,
     });
     return { ...product, availableQuantity: newQuantity, updatedAt: timestamp };

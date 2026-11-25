@@ -56,6 +56,7 @@ export type InventoryMovementItem = {
   newQuantity: number;
   referenceType: string;
   notes: string | null;
+  movementDate: string;
   createdAt: string;
 };
 

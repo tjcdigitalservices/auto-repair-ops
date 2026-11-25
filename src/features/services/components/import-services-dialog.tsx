@@ -22,12 +22,26 @@ import {
   SPREADSHEET_MAX_ROWS,
 } from "@/lib/spreadsheet/spreadsheet-io";
 
-export function ImportServicesDialog({
-  triggerVariant = "button",
+export function ImportServicesMenuItem({
+  onSelect,
 }: {
-  triggerVariant?: "button" | "menu";
+  onSelect: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  return (
+    <DropdownMenuItem onSelect={onSelect} className="flex items-center gap-2">
+      <Upload className="size-4" />
+      Import services
+    </DropdownMenuItem>
+  );
+}
+
+export function ImportServicesDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const [instanceKey, setInstanceKey] = useState(0);
 
   useEffect(() => {
@@ -40,8 +54,7 @@ export function ImportServicesDialog({
     <ImportServicesDialogForm
       key={instanceKey}
       open={open}
-      onOpenChange={setOpen}
-      triggerVariant={triggerVariant}
+      onOpenChange={onOpenChange}
     />
   );
 }
@@ -49,11 +62,9 @@ export function ImportServicesDialog({
 function ImportServicesDialogForm({
   open,
   onOpenChange,
-  triggerVariant = "button",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  triggerVariant?: "button" | "menu";
 }) {
   const router = useRouter();
   const [state, formAction] = useActionState(
@@ -74,25 +85,6 @@ function ImportServicesDialogForm({
       size="lg"
       title="Import services"
       description="Upload a CSV or Excel file to create or update services for this branch."
-      trigger={({ openDialog }) =>
-        triggerVariant === "menu" ? (
-          <DropdownMenuItem
-            onSelect={(event) => {
-              event.preventDefault();
-              openDialog();
-            }}
-            className="flex items-center gap-2"
-          >
-            <Upload className="size-4" />
-            Import services
-          </DropdownMenuItem>
-        ) : (
-          <Button type="button" variant="outline" onClick={openDialog}>
-            <Upload className="size-4" />
-            Import
-          </Button>
-        )
-      }
     >
       {({ closeDialog }) => (
         <form action={formAction} className="space-y-5">

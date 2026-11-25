@@ -288,6 +288,7 @@ async function saveQuotation(formData: FormData): Promise<FormActionState> {
     p_total_amount: totalAmount,
     p_items: rpcItems,
     p_created_by: context.userId,
+    p_quotation_date: values.quotationDate,
   });
 
   if (error) {

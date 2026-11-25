@@ -146,7 +146,7 @@ export function QuotationsPageView({
                     </TableCell>
                     <TableCell>
                       <TableCellLink href={`/quotations/${quotation.id}`} className="text-foreground">
-                        {formatDate(quotation.createdAt)}
+                        {formatDate(quotation.quotationDate)}
                       </TableCellLink>
                     </TableCell>
                     <TableCell className="w-14 text-right">

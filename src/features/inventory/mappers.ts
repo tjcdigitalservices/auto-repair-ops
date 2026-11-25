@@ -40,6 +40,7 @@ type MovementRow = Pick<
   | "new_quantity"
   | "reference_type"
   | "notes"
+  | "movement_date"
   | "created_at"
 >;
 type UnitRow = Pick<TableRow<"units">, "id" | "name" | "abbreviation">;
@@ -123,6 +124,7 @@ export function mapStockMovementRowToItem(params: {
     newQuantity: params.row.new_quantity,
     referenceType: params.row.reference_type,
     notes: params.row.notes,
+    movementDate: params.row.movement_date,
     createdAt: params.row.created_at,
   };
 }

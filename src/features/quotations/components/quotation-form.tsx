@@ -85,6 +85,7 @@ export function QuotationForm({
   const resolvedCustomerId = customerId || initialValues.customerId;
   const resolvedVehicleId = vehicleId || initialValues.vehicleId;
   const [status, setStatus] = useState(initialValues.status);
+  const [quotationDate, setQuotationDate] = useState(initialValues.quotationDate);
   const [natureOfRepair, setNatureOfRepair] = useState(initialValues.natureOfRepair);
   const [inspectionNotes, setInspectionNotes] = useState(initialValues.inspectionNotes);
   const [discount, setDiscount] = useState(initialValues.discount);
@@ -219,8 +220,32 @@ export function QuotationForm({
                 </div>
               </div>
 
-              {!lockCustomerVehicle ? (
-                <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="quotationDate" required>
+                    Quotation date
+                  </Label>
+                  <Input
+                    id="quotationDate"
+                    name="quotationDate"
+                    type="date"
+                    value={quotationDate}
+                    onChange={(event) => setQuotationDate(event.target.value)}
+                    className={fieldControlClassName(state.fieldErrors, "quotationDate")}
+                    {...fieldAriaProps({
+                      errors: state.fieldErrors,
+                      name: "quotationDate",
+                      required: true,
+                      errorId: fieldErrorId("quotationDate"),
+                    })}
+                  />
+                  <FieldError
+                    errors={state.fieldErrors}
+                    name="quotationDate"
+                    id={fieldErrorId("quotationDate")}
+                  />
+                </div>
+                {!lockCustomerVehicle ? (
                   <div className="space-y-2">
                     <Label htmlFor="status" required>
                       Quotation status
@@ -243,8 +268,10 @@ export function QuotationForm({
                     </select>
                     <FieldError errors={state.fieldErrors} name="status" id={fieldErrorId("status")} />
                   </div>
-                </div>
-              ) : null}
+                ) : (
+                  <input type="hidden" name="status" value={status} />
+                )}
+              </div>
 
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">

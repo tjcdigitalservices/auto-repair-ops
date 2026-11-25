@@ -33,6 +33,7 @@ export function createSandboxStockMovements(createdAt: string, approvedAt: strin
       newQuantity: 6,
       referenceType: "stock_in",
       notes: "Opening delivery from Metro Parts.",
+      movementDate: createdAt.slice(0, 10),
       createdAt,
     },
     {
@@ -44,6 +45,7 @@ export function createSandboxStockMovements(createdAt: string, approvedAt: strin
       newQuantity: 24,
       referenceType: "job_order",
       notes: "Used on JO-0001.",
+      movementDate: approvedAt.slice(0, 10),
       createdAt: approvedAt,
     },
     {
@@ -55,6 +57,7 @@ export function createSandboxStockMovements(createdAt: string, approvedAt: strin
       newQuantity: 3,
       referenceType: "pos_sale",
       notes: "POS-0001 counter sale.",
+      movementDate: createdAt.slice(0, 10),
       createdAt,
     },
   ];
@@ -384,6 +387,7 @@ export function createSandboxSeed(now = new Date()): SandboxSnapshot {
         subtotal: 1450,
         totalAmount: 1450,
         notes: "Customer asked for a pad replacement estimate.",
+        quotationDate: createdAt.slice(0, 10),
         createdAt,
         approvedAt: null,
       },
@@ -398,6 +402,7 @@ export function createSandboxSeed(now = new Date()): SandboxSnapshot {
         subtotal: 970,
         totalAmount: 970,
         notes: "Approved oil change.",
+        quotationDate: createdAt.slice(0, 10),
         createdAt,
         approvedAt,
       },

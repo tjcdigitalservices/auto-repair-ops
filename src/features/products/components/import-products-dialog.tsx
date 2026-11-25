@@ -24,12 +24,29 @@ import {
   buildProductImportTemplateCsv,
 } from "@/features/products/import/product-import-constants";
 
-export function ImportProductsDialog({
-  triggerVariant = "button",
+export function ImportProductsMenuItem({
+  onSelect,
 }: {
-  triggerVariant?: "button" | "menu";
+  onSelect: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  return (
+    <DropdownMenuItem
+      onSelect={onSelect}
+      className="flex items-center gap-2"
+    >
+      <Upload className="size-4" />
+      Import products
+    </DropdownMenuItem>
+  );
+}
+
+export function ImportProductsDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const [instanceKey, setInstanceKey] = useState(0);
 
   useEffect(() => {
@@ -42,8 +59,7 @@ export function ImportProductsDialog({
     <ImportProductsDialogForm
       key={instanceKey}
       open={open}
-      onOpenChange={setOpen}
-      triggerVariant={triggerVariant}
+      onOpenChange={onOpenChange}
     />
   );
 }
@@ -51,11 +67,9 @@ export function ImportProductsDialog({
 function ImportProductsDialogForm({
   open,
   onOpenChange,
-  triggerVariant = "button",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  triggerVariant?: "button" | "menu";
 }) {
   const router = useRouter();
   const [state, formAction] = useActionState(
@@ -76,25 +90,6 @@ function ImportProductsDialogForm({
       size="lg"
       title="Import products"
       description="Upload a CSV or Excel file to create or update catalog products for this branch."
-      trigger={({ openDialog }) =>
-        triggerVariant === "menu" ? (
-          <DropdownMenuItem
-            onSelect={(event) => {
-              event.preventDefault();
-              openDialog();
-            }}
-            className="flex items-center gap-2"
-          >
-            <Upload className="size-4" />
-            Import products
-          </DropdownMenuItem>
-        ) : (
-          <Button type="button" variant="outline" onClick={openDialog}>
-            <Upload className="size-4" />
-            Import
-          </Button>
-        )
-      }
     >
       {({ closeDialog }) => (
         <form action={formAction} className="space-y-5">

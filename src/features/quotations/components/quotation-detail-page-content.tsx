@@ -116,7 +116,7 @@ export function QuotationDetailPageContent({
               <MetadataPill>
                 {quotation.approvedAt
                   ? `Approved ${formatDate(quotation.approvedAt)}`
-                  : `Created ${formatDate(quotation.createdAt)}`}
+                  : `Dated ${formatDate(quotation.quotationDate)}`}
               </MetadataPill>
               {lastRevision ? (
                 <MetadataPill tone="info">{formatLastRevisedLabel(lastRevision.revisedAt)}</MetadataPill>

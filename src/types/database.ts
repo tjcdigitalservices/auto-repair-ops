@@ -1798,6 +1798,7 @@ export type Database = {
           created_by: string | null;
           approved_at: string | null;
           rejected_at: string | null;
+          quotation_date: string;
           created_at: string;
           updated_at: string;
         };
@@ -1822,6 +1823,7 @@ export type Database = {
           vehicle_year_snapshot?: number | null;
           vehicle_plate_number_snapshot?: string | null;
           vehicle_vin_snapshot?: string | null;
+          quotation_date?: string;
           prepared_by_name_snapshot?: string | null;
           prepared_by_title_snapshot?: string | null;
           created_by?: string | null;
@@ -2153,6 +2155,7 @@ export type Database = {
           reference_id: string | null;
           notes: string | null;
           created_by: string | null;
+          movement_date: string;
           created_at: string;
         };
         Insert: {
@@ -2167,6 +2170,7 @@ export type Database = {
           reference_id?: string | null;
           notes?: string | null;
           created_by?: string | null;
+          movement_date?: string;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["stock_movements"]["Insert"]>;
@@ -2538,6 +2542,7 @@ export type Database = {
           p_quantity: number;
           p_notes?: string | null;
           p_created_by?: string | null;
+          p_movement_date?: string | null;
         };
         Returns: string;
       };
@@ -2608,6 +2613,7 @@ export type Database = {
           p_quantity: number;
           p_notes?: string | null;
           p_created_by?: string | null;
+          p_movement_date?: string | null;
         };
         Returns: string;
       };
@@ -2618,6 +2624,7 @@ export type Database = {
           p_counted_quantity: number;
           p_notes?: string | null;
           p_created_by?: string | null;
+          p_movement_date?: string | null;
         };
         Returns: string;
       };
@@ -2677,6 +2684,7 @@ export type Database = {
           p_total_amount: number;
           p_items: Json;
           p_created_by?: string | null;
+          p_quotation_date?: string | null;
         };
         Returns: string;
       };

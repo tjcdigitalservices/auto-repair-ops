@@ -877,6 +877,7 @@ export function toQuotationListItem(snapshot: SandboxSnapshot, quotation: Sandbo
     discount: quotation.discount,
     tax: quotation.tax,
     totalAmount: quotation.totalAmount,
+    quotationDate: quotation.quotationDate,
     createdAt: quotation.createdAt,
     approvedAt: quotation.approvedAt,
   };
@@ -1855,6 +1856,7 @@ export function toInventoryDashboardData(
           newQuantity: movement.newQuantity,
           referenceType: movement.referenceType,
           notes: movement.notes,
+          movementDate: movement.movementDate,
           createdAt: movement.createdAt,
         };
       })
@@ -1862,7 +1864,7 @@ export function toInventoryDashboardData(
         if (!loweredSearch) return true;
         return [movement.productName, movement.sku ?? "", movement.barcode ?? ""].join(" ").toLowerCase().includes(loweredSearch);
       })
-      .sort((left, right) => right.createdAt.localeCompare(left.createdAt)),
+      .sort((left, right) => right.movementDate.localeCompare(left.movementDate)),
     productOptions: stocks.map(mapInventoryStockItemToProductOption),
     branches: [{ id: shop.branch.id, name: shop.branch.name, code: shop.branch.code }],
     selectedBranchId: shop.branch.id,

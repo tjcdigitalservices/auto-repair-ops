@@ -35,6 +35,7 @@ export async function submitInventoryMovementAction(
     p_product_id: parsed.data.productId,
     p_notes: parsed.data.notes || null,
     p_created_by: context.userId,
+    p_movement_date: parsed.data.movementDate,
   };
 
   const operation =

@@ -20,8 +20,13 @@ import { submitSandboxInventoryMovementAction } from "@/features/sandbox/form-ac
 import { useBoundAction } from "@/features/sandbox/use-bound-action";
 import { formatInventoryQuantity } from "@/features/inventory/utils";
 import { QuickCreateProductDialog } from "@/features/products/components/quick-create-product-dialog";
+import { getBusinessNow } from "@/lib/dates";
 import { INITIAL_FORM_ACTION_STATE } from "@/lib/forms";
 import { useFormValues } from "@/lib/use-form-values";
+
+function todayBusinessDate() {
+  return getBusinessNow().toISODate() ?? new Date().toISOString().slice(0, 10);
+}
 
 const INVENTORY_MOVEMENT_MODES: Array<{
   value: InventoryMovementAdminMode;
@@ -83,6 +88,7 @@ export function InventoryMovementDialog({
   const [productId, setProductId] = useState(initialProductId);
   const { values, updateFormValue, setValues } = useFormValues({
     quantity: "",
+    movementDate: todayBusinessDate(),
     notes: "",
   });
 
@@ -130,6 +136,7 @@ export function InventoryMovementDialog({
     setProductId(initialProductId);
     setValues({
       quantity: "",
+      movementDate: todayBusinessDate(),
       notes: "",
     });
   }, [initialProductId, setValues]);
@@ -297,7 +304,7 @@ export function InventoryMovementDialog({
             </div>
           ) : null}
 
-          <div className="grid gap-5 md:grid-cols-[220px_minmax(0,1fr)]">
+          <div className="grid gap-5 md:grid-cols-[220px_220px_minmax(0,1fr)]">
             <div className="space-y-2">
               <Label htmlFor="inventoryMovementQuantity" required>{quantityLabel}</Label>
               <Input
@@ -308,6 +315,20 @@ export function InventoryMovementDialog({
                 onChange={(event) => updateFormValue("quantity", event.target.value)}
               />
               <FieldError errors={state.fieldErrors} name="quantity" />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="inventoryMovementDate" required>
+                Movement date
+              </Label>
+              <Input
+                id="inventoryMovementDate"
+                name="movementDate"
+                type="date"
+                value={values.movementDate}
+                onChange={(event) => updateFormValue("movementDate", event.target.value)}
+              />
+              <FieldError errors={state.fieldErrors} name="movementDate" />
             </div>
 
             <div className="space-y-2">

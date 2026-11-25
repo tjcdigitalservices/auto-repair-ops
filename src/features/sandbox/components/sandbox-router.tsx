@@ -481,6 +481,7 @@ function QuotationsScreen({
             vehicleId: selection.vehicleId,
             natureOfRepair: "",
             inspectionNotes: "",
+            quotationDate: new Date().toISOString().slice(0, 10),
             status: "pending_approval",
             discount: formatMoneyInputValue(0),
             tax: formatMoneyInputValue(0),

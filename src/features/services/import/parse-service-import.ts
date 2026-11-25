@@ -2,6 +2,7 @@ import {
   cleanSpreadsheetText,
   isBlankSpreadsheetRow,
   mapSpreadsheetHeaders,
+  parseSpreadsheetNonNegativeNumber,
   readSpreadsheetRows,
 } from "@/lib/spreadsheet/spreadsheet-io";
 import { SERVICE_IMPORT_HEADER_ALIASES } from "@/features/services/import/service-import-constants";
@@ -42,7 +43,7 @@ function mapRawRow(rawRow: Record<string, unknown>, rowNumber: number): RowResul
     return [{ ok: false, rowNumber, message: "Service Name is required." }];
   }
 
-  const laborPrice = parseNonNegativeNumber(mapped.laborPrice);
+  const laborPrice = parseSpreadsheetNonNegativeNumber(mapped.laborPrice, 0);
   if (laborPrice === null) {
     return [{ ok: false, rowNumber, message: "Labor Price must be a non-negative number." }];
   }
@@ -77,20 +78,6 @@ function mapRawRow(rawRow: Record<string, unknown>, rowNumber: number): RowResul
       },
     },
   ];
-}
-
-function parseNonNegativeNumber(value: unknown) {
-  const text = cleanSpreadsheetText(value);
-  if (!text) {
-    return 0;
-  }
-
-  const parsed = Number(text);
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    return null;
-  }
-
-  return parsed;
 }
 
 function parseStatus(value: unknown): "active" | "inactive" | null {

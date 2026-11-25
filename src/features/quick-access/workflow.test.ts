@@ -31,6 +31,7 @@ function quotation(partial: Partial<QuotationListItem> & Pick<QuotationListItem,
     discount: 0,
     tax: 0,
     totalAmount: 0,
+    quotationDate: partial.quotationDate ?? "2026-07-27",
     createdAt: partial.createdAt ?? "2026-07-27T00:00:00.000Z",
     approvedAt: partial.approvedAt ?? null,
   } satisfies QuotationListItem;

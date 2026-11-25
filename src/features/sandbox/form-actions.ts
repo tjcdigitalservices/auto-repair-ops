@@ -1013,6 +1013,7 @@ export async function submitSandboxInventoryMovementAction(
     mode: parsed.data.movementMode,
     quantity: Number(parsed.data.quantity),
     notes: parsed.data.notes.trim() || null,
+    movementDate: parsed.data.movementDate,
   });
   if (!result.ok) return { status: "error", message: result.message };
 

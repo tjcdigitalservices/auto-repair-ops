@@ -161,6 +161,7 @@ export type SandboxStockMovement = {
   newQuantity: number;
   referenceType: string;
   notes: string | null;
+  movementDate: string;
   createdAt: string;
 };
 
@@ -203,6 +204,7 @@ export type SandboxQuotation = {
   notes: string | null;
   natureOfRepair?: string | null;
   inspectionNotes?: string | null;
+  quotationDate: string;
   createdAt: string;
   approvedAt: string | null;
 };

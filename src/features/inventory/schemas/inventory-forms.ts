@@ -9,6 +9,10 @@ export const inventoryMovementSchema = z
     movementMode: inventoryMovementModeSchema,
     productId: z.string().uuid("Product is required."),
     quantity: z.string().trim(),
+    movementDate: z
+      .string()
+      .trim()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Movement date is required."),
     notes: z.string().trim().max(500, "Notes are too long."),
   })
   .superRefine((value, ctx) => {
@@ -113,6 +117,7 @@ export function parseInventoryMovementFormData(formData: FormData) {
     movementMode: readString(formData, "movementMode"),
     productId: readString(formData, "productId"),
     quantity: readString(formData, "quantity"),
+    movementDate: readString(formData, "movementDate"),
     notes: readString(formData, "notes"),
   };
 }

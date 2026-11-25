@@ -26,6 +26,7 @@ const documentFixture: QuotationPrintDocument = {
     discount: 0,
     tax: 0,
     totalAmount: 1790,
+    quotationDate: "2026-05-20",
     createdAt: "2026-05-20T08:00:00.000Z",
     approvedAt: null,
     customerContactNumber: "09171234567",

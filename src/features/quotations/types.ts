@@ -26,6 +26,7 @@ export type QuotationListItem = {
   discount: number;
   tax: number;
   totalAmount: number;
+  quotationDate: string;
   createdAt: string;
   approvedAt: string | null;
 };
@@ -94,6 +95,7 @@ export type QuotationFormValues = {
   vehicleId: string;
   natureOfRepair: string;
   inspectionNotes: string;
+  quotationDate: string;
   status: Extract<QuotationStatus, "draft" | "pending_approval">;
   discount: string;
   tax: string;

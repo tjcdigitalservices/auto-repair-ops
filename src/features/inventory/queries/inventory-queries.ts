@@ -60,6 +60,7 @@ type MovementRow = Pick<
   | "new_quantity"
   | "reference_type"
   | "notes"
+  | "movement_date"
   | "created_at"
 >;
 type ProductMetaRow = Pick<TableRow<"products">, "id" | "name" | "sku" | "barcode">;
@@ -75,8 +76,9 @@ export async function getInventoryDashboardData(filters?: {
   let movementQuery = supabase
     .from("stock_movements")
     .select(
-      "id, product_id, movement_type, quantity, previous_quantity, new_quantity, reference_type, notes, created_at",
+      "id, product_id, movement_type, quantity, previous_quantity, new_quantity, reference_type, notes, movement_date, created_at",
     )
+    .order("movement_date", { ascending: false })
     .order("created_at", { ascending: false });
 
   if (branchId) {

@@ -7,6 +7,7 @@ import {
   type ProductImportType,
 } from "@/features/products/import/product-import-constants";
 import type { ParsedProductImportRow } from "@/features/products/import/product-import-types";
+import { parseSpreadsheetNonNegativeNumber } from "@/lib/spreadsheet/spreadsheet-io";
 
 export type { ParsedProductImportRow };
 
@@ -22,7 +23,8 @@ export type ParsedProductImportFile = {
 };
 
 export function parseProductImportWorkbook(buffer: ArrayBuffer): ParsedProductImportFile {
-  const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
+  // codepage 65001 = UTF-8 so CSV values like ₱2,200.00 keep the peso sign.
+  const workbook = XLSX.read(buffer, { type: "array", cellDates: true, codepage: 65001 });
   const sheetName =
     workbook.SheetNames.find((name) => name.trim().toLowerCase() === "products") ??
     workbook.SheetNames[0];
@@ -67,24 +69,24 @@ function mapRawRow(
     return [{ ok: false, rowNumber, message: "Product Name is required." }];
   }
 
-  const costPrice = parseNonNegativeNumber(mapped.costPrice, 0);
+  const costPrice = parseSpreadsheetNonNegativeNumber(mapped.costPrice, 0);
   if (costPrice === null) {
     return [{ ok: false, rowNumber, message: "Cost Price must be a non-negative number." }];
   }
 
-  const sellingPrice = parseNonNegativeNumber(mapped.sellingPrice, 0);
+  const sellingPrice = parseSpreadsheetNonNegativeNumber(mapped.sellingPrice, 0);
   if (sellingPrice === null) {
     return [{ ok: false, rowNumber, message: "Selling Price must be a non-negative number." }];
   }
 
-  const reorderLevel = parseNonNegativeNumber(mapped.reorderLevel, 0);
+  const reorderLevel = parseSpreadsheetNonNegativeNumber(mapped.reorderLevel, 0);
   if (reorderLevel === null) {
     return [{ ok: false, rowNumber, message: "Reorder Level must be a non-negative number." }];
   }
 
   let currentStock: number | null = null;
   if (mapped.currentStock !== undefined && mapped.currentStock !== null && mapped.currentStock !== "") {
-    currentStock = parseNonNegativeNumber(mapped.currentStock, null);
+    currentStock = parseSpreadsheetNonNegativeNumber(mapped.currentStock, null);
     if (currentStock === null) {
       return [{ ok: false, rowNumber, message: "Current Stock must be a non-negative number." }];
     }
@@ -172,23 +174,3 @@ function cleanText(value: unknown): string | null {
   return text ? text : null;
 }
 
-function parseNonNegativeNumber(
-  value: unknown,
-  fallback: number | null,
-): number | null {
-  if (value === null || value === undefined || value === "") {
-    return fallback;
-  }
-
-  if (typeof value === "number") {
-    return Number.isFinite(value) && value >= 0 ? value : null;
-  }
-
-  const text = String(value).trim().replace(/,/g, "");
-  if (!text) {
-    return fallback;
-  }
-
-  const parsed = Number(text);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
-}

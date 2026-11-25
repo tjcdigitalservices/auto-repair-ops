@@ -143,8 +143,9 @@ async function buildPrintDocument(
     businessSettings,
     tenantBranding,
   );
-  const validUntil = DateTime.fromISO(quotation.createdAt, { zone: "utc" })
-    .setZone("Asia/Manila")
+  const validUntil = DateTime.fromISO(quotation.quotationDate, {
+    zone: "Asia/Manila",
+  })
     .plus({ days: 14 })
     .toISO();
 

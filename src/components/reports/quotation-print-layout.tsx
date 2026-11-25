@@ -52,7 +52,7 @@ export function QuotationPrintLayout({
           documentTitle={getDocumentTitle(mode)}
           documentMeta={buildCompactHeaderMeta(
             quotation.quotationNumber,
-            quotation.createdAt,
+            quotation.quotationDate,
           )}
         >
           {page.includeIntro ? (

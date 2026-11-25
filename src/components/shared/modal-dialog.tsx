@@ -71,7 +71,12 @@ export function ModalDialog({
         ? createPortal(
             <div
               className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-slate-950/45 px-4 py-4 backdrop-blur-[2px] sm:items-center sm:py-6"
-              onMouseDown={() => setDialogOpen(false)}
+              onMouseDown={(event) => {
+                // Ignore non-backdrop targets (and keep the dialog open when OS file pickers steal focus).
+                if (event.target === event.currentTarget) {
+                  setDialogOpen(false);
+                }
+              }}
             >
               <div
                 role="dialog"

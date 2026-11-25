@@ -34,7 +34,7 @@ import {
   formatInventoryQuantity,
 } from "@/features/inventory/utils";
 import { formatCurrency } from "@/lib/currency";
-import { formatDateTime } from "@/lib/dates";
+import { formatDate } from "@/lib/dates";
 import { paginateItems } from "@/lib/pagination";
 import { cn } from "@/lib/utils";
 
@@ -275,7 +275,7 @@ export function InventoryPageView({
                   {movementPagination.items.map((movement) => (
                     <TableRow key={movement.id}>
                       <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-                        {formatDateTime(movement.createdAt)}
+                        {formatDate(movement.movementDate)}
                       </TableCell>
                       <TableCell>
                         <DataTableCellStack>
